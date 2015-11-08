@@ -1,0 +1,18 @@
+{
+  "name": "openbci-sdk",
+  "version": "0.0.1",
+  "description": "A fully NodeJS based API for the OpenBCI board connecting to the hardware directly over serial",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "openbci",
+    "openbci-node"
+  ],
+  "author": "Asyrique Thevendran <asyrique@gmail.com> (www.openbci.com)",
+  "license": "ISC",
+  "dependencies": {
+    "serialport": "^2.0.2"
+  }
+}
