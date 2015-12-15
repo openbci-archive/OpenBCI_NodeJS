@@ -9,70 +9,60 @@ var fs = require("fs");
 
 
 // Fill a buffer with that data
-var buf = function () {
-	const byteSample 		= '\x45';
-	const byteStart	 		= '\x0A';
-	const byteStop 			= '\xC0';
-	const chunkDataAux		= '\x00\x01';
-	const chunkDataChannel	= '\x00\x00\x01';
+function sampleOpenBCIPacket() {
+	var byteSample 			= '\x45';
+	var byteStart	 		= '\x0A';
+	var byteStop 			= '\xC0';
+	var chunkDataAux 		= '\x00\x01';
+	var chunkDataChannel	= '\x00\x00\x01';
 
 	// test data in OpenBCI serial format V3
-	var data = 	byteStart 			+ 
-				byteSample 			+ 
-				chunkDataChannel 	+ 
-				chunkDataChannel 	+ 
-				chunkDataChannel 	+ 
-				chunkDataChannel 	+ 
-				chunkDataChannel 	+ 
-				chunkDataChannel 	+ 
-				chunkDataChannel 	+ 
-				chunkDataChannel 	+ 
-				chunkDataAux 		+ 
-				chunkDataAux 		+ 
-				chunkDataAux 		+ 
-				byteStop;
+	var data = 	byteStart + byteSample + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataAux + chunkDataAux + chunkDataAux + byteStop;
 	return new Buffer(data);
 }
 
+var sampleBuf = sampleOpenBCIPacket();
 
 function OpenBCISample(dataBuf) {
-	var numberOfBytes = dataBuf.byteLength;
+	var numberOfBytes = dataBuf.byteLength - 1; // Weird off by one error...
 
  	var numberOfChannels = numberOfBytes - 9;
 
-
-
  	var channelData = function() {
  		var out = {};
- 		for(var i = 2; i < numberOfBytes-7; i++) {
- 			out[i] = interpret24bitAsInt32(buf.slice(i,i+3));
+ 		var count = 1;
+ 		for(var i = 2; i < numberOfBytes-10; i += 3) {
+ 			console.log(i);
+ 			out[count] = interpret24bitAsInt32(dataBuf.slice(i,i+3));
+ 			count++;
  		}
  		return out;
  	}
 
- 	// var auxData = function() {
- 	// 	var out = {};
- 	// 	for(var i = ; i < numberOfBytes - 1; i++) {
- 	// 		out[i] = dataBuf.readUInt8(i);
- 	// 	}
- 	// 	return out;
- 	// }
-
-
+ 	var auxData = function() {
+ 		var out = {};
+ 		var count = 1;
+ 		for(var i = numberOfBytes - 7; i < numberOfBytes - 1; i += 2) {
+ 			console.log(i);
+ 			out[count] = interpret16bitAsInt32(dataBuf.slice(i,i+2));
+ 			count++;
+ 		}
+ 		return out;
+ 	}
 
 	return {
-		startByte		: dataBuf.readUInt8(0), //byte
-		sampleNumber	: dataBuf.readUInt8(1), //byte
+		startByte		: dataBuf[0], //byte
+		sampleNumber	: dataBuf[1], //byte
 		channelData		: channelData(), 		// multiple of 3 bytes
-		auxData			: "auData", 					// 6 bytes
-		stopByte 		: dataBuf.readUInt8(numberOfBytes - 1) //byte
+		auxData			: auxData(), 					// 6 bytes
+		stopByte 		: dataBuf[numberOfBytes - 1] //byte
 	};
 }
 
 
-// var openBCISample1 = convertSerialToOpenBCISample(buf);
+var openBCISample1 = OpenBCISample(sampleBuf);
 
-// console.log(openBCISample1);
+console.log(openBCISample1);
 
 
 function interpret24bitAsInt32(threeByteBuffer) {
@@ -95,8 +85,8 @@ function interpret24bitAsInt32(threeByteBuffer) {
  	return newInt;
 }
 
-var bufTemp = new Buffer('\x00\x00\x07');
-console.log(interpret24bitAsInt32(bufTemp));
+// var bufTemp = new Buffer('\x00\x00\x07');
+// console.log(interpret24bitAsInt32(bufTemp));
 
 function interpret16bitAsInt32(twoByteBuffer) {
 	const maskForNegativeNum = (255 << (3 * 8)) | (255 << (2 * 8));
