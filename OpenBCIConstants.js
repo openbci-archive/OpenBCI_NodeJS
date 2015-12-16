@@ -127,114 +127,240 @@ const kOBCIChannelMaxNumber16   = 'C';
 
 module.exports = {
     /** Turning channels off */
-    kOBCIChannelOff_1:kOBCIChannelOff_1,
-    kOBCIChannelOff_2:kOBCIChannelOff_2,
-    kOBCIChannelOff_3:kOBCIChannelOff_3,
-    kOBCIChannelOff_4:kOBCIChannelOff_4,
-    kOBCIChannelOff_5:kOBCIChannelOff_5,
-    kOBCIChannelOff_6:kOBCIChannelOff_6,
-    kOBCIChannelOff_7:kOBCIChannelOff_7,
-    kOBCIChannelOff_8:kOBCIChannelOff_8,
-    kOBCIChannelOff_9:kOBCIChannelOff_9,
-    kOBCIChannelOff_10:kOBCIChannelOff_10,
-    kOBCIChannelOff_11:kOBCIChannelOff_11,
-    kOBCIChannelOff_12:kOBCIChannelOff_12,
-    kOBCIChannelOff_13:kOBCIChannelOff_13,
-    kOBCIChannelOff_14:kOBCIChannelOff_14,
-    kOBCIChannelOff_15:kOBCIChannelOff_15,
-    kOBCIChannelOff_16:kOBCIChannelOff_16,
+    OBCIChannelOff_1:kOBCIChannelOff_1,
+    OBCIChannelOff_2:kOBCIChannelOff_2,
+    OBCIChannelOff_3:kOBCIChannelOff_3,
+    OBCIChannelOff_4:kOBCIChannelOff_4,
+    OBCIChannelOff_5:kOBCIChannelOff_5,
+    OBCIChannelOff_6:kOBCIChannelOff_6,
+    OBCIChannelOff_7:kOBCIChannelOff_7,
+    OBCIChannelOff_8:kOBCIChannelOff_8,
+    OBCIChannelOff_9:kOBCIChannelOff_9,
+    OBCIChannelOff_10:kOBCIChannelOff_10,
+    OBCIChannelOff_11:kOBCIChannelOff_11,
+    OBCIChannelOff_12:kOBCIChannelOff_12,
+    OBCIChannelOff_13:kOBCIChannelOff_13,
+    OBCIChannelOff_14:kOBCIChannelOff_14,
+    OBCIChannelOff_15:kOBCIChannelOff_15,
+    OBCIChannelOff_16:kOBCIChannelOff_16,
+    commandChannelOff: function(channelNumber,callback) {
+        switch (channelNumber) {
+            case 1:
+                return kOBCIChannelOff_1;
+            case 2:
+                return kOBCIChannelOff_2;
+            case 3:
+                return kOBCIChannelOff_3;
+            case 4:
+                return kOBCIChannelOff_4;
+            case 5:
+                return kOBCIChannelOff_5;
+            case 6:
+                return kOBCIChannelOff_6;
+            case 7:
+                return kOBCIChannelOff_7;
+            case 8:
+                return kOBCIChannelOff_8;
+            case 9:
+                return kOBCIChannelOff_9;
+            case 10:
+                return kOBCIChannelOff_10;
+            case 11:
+                return kOBCIChannelOff_11;
+            case 12:
+                return kOBCIChannelOff_12;
+            case 13:
+                return kOBCIChannelOff_13;
+            case 14:
+                return kOBCIChannelOff_14;
+            case 15:
+                return kOBCIChannelOff_15;
+            case 16:
+                return kOBCIChannelOff_16;
+            default:
+                if(callback) {
+                    callback('Error [commandChannelOff]: Invalid Channel Number')
+                }
+                return;
+        }
+    },
     /** Turning channels on */
-    kOBCIChannelOn_1:kOBCIChannelOn_1,
-    kOBCIChannelOn_2:kOBCIChannelOn_2,
-    kOBCIChannelOn_3:kOBCIChannelOn_3,
-    kOBCIChannelOn_4:kOBCIChannelOn_4,
-    kOBCIChannelOn_5:kOBCIChannelOn_5,
-    kOBCIChannelOn_6:kOBCIChannelOn_6,
-    kOBCIChannelOn_7:kOBCIChannelOn_7,
-    kOBCIChannelOn_8:kOBCIChannelOn_8,
-    kOBCIChannelOn_9:kOBCIChannelOn_9,
-    kOBCIChannelOn_10:kOBCIChannelOn_10,
-    kOBCIChannelOn_11:kOBCIChannelOn_11,
-    kOBCIChannelOn_12:kOBCIChannelOn_12,
-    kOBCIChannelOn_13:kOBCIChannelOn_13,
-    kOBCIChannelOn_14:kOBCIChannelOn_14,
-    kOBCIChannelOn_15:kOBCIChannelOn_15,
-    kOBCIChannelOn_16:kOBCIChannelOn_16,
+    OBCIChannelOn_1:kOBCIChannelOn_1,
+    OBCIChannelOn_2:kOBCIChannelOn_2,
+    OBCIChannelOn_3:kOBCIChannelOn_3,
+    OBCIChannelOn_4:kOBCIChannelOn_4,
+    OBCIChannelOn_5:kOBCIChannelOn_5,
+    OBCIChannelOn_6:kOBCIChannelOn_6,
+    OBCIChannelOn_7:kOBCIChannelOn_7,
+    OBCIChannelOn_8:kOBCIChannelOn_8,
+    OBCIChannelOn_9:kOBCIChannelOn_9,
+    OBCIChannelOn_10:kOBCIChannelOn_10,
+    OBCIChannelOn_11:kOBCIChannelOn_11,
+    OBCIChannelOn_12:kOBCIChannelOn_12,
+    OBCIChannelOn_13:kOBCIChannelOn_13,
+    OBCIChannelOn_14:kOBCIChannelOn_14,
+    OBCIChannelOn_15:kOBCIChannelOn_15,
+    OBCIChannelOn_16:kOBCIChannelOn_16,
+    commandChannelOn: function(channelNumber,callback) {
+        switch (channelNumber) {
+            case 1:
+                return kOBCIChannelOn_1;
+            case 2:
+                return kOBCIChannelOn_2;
+            case 3:
+                return kOBCIChannelOn_3;
+            case 4:
+                return kOBCIChannelOn_4;
+            case 5:
+                return kOBCIChannelOn_5;
+            case 6:
+                return kOBCIChannelOn_6;
+            case 7:
+                return kOBCIChannelOn_7;
+            case 8:
+                return kOBCIChannelOn_8;
+            case 9:
+                return kOBCIChannelOn_9;
+            case 10:
+                return kOBCIChannelOn_10;
+            case 11:
+                return kOBCIChannelOn_11;
+            case 12:
+                return kOBCIChannelOn_12;
+            case 13:
+                return kOBCIChannelOn_13;
+            case 14:
+                return kOBCIChannelOn_14;
+            case 15:
+                return kOBCIChannelOn_15;
+            case 16:
+                return kOBCIChannelOn_16;
+            default:
+                if(callback) {
+                    callback('Error [commandChannelOn]: Invalid Channel Number')
+                }
+                return;
+        }
+    },
     /** Test Signal Control Commands */
-    kOBCITestSignalConnectToDC:kOBCITestSignalConnectToDC,
-    kOBCITestSignalConnectToGround:kOBCITestSignalConnectToGround,
-    kOBCITestSignalConnectToPulse1xFast:kOBCITestSignalConnectToPulse1xFast,
-    kOBCITestSignalConnectToPulse1xSlow:kOBCITestSignalConnectToPulse1xSlow,
-    kOBCITestSignalConnectToPulse2xFast:kOBCITestSignalConnectToPulse2xFast,
-    kOBCITestSignalConnectToPulse2xSlow:kOBCITestSignalConnectToPulse2xSlow,
+    OBCITestSignalConnectToDC:kOBCITestSignalConnectToDC,
+    OBCITestSignalConnectToGround:kOBCITestSignalConnectToGround,
+    OBCITestSignalConnectToPulse1xFast:kOBCITestSignalConnectToPulse1xFast,
+    OBCITestSignalConnectToPulse1xSlow:kOBCITestSignalConnectToPulse1xSlow,
+    OBCITestSignalConnectToPulse2xFast:kOBCITestSignalConnectToPulse2xFast,
+    OBCITestSignalConnectToPulse2xSlow:kOBCITestSignalConnectToPulse2xSlow,
     /** Channel Setting Commands */
-    kOBCIChannelCmdADCNormal:kOBCIChannelCmdADCNormal,
-    kOBCIChannelCmdADCShorted:kOBCIChannelCmdADCShorted,
-    kOBCIChannelCmdADCBiasDRP:kOBCIChannelCmdADCBiasDRP,
-    kOBCIChannelCmdADCBiasDRN:kOBCIChannelCmdADCBiasDRN,
-    kOBCIChannelCmdADCBiasMethod:kOBCIChannelCmdADCBiasMethod,
-    kOBCIChannelCmdADCMVDD:kOBCIChannelCmdADCMVDD,
-    kOBCIChannelCmdADCTemp:kOBCIChannelCmdADCTemp,
-    kOBCIChannelCmdADCTestSig:kOBCIChannelCmdADCTestSig,
-    kOBCIChannelCmdBiasInclude:kOBCIChannelCmdBiasInclude,
-    kOBCIChannelCmdBiasRemove:kOBCIChannelCmdBiasRemove,
-    kOBCIChannelCmdChannel_1:kOBCIChannelCmdChannel_1,
-    kOBCIChannelCmdChannel_2:kOBCIChannelCmdChannel_2,
-    kOBCIChannelCmdChannel_3:kOBCIChannelCmdChannel_3,
-    kOBCIChannelCmdChannel_4:kOBCIChannelCmdChannel_4,
-    kOBCIChannelCmdChannel_5:kOBCIChannelCmdChannel_5,
-    kOBCIChannelCmdChannel_6:kOBCIChannelCmdChannel_6,
-    kOBCIChannelCmdChannel_7:kOBCIChannelCmdChannel_7,
-    kOBCIChannelCmdChannel_8:kOBCIChannelCmdChannel_8,
-    kOBCIChannelCmdChannel_9:kOBCIChannelCmdChannel_9,
-    kOBCIChannelCmdChannel_10:kOBCIChannelCmdChannel_10,
-    kOBCIChannelCmdChannel_11:kOBCIChannelCmdChannel_11,
-    kOBCIChannelCmdChannel_12:kOBCIChannelCmdChannel_12,
-    kOBCIChannelCmdChannel_13:kOBCIChannelCmdChannel_13,
-    kOBCIChannelCmdChannel_14:kOBCIChannelCmdChannel_14,
-    kOBCIChannelCmdChannel_15:kOBCIChannelCmdChannel_15,
-    kOBCIChannelCmdChannel_16:kOBCIChannelCmdChannel_16,
-    kOBCIChannelCmdGain_1:kOBCIChannelCmdGain_1,
-    kOBCIChannelCmdGain_2:kOBCIChannelCmdGain_2,
-    kOBCIChannelCmdGain_4:kOBCIChannelCmdGain_4,
-    kOBCIChannelCmdGain_6:kOBCIChannelCmdGain_6,
-    kOBCIChannelCmdGain_8:kOBCIChannelCmdGain_8,
-    kOBCIChannelCmdGain_12:kOBCIChannelCmdGain_12,
-    kOBCIChannelCmdGain_24:kOBCIChannelCmdGain_24,
-    kOBCIChannelCmdLatch:kOBCIChannelCmdLatch,
-    kOBCIChannelCmdPowerOff:kOBCIChannelCmdPowerOff,
-    kOBCIChannelCmdPowerOn:kOBCIChannelCmdPowerOn,
-    kOBCIChannelCmdSet:kOBCIChannelCmdSet,
-    kOBCIChannelCmdSRB1Connect:kOBCIChannelCmdSRB1Connect,
-    kOBCIChannelCmdSRB1Diconnect:kOBCIChannelCmdSRB1Diconnect,
-    kOBCIChannelCmdSRB2Connect:kOBCIChannelCmdSRB2Connect,
-    kOBCIChannelCmdSRB2Diconnect:kOBCIChannelCmdSRB2Diconnect,
+    OBCIChannelCmdADCNormal:kOBCIChannelCmdADCNormal,
+    OBCIChannelCmdADCShorted:kOBCIChannelCmdADCShorted,
+    OBCIChannelCmdADCBiasDRP:kOBCIChannelCmdADCBiasDRP,
+    OBCIChannelCmdADCBiasDRN:kOBCIChannelCmdADCBiasDRN,
+    OBCIChannelCmdADCBiasMethod:kOBCIChannelCmdADCBiasMethod,
+    OBCIChannelCmdADCMVDD:kOBCIChannelCmdADCMVDD,
+    OBCIChannelCmdADCTemp:kOBCIChannelCmdADCTemp,
+    OBCIChannelCmdADCTestSig:kOBCIChannelCmdADCTestSig,
+    OBCIChannelCmdBiasInclude:kOBCIChannelCmdBiasInclude,
+    OBCIChannelCmdBiasRemove:kOBCIChannelCmdBiasRemove,
+    OBCIChannelCmdChannel_1:kOBCIChannelCmdChannel_1,
+    OBCIChannelCmdChannel_2:kOBCIChannelCmdChannel_2,
+    OBCIChannelCmdChannel_3:kOBCIChannelCmdChannel_3,
+    OBCIChannelCmdChannel_4:kOBCIChannelCmdChannel_4,
+    OBCIChannelCmdChannel_5:kOBCIChannelCmdChannel_5,
+    OBCIChannelCmdChannel_6:kOBCIChannelCmdChannel_6,
+    OBCIChannelCmdChannel_7:kOBCIChannelCmdChannel_7,
+    OBCIChannelCmdChannel_8:kOBCIChannelCmdChannel_8,
+    OBCIChannelCmdChannel_9:kOBCIChannelCmdChannel_9,
+    OBCIChannelCmdChannel_10:kOBCIChannelCmdChannel_10,
+    OBCIChannelCmdChannel_11:kOBCIChannelCmdChannel_11,
+    OBCIChannelCmdChannel_12:kOBCIChannelCmdChannel_12,
+    OBCIChannelCmdChannel_13:kOBCIChannelCmdChannel_13,
+    OBCIChannelCmdChannel_14:kOBCIChannelCmdChannel_14,
+    OBCIChannelCmdChannel_15:kOBCIChannelCmdChannel_15,
+    OBCIChannelCmdChannel_16:kOBCIChannelCmdChannel_16,
+    commandChannelForCmd: function(channelNumber,callback) {
+        switch (channelNumber) {
+            case 1:
+                return kOBCIChannelCmdChannel_1;
+            case 2:
+                return kOBCIChannelCmdChannel_2;
+            case 3:
+                return kOBCIChannelCmdChannel_3;
+            case 4:
+                return kOBCIChannelCmdChannel_4;
+            case 5:
+                return kOBCIChannelCmdChannel_5;
+            case 6:
+                return kOBCIChannelCmdChannel_6;
+            case 7:
+                return kOBCIChannelCmdChannel_7;
+            case 8:
+                return kOBCIChannelCmdChannel_8;
+            case 9:
+                return kOBCIChannelCmdChannel_9;
+            case 10:
+                return kOBCIChannelCmdChannel_10;
+            case 11:
+                return kOBCIChannelCmdChannel_11;
+            case 12:
+                return kOBCIChannelCmdChannel_12;
+            case 13:
+                return kOBCIChannelCmdChannel_13;
+            case 14:
+                return kOBCIChannelCmdChannel_14;
+            case 15:
+                return kOBCIChannelCmdChannel_15;
+            case 16:
+                return kOBCIChannelCmdChannel_16;
+            default:
+                if(callback) {
+                    callback('Error [commandChannelOn]: Invalid Channel Number')
+                }
+                return;
+        }
+    },
+    OBCIChannelCmdGain_1:kOBCIChannelCmdGain_1,
+    OBCIChannelCmdGain_2:kOBCIChannelCmdGain_2,
+    OBCIChannelCmdGain_4:kOBCIChannelCmdGain_4,
+    OBCIChannelCmdGain_6:kOBCIChannelCmdGain_6,
+    OBCIChannelCmdGain_8:kOBCIChannelCmdGain_8,
+    OBCIChannelCmdGain_12:kOBCIChannelCmdGain_12,
+    OBCIChannelCmdGain_24:kOBCIChannelCmdGain_24,
+    OBCIChannelCmdLatch:kOBCIChannelCmdLatch,
+    OBCIChannelCmdPowerOff:kOBCIChannelCmdPowerOff,
+    OBCIChannelCmdPowerOn:kOBCIChannelCmdPowerOn,
+    OBCIChannelCmdSet:kOBCIChannelCmdSet,
+    OBCIChannelCmdSRB1Connect:kOBCIChannelCmdSRB1Connect,
+    OBCIChannelCmdSRB1Diconnect:kOBCIChannelCmdSRB1Diconnect,
+    OBCIChannelCmdSRB2Connect:kOBCIChannelCmdSRB2Connect,
+    OBCIChannelCmdSRB2Diconnect:kOBCIChannelCmdSRB2Diconnect,
     /** Default Channel Settings */
-    kOBCIChannelDefaultAllSet:kOBCIChannelDefaultAllSet,
-    kOBCIChannelDefaultAllGet:kOBCIChannelDefaultAllGet,
+    OBCIChannelDefaultAllSet:kOBCIChannelDefaultAllSet,
+    OBCIChannelDefaultAllGet:kOBCIChannelDefaultAllGet,
     /** LeadOff Impedance Commands */
-    kOBCIChannelImpedanceLatch:kOBCIChannelImpedanceLatch,
-    kOBCIChannelImpedanceSet:kOBCIChannelImpedanceSet,
-    kOBCIChannelImpedanceTestSignalApplied:kOBCIChannelImpedanceTestSignalApplied,
-    kOBCIChannelImpedanceTestSignalAppliedNot:kOBCIChannelImpedanceTestSignalAppliedNot,
+    OBCIChannelImpedanceLatch:kOBCIChannelImpedanceLatch,
+    OBCIChannelImpedanceSet:kOBCIChannelImpedanceSet,
+    OBCIChannelImpedanceTestSignalApplied:kOBCIChannelImpedanceTestSignalApplied,
+    OBCIChannelImpedanceTestSignalAppliedNot:kOBCIChannelImpedanceTestSignalAppliedNot,
     /** SD card Commands */
-    kOBCISDLogForHour1:kOBCISDLogForHour1,
-    kOBCISDLogForHour2:kOBCISDLogForHour2,
-    kOBCISDLogForHour4:kOBCISDLogForHour4,
-    kOBCISDLogForHour12:kOBCISDLogForHour12,
-    kOBCISDLogForHour24:kOBCISDLogForHour24,
-    kOBCISDLogForMin5:kOBCISDLogForMin5,
-    kOBCISDLogForMin15:kOBCISDLogForMin15,
-    kOBCISDLogForMin30:kOBCISDLogForMin30,
-    kOBCISDLogForSec14:kOBCISDLogForSec14,
-    kOBCISDLogStop:kOBCISDLogStop,
+    OBCISDLogForHour1:kOBCISDLogForHour1,
+    OBCISDLogForHour2:kOBCISDLogForHour2,
+    OBCISDLogForHour4:kOBCISDLogForHour4,
+    OBCISDLogForHour12:kOBCISDLogForHour12,
+    OBCISDLogForHour24:kOBCISDLogForHour24,
+    OBCISDLogForMin5:kOBCISDLogForMin5,
+    OBCISDLogForMin15:kOBCISDLogForMin15,
+    OBCISDLogForMin30:kOBCISDLogForMin30,
+    OBCISDLogForSec14:kOBCISDLogForSec14,
+    OBCISDLogStop:kOBCISDLogStop,
     /** Stream Data Commands */
-    kOBCIStreamStart:kOBCIStreamStart,
-    kOBCIStreamStop:kOBCIStreamStop,
+    OBCIStreamStart:kOBCIStreamStart,
+    OBCIStreamStop:kOBCIStreamStop,
     /** Miscellaneous */
-    kOBCIMiscQueryRegisterSettings:kOBCIMiscQueryRegisterSettings,
-    kOBCIMiscSoftReset:kOBCIMiscSoftReset,
+    OBCIMiscQueryRegisterSettings:kOBCIMiscQueryRegisterSettings,
+    OBCIMiscSoftReset:kOBCIMiscSoftReset,
     /** 16 Channel Commands */
-    kOBCIChannelMaxNumber8:kOBCIChannelMaxNumber8,
-    kOBCIChannelMaxNumber16:kOBCIChannelMaxNumber16
+    OBCIChannelMaxNumber8:kOBCIChannelMaxNumber8,
+    OBCIChannelMaxNumber16:kOBCIChannelMaxNumber16,
+    /** Filters */
+    OBCIFilterDisable:'g',
+    OBCIFilterEnable:'f'
 }

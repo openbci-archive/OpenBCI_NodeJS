@@ -1,5 +1,5 @@
+var k = require('./OpenBCIConstants');
 var openBCISample = require('OpenBCISample');
-var k = require('OpenBCIConstants');
 var serialPort = require('serialport');
 var Serialport = serialPort.SerialPort;
 var EventEmitter = require('events').EventEmitter;
@@ -14,7 +14,7 @@ function OpenBCIFactory() {
         daisy: false
     };
 
-    function OpenBCIBoard(portName,options,callback) {
+    function OpenBCIBoard(portName,options,connectImmediately,callback) {
         var self = this;
 
         var args = Array.prototype.slice.call(arguments);
@@ -28,6 +28,8 @@ function OpenBCIFactory() {
         options = (typeof options !== 'function') && options || {};
 
         var opts = {};
+
+        connectImmediately = (connectImmediately === undefined || connectImmediately === null) ? true : connectImmediately;
 
         callback = callback || function(err) {
                 if(err) {
@@ -52,17 +54,22 @@ function OpenBCIFactory() {
         }
         this.options = opts;
         this.portName = portName;
+        if(connectImmediately) {
+            process.nextTick(function() {
+                self.boardConnect(callback);
+            });
+        }
     }
 
     //OpenBCIBoard.prototype.listPorts = serialPort.listPorts;
 
-    OpenBCIBoard.prototype.boardConnect = function() {
+    OpenBCIBoard.prototype.boardConnect = function(callback) {
         var self = this;
         this.paused = false;
         this.connected = true;
         var boardSerial = new Serialport(this.portName, {
             baudrate: this.baudrate,
-            parser: serialport.parsers.byteLength(33);
+            parser: serialport.parsers.byteLength(33)
         });
 
         boardSerial.on('open', function() {
@@ -70,16 +77,22 @@ function OpenBCIFactory() {
             self.connected = true;
             boardSerial.on('data', function(data) {
                 console.log('data recieved: ' + data);
-                self.emit('sample', OpenBCISample.convertPacketToSample(data);)
+                self.emit('sample', OpenBCISample.convertPacketToSample(data));
             });
         });
         boardSerial.on('close', function() {
             self.connected = false;
+            self.emit('disconnected');
             console.log('serial connection closed');
         });
         this.serial = boardSerial;
 
-        writeAndDrain(boardSerial, k.kOBCIStreamStart);
+        writeAndDrain(boardSerial, k.OBCIStreamStart, function() {
+            self.emit('connected');
+        });
+
+
+        if (callback) { callback(); }
 
     };
 
@@ -98,7 +111,7 @@ function OpenBCIFactory() {
         if(this.connected) {
             if(this.streaming === false) {
                 this.streaming = true;
-                writeAndDrain(this.serial,k.kOBCIStreamStart);
+                writeAndDrain(this.serial,k.OBCIStreamStart);
             } else {
                 callback("All ready streaming")
             }
@@ -111,7 +124,7 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.streamStop = function() {
         if(this.streaming) {
             this.streaming = false;
-            writeAndDrain(this.serial,k.kOBCIStreamStop);
+            writeAndDrain(this.serial,k.OBCIStreamStop);
         }
     };
     // TODO: boardCheckConnection (py: check_connection)
@@ -134,8 +147,16 @@ util.inherits(OpenBCIFactory, EventEmitter);
 
 module.exports = new OpenBCIFactory();
 
+/**
+ * Should be used to send data to the board
+ * @param boardSerial
+ * @param data
+ * @param callback
+ */
 function writeAndDrain(boardSerial,data, callback) {
     boardSerial.write(data, function() {
         boardSerial.drain(callback);
     })
 }
+
+

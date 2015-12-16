@@ -1,4 +1,4 @@
-var OpenBCIBoard = require("./OpenBCIBoard").OpenBCIBoard;
+var OpenBCIBoard = require('OpenBCIBoard').OpenBCIBoard;
 
 var serialPortName = "/dev/ttyUSB0";
 
