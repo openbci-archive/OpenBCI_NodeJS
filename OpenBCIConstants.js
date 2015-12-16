@@ -59,6 +59,22 @@ const kOBCIChannelCmdADCTemp        = '4';
 const kOBCIChannelCmdADCTestSig     = '5';
 const kOBCIChannelCmdBiasInclude    = '1';
 const kOBCIChannelCmdBiasRemove     = '0';
+const kOBCIChannelCmdChannel_1      = '1';
+const kOBCIChannelCmdChannel_2      = '2';
+const kOBCIChannelCmdChannel_3      = '3';
+const kOBCIChannelCmdChannel_4      = '4';
+const kOBCIChannelCmdChannel_5      = '5';
+const kOBCIChannelCmdChannel_6      = '6';
+const kOBCIChannelCmdChannel_7      = '7';
+const kOBCIChannelCmdChannel_8      = '8';
+const kOBCIChannelCmdChannel_9      = 'Q';
+const kOBCIChannelCmdChannel_10     = 'W';
+const kOBCIChannelCmdChannel_11     = 'E';
+const kOBCIChannelCmdChannel_12     = 'R';
+const kOBCIChannelCmdChannel_13     = 'T';
+const kOBCIChannelCmdChannel_14     = 'Y';
+const kOBCIChannelCmdChannel_15     = 'U';
+const kOBCIChannelCmdChannel_16     = 'I';
 const kOBCIChannelCmdGain_1         = '0';
 const kOBCIChannelCmdGain_2         = '1';
 const kOBCIChannelCmdGain_4         = '2';
@@ -162,6 +178,22 @@ module.exports = {
     kOBCIChannelCmdADCTestSig:kOBCIChannelCmdADCTestSig,
     kOBCIChannelCmdBiasInclude:kOBCIChannelCmdBiasInclude,
     kOBCIChannelCmdBiasRemove:kOBCIChannelCmdBiasRemove,
+    kOBCIChannelCmdChannel_1:kOBCIChannelCmdChannel_1,
+    kOBCIChannelCmdChannel_2:kOBCIChannelCmdChannel_2,
+    kOBCIChannelCmdChannel_3:kOBCIChannelCmdChannel_3,
+    kOBCIChannelCmdChannel_4:kOBCIChannelCmdChannel_4,
+    kOBCIChannelCmdChannel_5:kOBCIChannelCmdChannel_5,
+    kOBCIChannelCmdChannel_6:kOBCIChannelCmdChannel_6,
+    kOBCIChannelCmdChannel_7:kOBCIChannelCmdChannel_7,
+    kOBCIChannelCmdChannel_8:kOBCIChannelCmdChannel_8,
+    kOBCIChannelCmdChannel_9:kOBCIChannelCmdChannel_9,
+    kOBCIChannelCmdChannel_10:kOBCIChannelCmdChannel_10,
+    kOBCIChannelCmdChannel_11:kOBCIChannelCmdChannel_11,
+    kOBCIChannelCmdChannel_12:kOBCIChannelCmdChannel_12,
+    kOBCIChannelCmdChannel_13:kOBCIChannelCmdChannel_13,
+    kOBCIChannelCmdChannel_14:kOBCIChannelCmdChannel_14,
+    kOBCIChannelCmdChannel_15:kOBCIChannelCmdChannel_15,
+    kOBCIChannelCmdChannel_16:kOBCIChannelCmdChannel_16,
     kOBCIChannelCmdGain_1:kOBCIChannelCmdGain_1,
     kOBCIChannelCmdGain_2:kOBCIChannelCmdGain_2,
     kOBCIChannelCmdGain_4:kOBCIChannelCmdGain_4,
