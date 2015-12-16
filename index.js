@@ -1,5 +1,5 @@
 var serialport = require('serialport');
-var openBCIBoard = require("./openBCIBoard");
+var openBCIBoard = require("./OpenBCIBoard");
 
 var board = {
   baudrate : 115200,
