@@ -125,6 +125,22 @@ const kOBCIMiscSoftReset                = 'v';
 const kOBCIChannelMaxNumber8    = 'c';
 const kOBCIChannelMaxNumber16   = 'C';
 
+/** 60Hz line filter */
+const kOBCIFilterDisable ='g';
+const kOBCIFilterEnable = 'f';
+
+/** Possible number of channels */
+const kOBCINumberOfChannelsDaisy = 16;
+const kOBCINumberOfChannelsDefault = 8;
+const kOBCINumberOfChannelsGanglion = 4;
+
+/** Possible Sample Rates*/
+const kOBCISampleRate125 = 125;
+const kOBCISampleRate250 = 250;
+
+/** Impedance */
+const kOBCIImpedance
+
 module.exports = {
     /** Turning channels off */
     OBCIChannelOff_1:kOBCIChannelOff_1,
@@ -361,6 +377,13 @@ module.exports = {
     OBCIChannelMaxNumber8:kOBCIChannelMaxNumber8,
     OBCIChannelMaxNumber16:kOBCIChannelMaxNumber16,
     /** Filters */
-    OBCIFilterDisable:'g',
-    OBCIFilterEnable:'f'
+    OBCIFilterDisable:kOBCIFilterDisable,
+    OBCIFilterEnable:kOBCIFilterEnable,
+    /** Possible number of channels */
+    OBCINumberOfChannelsDaisy:kOBCINumberOfChannelsDaisy,
+    OBCINumberOfChannelsDefault:kOBCINumberOfChannelsDefault,
+    OBCINumberOfChannelsGanglion:kOBCINumberOfChannelsGanglion,
+    /** Possible Sample Rates */
+    OBCISampleRate125:kOBCISampleRate125,
+    OBCISampleRate250:kOBCISampleRate250
 }

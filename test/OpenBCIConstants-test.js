@@ -530,4 +530,23 @@ describe('OpenBCIConstants', function() {
             });
         });
     });
+    describe('Number of channels',function() {
+        it('Daisy',function () {
+            assert.equal(16, k.OBCINumberOfChannelsDaisy);
+        });
+        it('Default',function () {
+            assert.equal(8, k.OBCINumberOfChannelsDefault);
+        });
+        it('Ganglion',function () {
+            assert.equal(4, k.OBCINumberOfChannelsGanglion);
+        });
+    });
+    describe('Possible Sample Rates',function() {
+        it('should be 125',function () {
+            assert.equal(125, k.OBCISampleRate125);
+        });
+        it('should be 250',function () {
+            assert.equal(250, k.OBCISampleRate250);
+        });
+    });
 });

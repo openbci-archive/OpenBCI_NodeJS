@@ -37,13 +37,14 @@ module.exports = {
     scaleFactorAux: SCALE_FACTOR_ACCEL,
     scaleFactorChannel: SCALE_FACTOR_CHANNEL,
     convertPacketToSample: function (dataBuf) {
-        var numberOfBytes = dataBuf.byteLength;
-        var scaleData = true;
+        return new Promise(function(resolve,reject) {
+            var numberOfBytes = dataBuf.byteLength;
+            var scaleData = true;
 
-        try {
-            if (dataBuf[0] != BYTE_START) throw kErrorInvalidByteStart;
-            if (dataBuf[32] != BYTE_STOP) throw kErrorInvalidByteStop;
-            if (numberOfBytes != SAMPLE_NUMBER_OF_BYTES) throw kErrorInvalidByteLength;
+            if (dataBuf[0] != BYTE_START) { reject(Error(kErrorInvalidByteStart)); }
+            if (dataBuf[32] != BYTE_STOP) { reject(Error(kErrorInvalidByteStop)); }
+            if (numberOfBytes != SAMPLE_NUMBER_OF_BYTES) { reject(Error(kErrorInvalidByteLength)); }
+
             var channelData = function () {
                 var out = {};
                 var count = 0;
@@ -66,29 +67,15 @@ module.exports = {
                 return out;
             }
 
-            return {
+            resolve({
                 startByte: dataBuf[0], //byte
                 sampleNumber: dataBuf[1], //byte
                 channelData: channelData(), // multiple of 3 bytes
                 auxData: auxData(), // 6 bytes
                 stopByte: dataBuf[numberOfBytes - 1] //byte
-            };
-        } catch(error) {
-            switch (error) {
-                case kErrorInvalidByteLength:
-                    break;
-                case kErrorInvalidByteStart:
-                    break;
-                case kErrorInvalidByteStop:
-                    break;
-                default:
-                    break;
-            }
-            console.log("ERROR: " + error);
-            return {
-                error:error
-            };
-        }
+            });
+        });
+
     }
 
 }

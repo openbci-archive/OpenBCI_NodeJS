@@ -4,14 +4,15 @@
   "description": "A fully NodeJS based API for the OpenBCI board connecting to the hardware directly over serial",
   "main": "index.js",
   "scripts": {
+    "start": "node index",
     "test": "mocha test"
   },
   "keywords": [
     "openbci",
     "openbci-node"
   ],
-  "author": "Asyrique Thevendran <asyrique@gmail.com> (www.openbci.com)",
-  "license": "ISC",
+  "author": "AJ Keller <aj@pushtheworld.us> (www.openbci.com)",
+  "license": "MIT",
   "dependencies": {
     "serialport": "^2.0.2"
   }
