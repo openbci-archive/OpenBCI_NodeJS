@@ -34,38 +34,47 @@ var sampleBuf = sampleOpenBCIPacket();
 describe('OpenBCISample',function() {
     describe('#convertPacketToSample', function() {
         it('should have the correct start byte', function() {
-            var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(0x0A,sample.startByte);
+            OpenBCISample.convertPacketToSample(sampleBuf).then(function(sample){
+                assert.equal(0x0A,sample.startByte);
+            });
         });
         it('should have the correct stop byte', function() {
-            var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(0xC0,sample.stopByte);
+            OpenBCISample.convertPacketToSample(sampleBuf).then(function(sample){
+                assert.equal(0xC0,sample.stopByte);
+            });
         });
         it('should have the correct sample number', function() {
-            var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(0x45,sample.sampleNumber);
+            OpenBCISample.convertPacketToSample(sampleBuf).then(function(sample){
+                assert.equal(0x45,sample.sampleNumber);
+            });
         });
         it('all the channels should have the same number value as their index * scaleFactor', function() {
-            var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            for(var i = 0;i < 8;i++) {
-                assert.equal(sample.channelData[i],OpenBCISample.scaleFactorChannel * i);
-            }
+            OpenBCISample.convertPacketToSample(sampleBuf).then(function(sample){
+                for(var i = 0;i < 8;i++) {
+                    assert.equal(sample.channelData[i],OpenBCISample.scaleFactorChannel * i);
+                }
+            });
         });
         it('all the auxs should have the same number value as their index * scaleFactor', function() {
-            var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            for(var i = 0;i < 3;i++) {
-                assert.equal(sample.auxData[i],OpenBCISample.scaleFactorAux * i);
-            }
+            OpenBCISample.convertPacketToSample(sampleBuf).then(function(sample){
+                for(var i = 0;i < 3;i++) {
+                    assert.equal(sample.auxData[i],OpenBCISample.scaleFactorAux * i);
+                }
+            });
         });
         it('check to see if negative numbers work on channel data',function() {
             sampleBuf.write(0x81.toString(),2,1);
+            OpenBCISample.convertPacketToSample(sampleBuf).then(function(sample){
+                assert.equal(0x0A,sample.startByte);
+            });
+
             var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert(sample.channelData[0],-255 * OpenBCISample.scaleFactorChannel);
         });
         it('check to see if negative numbers work on aux data',function() {
             sampleBuf.write(0x81.toString(),27,1);
-            var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert(sample.auxData[0],-255 * OpenBCISample.scaleFactorAux);
+            OpenBCISample.convertPacketToSample(sampleBuf).then(function(sample){
+                assert(sample.auxData[0],-255 * OpenBCISample.scaleFactorAux);
+            });
         });
     });
 });

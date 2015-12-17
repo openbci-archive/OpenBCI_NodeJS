@@ -4,7 +4,7 @@
 var k = require('./OpenBCIConstants');
 var OpenBCISample = require('./OpenBCISample');
 var serialPort = require('serialport');
-var SerialPort = serialPort.SerialPort;
+//var SerialPort = serialPort.SerialPort;
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var stream = require('stream');
@@ -15,7 +15,8 @@ function OpenBCIFactory() {
 
     var _options = {
         baudrate: 115200,
-        daisy: false
+        daisy: false,
+        parser: serialPort.parsers.byteLength(33)
     };
 
     function OpenBCIBoard(portName,options,connectImmediately,callback) {
@@ -62,10 +63,10 @@ function OpenBCIFactory() {
         this.options = opts;
         this.portName = portName;
         this.serialPort = serialPort;
-        this.parsers = serialPort.parsers;
+        //this.parsers = serialPort.parsers;
         //if(connectImmediately) {
         //    process.nextTick(function() {
-        //        self.boardConnect(callback);
+        //        self.boardConnect();
         //    });
         //}
     }
@@ -78,52 +79,49 @@ function OpenBCIFactory() {
         return new Promise(function(resolve, reject) {
             self.paused = false;
             self.connected = true;
+            self.streaming = false;
+            var moneyBuf = new Buffer('$$$');
             console.log('Attempting to open serial connection to: ' + self.portName);
-            var boardSerial = new self.serialPort.SerialPort(self.portName, {
-                baudrate: self.baudrate,
-                parser: self.parsers.byteLength(33)
+            var boardSerial = new serialPort.SerialPort(self.portName, {
+                baudrate: self.options.baudRate,
+                parser: serialPort.parsers.raw
             });
             self.serial = boardSerial;
             boardSerial.on('open',function() {
                 console.log('Successful connection to board!');
-                resolve(boardSerial);
             });
-            boardSerial.on('error',function(err) {
-                console.log('Error! :(');
-                reject(err);
+
+            var temp = function(data) {
+                var sizeOfData =  data.length;
+                for(var i = 0; i < sizeOfData - 2; i++) {
+                    if(moneyBuf.equals(data.slice(i,i+3))) {
+                        console.log('Money!');
+                        return true;
+                        //resolve(boardSerial);
+                    }
+                }
+            }
+
+            boardSerial.on('data', function(data) {
+                //var sizeOfData =  data.length;
+                //console.log('Size of data: ' + sizeOfData.toString());
+                //console.log(data);
+
+                if(self.streaming === false) {
+                    if(temp(data)) {
+                        console.log('og data fired');
+                        boardSerial.removeListener('data',temp);
+                        boardSerial.flush(function() {
+                            resolve(boardSerial);
+                        });
+                    }
+                }
+
             });
-        }).then(function(boardSerial) {
-            console.log('soft reset');
-            return writeAndDrain(boardSerial, k.OBCIMiscSoftReset);
+            self.serial = boardSerial;
         }).catch(function(err) {
-            return Promise.reject(err);
+            return Promise.reject('Error [boardConnect]' + err);
         });
-
-
-        //var promise = new Promise(function(resolve, reject) {
-        //    boardSerial.on('open',resolve);
-        //    boardSerial.on('close', reject);
-        //});
-        //
-        //boardSerial.on('data',onData).on('error',onErr);
-        //return promise;
-        //return new Promise(function(resolve,reject) {
-        //
-        //
-        //    boardSerial.on('open', function() {
-        //        console.log('open');
-        //        self.connected = true;
-        //    });
-        //    boardSerial.on('close', function() {
-        //        self.connected = false;
-        //        self.emit('disconnected');
-        //        console.log('serial connection closed');
-        //    });
-        //
-        //
-        //    resolve(boardSerial);
-        //
-        //});
     };
 
 
@@ -143,26 +141,35 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.streamStart = function() {
         var self = this;
-        return new Promise(function(resolve,reject) {
+        if(self.streaming === false) {
+            self.streaming = true;
+            console.log('telling board to start streaming');
+            writeAndDrain(self.serial, k.OBCIStreamStart);
+        }
+        return new Promise(function(resolve) {
+            //self.serial.removeAllListners(['data']);
+            //console.log(serialPort.parsers.byteLength(33) === self.serial.parser);
             self.serial.on('data', function(data) {
+                console.log('new era data recieved: ' + data);
                 resolve(data);
             });
             self.serial.on('close',function() {
                 console.log("Connection closed");
             });
-            resolve();
-        }).then(function(data) {
-            if((self.connected === true) && (self.streaming === false)) {
-                writeAndDrain(self.serial, k.OBCIStreamStart);
-            }
-            return Promise.resolve(data);
+            self.serial.on('error',function(err) {
+                console.log('Error! :(' + err);
+            });
+            //resolve();
         }).then(OpenBCISample.convertPacketToSample).then(function(sample) {
             console.log('Got a packet!');
             return Promise.resolve(sample);
+        },function(error) {
+            console.log('Whoops... ' + error);
+            return Promise.resolve();
         }).catch(function(err) {
             self.badPackets++;
             console.log('Dropped a packet :( -> Total Packets Dropped: ' + self.badPackets);
-            return Promise.reject(err);
+            return Promise.resolve(err);
         });
     };
 
@@ -239,9 +246,14 @@ function writeAndDrain(boardSerial,data) {
     return new Promise(function(resolve,reject) {
         boardSerial.write(data,function(error,results) {
             if(results) {
-                console.log('Sent msg to board');
-                resolve(boardSerial.drain());
+                //console.log('Sent msg to board');
+                boardSerial.drain(function() {
+                    //console.log('boardSerial in writeAndDrain: ');
+                    //console.log(JSON.stringify(boardSerial));
+                    resolve(boardSerial);
+                });
             } else {
+                console.log('Error [writeAndDrain]: ' + error);
                 reject(error);
             }
         })
