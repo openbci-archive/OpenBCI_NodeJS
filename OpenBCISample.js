@@ -38,6 +38,9 @@ module.exports = {
     scaleFactorChannel: SCALE_FACTOR_CHANNEL,
     convertPacketToSample: function (dataBuf) {
         return new Promise(function(resolve,reject) {
+            if(dataBuf === undefined || dataBuf === null) {
+                reject('data is undefined');
+            }
             var numberOfBytes = dataBuf.byteLength;
             var scaleData = true;
 

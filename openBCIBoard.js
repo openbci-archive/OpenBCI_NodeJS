@@ -86,12 +86,17 @@ function OpenBCIFactory() {
             self.serial = boardSerial;
             boardSerial.on('open',function() {
                 console.log('Successful connection to board!');
-                return resolve(boardSerial);
+                resolve(boardSerial);
             });
             boardSerial.on('error',function(err) {
                 console.log('Error! :(');
-                return reject(err);
+                reject(err);
             });
+        }).then(function(boardSerial) {
+            console.log('soft reset');
+            return writeAndDrain(boardSerial, k.OBCIMiscSoftReset);
+        }).catch(function(err) {
+            return Promise.reject(err);
         });
 
 
@@ -138,32 +143,25 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.streamStart = function() {
         var self = this;
-        var promiseBoardStream =  new Promise(function(resolve,reject) {
-            if(self.connected === false) { reject(Error("Must call boardConnect first to connect device")); }
-            if(self.streaming === true) { reject(Error("Already streaming!")); }
-
-            writeAndDrain(self.serial, k.OBCIStreamStart, function() {
-                self.streaming = true;
-                resolve(self.serial);
+        return new Promise(function(resolve,reject) {
+            self.serial.on('data', function(data) {
+                resolve(data);
             });
-        });
-        promiseBoardStream.then(function(boardSerial) {
-            return new Promise(function(resolve,reject) {
-                boardSerial.on('data', function(data) {
-                    resolve(data);
-                });
-                boardSerial.on('close',function() {
-                    reject('Connectiong closed');
-                });
+            self.serial.on('close',function() {
+                console.log("Connection closed");
             });
-        }).then(OpenBCISample.convertPacketToSample()).then(function(response) {
+            resolve();
+        }).then(function(data) {
+            if((self.connected === true) && (self.streaming === false)) {
+                writeAndDrain(self.serial, k.OBCIStreamStart);
+            }
+            return Promise.resolve(data);
+        }).then(OpenBCISample.convertPacketToSample).then(function(sample) {
             console.log('Got a packet!');
-            return Promise.resolve(response);
-        }, function(err) {
+            return Promise.resolve(sample);
+        }).catch(function(err) {
             self.badPackets++;
             console.log('Dropped a packet :( -> Total Packets Dropped: ' + self.badPackets);
-            return Promise.reject(err);
-        }).catch(function(err) {
             return Promise.reject(err);
         });
     };

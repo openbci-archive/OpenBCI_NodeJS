@@ -5,14 +5,12 @@ var serialPortName = "/dev/tty.usbserial-DN0095GD";
 
 var bciBoard = new board.OpenBCIBoard(serialPortName);
 
-bciBoard.on('sample', function(sample){
-    console.log('Sample: '+ sample.sampleNumber);
-});
-
 setTimeout(function() {
-    bciBoard.boardConnect().then(bciBoard.streamStart()).then(function(sample) {
+    bciBoard.boardConnect().then(function(boardSerial) {
+        return bciBoard.streamStart(boardSerial);
+    }).then(function(sample) {
         console.log('Sample: ' + JSON.stringify(sample));
-    }, function(err) {
+    }).catch(function(err) {
         console.log(err);
     });
 },1000);
