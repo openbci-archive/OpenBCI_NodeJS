@@ -5,20 +5,30 @@ var bciBoard = new board.OpenBCIBoard();
 
 bciBoard.autoFindOpenBCIBoard(function(portName) {
     if(portName) {
-        bciBoard.boardConnect(portName).then(function() {
-                console.log('Waiting for 1 second before sending start stream command!');
-                setTimeout(function(){
-                    console.log("Starting stream");
-                    return bciBoard.streamStart().then(function(sample) {
-                        console.log('Sample: ' + JSON.stringify(sample));
-                    });
-                },1000);
-            })
-            .catch( function(err) {
-                console.log('Error [Outside]: ' + err);
-            });
+        bciBoard.boardConnect(portName).then(function(boardSerial) {
+            console.log('Connected...');
+            
+
+        }).catch(function(err) {
+            console.log('Error [setup]: ' + err);
+        });
+
+
+        //bciBoard.boardConnect(portName).then(function(boardSerial) {
+        //        console.log('Waiting for 1 second before sending start stream command!');
+        //        setTimeout(function(){
+        //            console.log("Starting stream");
+        //            return bciBoard.streamStart().then(function(sample) {
+        //                console.log('Sample: ' + JSON.stringify(sample));
+        //            });
+        //        },1000);
+        //    })
+        //    .catch( function(err) {
+        //        console.log('Error [Outside]: ' + err);
+        //    });
     } else {
         /** Display list of ports*/
+
     }
 });
 

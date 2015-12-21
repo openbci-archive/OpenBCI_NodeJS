@@ -13,6 +13,8 @@ var stream = require('stream');
 function OpenBCIFactory() {
     var factory = this;
 
+
+
     var _options = {
         baudrate: 115200,
         daisy: false,
@@ -22,6 +24,8 @@ function OpenBCIFactory() {
     function OpenBCIBoard(portName,options,connectImmediately) {
         var self = this;
         var args = Array.prototype.slice.call(arguments);
+
+
 
         options = (typeof options !== 'function') && options || {};
 
@@ -38,6 +42,19 @@ function OpenBCIFactory() {
         self.badPackets = 0;
         self.options = opts;
         self.portName = portName;
+        self.moneyBuf = new Buffer('$$$');
+        self.lookingForMoney = true;
+
+        if(connectImmediately) {
+            /** Step 1:  Instaniate serialport */
+
+            /** Step 2:  Wait for 'open' event on serialport */
+
+            /** Step 3:  Send a soft reset */
+
+            /** Step 4:  Wait for a '$$$' on buffer */
+
+        }
 
     }
 
@@ -85,60 +102,162 @@ function OpenBCIFactory() {
 
     OpenBCIBoard.prototype.boardConnect = function(portName) {
         var self = this;
-        return new Promise(function(resolve, reject) {
-            //console.log('inside the promise, board is: ' + board);
-            //self.paused = false;
-            self.connected = true;
-            self.streaming = false;
-            var moneyBuf = new Buffer('$$$');
-            console.log('Attempting to open serial connection to: ' + portName + ' at baud rate: ' + self.options.baudRate);
-            var boardSerial = new serialPort.SerialPort(portName, {
-                baudrate: self.options.baudRate,
-                parser: serialPort.parsers.raw
-            });
-            self.serial = boardSerial;
-            boardSerial.on('open', function () {
-                console.log('Successful connection to board!');
-                console.log('Sending soft reset to board...');
-                boardSerial.write(k.OBCIMiscSoftReset, function(error, results) {
-                    if(results)
-                    console.log('    Success');
-                });
-            });
 
-            var temp = function (data) {
-                var sizeOfData = data.length;
-                console.log(data);
-                for (var i = 0; i < sizeOfData - 2; i++) {
-                    if (moneyBuf.equals(data.slice(i, i + 3))) {
-                        console.log('Money!');
-                        return true;
-                        //resolve(boardSerial);
-                    }
-                }
-            };
+        this.connected = true;
+        this.streaming = false;
+        //this.gotMoney = false; //indicates if '$$$' was sent over port yet
 
-            boardSerial.on('data', function (data) {
-                var sizeOfData =  data.length;
-                //console.log('Size of data: ' + sizeOfData.toString());
-                //console.log(data);
-                //console.log('data recieved: ' + data);
-                if (self.streaming === false) {
-                    if (temp(data)) {
-                        console.log('og data fired');
-                        boardSerial.removeListener('data', temp);
-                        boardSerial.flush(function () {
-                            resolve(boardSerial);
-                        });
-                    }
-                }
-
-            });
-
-            //board.serial = boardSerial;
-        }).catch(function(err) {
-            return Promise.reject('Error [boardConnect]' + err);
+        var boardSerial = new serialPort.SerialPort(portName, {
+            baudrate: self.options.baudRate
+        },function(err) {
+            return Promise.reject(err);
         });
+
+        this.serial = boardSerial;
+
+        return Promise.resolve(boardSerial).then(function(boardSerial){
+            return new Promise(function(resolve,reject) {
+                console.log('0');
+                boardSerial.on('data',function(data) {
+                    self.processBytes(data);
+                });
+                boardSerial.on('open',resolve(boardSerial));
+                boardSerial.on('close',reject('Serial Port Closed!'));
+                boardSerial.on('error',reject('Error on serialport'));
+            }).then(function(boardSerial) {
+                setTimeout(function() {
+                    console.log('Sending soft reset');
+                    return writeAndDrain(boardSerial, k.OBCIMiscSoftReset);
+                },500);
+            });
+        });
+
+        //console.log('Attempting to open serial connection to: ' + portName + ' at baud rate: ' + self.options.baudRate);
+        //return new Promise(function(resolve,reject) {
+        //    var boardSerial = new serialPort.SerialPort(portName, {
+        //        baudrate: self.options.baudRate
+        //    },function(err) {
+        //        reject(err);
+        //    });
+        //    resolve(boardSerial);
+        //}).then(function(boardSerial){
+        //    return new Promise(function(resolve,reject) {
+        //        console.log('0');
+        //        boardSerial.on('open',resolve(boardSerial));
+        //        boardSerial.on('close',reject('Serial Port Closed!'));
+        //    });
+        //});
+
+
+        //var boardSerial = new serialPort.SerialPort(portName, {
+        //    baudrate: self.options.baudRate
+        //},function(err) {
+        //    if(err) {
+        //        return Promise.reject('FUCK');
+        //    } else {
+        //        return thisCoolNewPromise(boardSerial)
+        //            .then(function(boardSerial) {
+        //                console.log('1');
+        //            return new Promise(function(resolve,reject) {
+        //                resolve(boardSerial.write(k.OBCIStreamStart));
+        //            });
+        //        }).then(function(boardSerial) {
+        //                console.log('2');
+        //                return new Promise(function(resolve,reject) {
+        //                    boardSerial.on('data',resolve);
+        //                    boardSerial.on('error',reject);
+        //                });
+        //        }).then(function(data) {
+        //                console.log('3');
+        //            console.log('Data! --> ' + data);
+        //            if(self.gotMoney) {
+        //                /** Look for dat money, you dough what na mean */
+        //            } else {
+        //                /** Send to data parser here */
+        //            }
+        //            return Promise.resolve();
+        //        }).catch(function(err) {
+        //            return Promise.reject('Error [boardConnect]' + err);
+        //        });
+        //    }
+        //});
+
+
+        //return new Promise(function(resolve, reject) {
+        //    //console.log('inside the promise, board is: ' + board);
+        //    //self.paused = false;
+        //
+        //    resolve(boardSerial);
+        //
+        //    //var moneyBuf = new Buffer('$$$');
+        //    //resolve(new serialPort.SerialPort(portName, {
+        //    //    baudrate: self.options.baudRate
+        //    //}));
+        //    //self.serial = boardSerial;
+        //    /**
+        //     * STEP 2
+        //     */
+        //
+        //
+        //
+        //    //var temp = function (data) {
+        //        var sizeOfData = data.length;
+        //        //console.log(data);
+        //        for (var i = 0; i < sizeOfData - 2; i++) {
+        //            if (moneyBuf.equals(data.slice(i, i + 3))) {
+        //                console.log('Money!');
+        //                return true;
+        //            }
+        //        }
+        //    //};
+        //    //
+        //    //boardSerial.on('data', function (data) {
+        //    //    var sizeOfData =  data.length;
+        //    //    console.log('Size of data: ' + sizeOfData.toString());
+        //    //    //console.log(data);
+        //    //    //console.log('data recieved: ' + data);
+        //    //    if (self.streaming === false) {
+        //    //        /**
+        //    //         * STEP 4
+        //    //         */
+        //    //        if (temp(data)) {
+        //    //            console.log('og data fired');
+        //    //            boardSerial.removeListener('data', temp);
+        //    //            boardSerial.flush(function () {
+        //    //                resolve(boardSerial);
+        //    //            });
+        //    //        }
+        //    //    }
+        //    //
+        //    //});
+        //
+        //    //board.serial = boardSerial;
+        //}).then(function(boardSerial) {
+        //    boardSerial.on('open',resolve(boardSerial));
+        //    boardSerial.on('close',reject('Serial Port Closed!'));
+        //}).then(function(boardSerial) {
+        //    return new Promise(function(resolve,reject) {
+        //        resolve(boardSerial.write(k.OBCIStreamStart));
+        //    });
+        //}).then(function(boardSerial) {
+        //    boardSerial.on('data',resolve);
+        //    boardSerial.on('error',reject);
+        //}).then(function(data) {
+        //    console.log('Data! --> ' + data);
+        //    if(self.gotMoney) {
+        //        /** Look for dat money, you dough what na mean */
+        //    } else {
+        //        /** Send to data parser here */
+        //    }
+        //    return Promise.resolve();
+        //}).catch(function(err) {
+        //    return Promise.reject('Error [boardConnect]' + err);
+        //});
+    };
+
+    OpenBCIBoard.prototype.boardReset = function() {
+        var self = this;
+        return writeAndDrain(self.serial, k.OBCIMiscSoftReset);
     };
 
 
@@ -156,40 +275,45 @@ function OpenBCIFactory() {
      * Call to start a stream...
      * Returns a promise, on success, with a OpenBCISample
      */
-    OpenBCIBoard.prototype.streamStart = function() {
+    OpenBCIBoard.prototype.streamStart = function(boardSerial) {
         var self = this;
-        if(self.streaming === false) {
-            console.log('Streaming: true');
-            self.streaming = true;
-            console.log('telling board to start streaming');
-            self.serial.parser = serialPort.parsers.byteLength(33);
-            writeAndDrain(self.serial, k.OBCIStreamStart);
-        }
-        return new Promise(function(resolve) {
-            //self.serial.removeAllListners(['data']);
-            //console.log(serialPort.parsers.byteLength(33) === self.serial.parser);
-            self.serial.on('data', function(data) {
-                //console.log('new era data recieved: ' + data);
-                resolve(data);
-            });
-            self.serial.on('close',function() {
-                console.log("Connection closed");
-            });
-            self.serial.on('error',function(err) {
-                console.log('Error! :(' + err);
-            });
-            //resolve();
-        }).then(OpenBCISample.convertPacketToSample).then(function(sample) {
-            console.log('Got a packet!');
-            return Promise.resolve(sample);
-        },function(error) {
-            console.log('Whoops... ' + error);
-            return Promise.resolve();
-        }).catch(function(err) {
-            self.badPackets++;
-            console.log('Dropped a packet :( -> Total Packets Dropped: ' + self.badPackets);
-            return Promise.resolve(err);
-        });
+
+        var serialComs = boardSerial || self.serial;
+
+        return writeAndDrain(serialComs, k.OBCIStreamStart);
+        //if(self.streaming === false) {
+        //    console.log('Streaming: true');
+        //    self.streaming = true;
+        //    console.log('telling board to start streaming');
+        //    self.serial.parser = serialPort.parsers.readline(0xC0,'hex');
+        //    writeAndDrain(self.serial, k.OBCIStreamStart);
+        //}
+        //return new Promise(function(resolve) {
+        //    //self.serial.removeAllListners(['data']);
+        //    //console.log(serialPort.parsers.byteLength(33) === self.serial.parser);
+        //    self.serial.on('data', function(data) {
+        //        //console.log('new era data recieved: ' + data);
+        //        console.log('Data length: ' + data.byteLength);
+        //        resolve(data);
+        //    });
+        //    self.serial.on('close',function() {
+        //        console.log("Connection closed");
+        //    });
+        //    self.serial.on('error',function(err) {
+        //        console.log('Error! :(' + err);
+        //    });
+        //    //resolve();
+        //}).then(OpenBCISample.convertPacketToSample).then(function(sample) {
+        //    console.log('Got a packet!');
+        //    return Promise.resolve(sample);
+        //},function(error) {
+        //    console.log('Whoops... ' + error);
+        //    return Promise.resolve();
+        //}).catch(function(err) {
+        //    self.badPackets++;
+        //    console.log('Dropped a packet :( -> Total Packets Dropped: ' + self.badPackets);
+        //    return Promise.resolve(err);
+        //});
     };
 
     /**
@@ -232,6 +356,22 @@ function OpenBCIFactory() {
         } else {
             return k.OBCINumberOfChannelsDefault;
         }
+    };
+
+    OpenBCIBoard.prototype.processBytes = function(data) {
+        var self = this;
+        var sizeOfData = data.byteLength;
+        if(self.lookingForMoney) { //in a reset state
+            for (var i = 0; i < sizeOfData - 2; i++) {
+                if (self.moneyBuf.equals(data.slice(i, i + 3))) {
+                    console.log('Money!');
+                    self.lookingForMoney = false;
+                }
+            }
+        } else { //ready to open the serial fire hose
+            console.log('The size of the data is: ' + sizeOfData);
+        }
+
     };
 
     OpenBCIBoard.prototype.autoFindOpenBCIBoard = function(callback) {
@@ -285,14 +425,14 @@ module.exports = new OpenBCIFactory();
  */
 function writeAndDrain(boardSerial,data) {
     return new Promise(function(resolve,reject) {
-        //console.log(boardSerial);
+        //console.log('boardSerial in [writeAndDrain]: ' + JSON.stringify(boardSerial) + ' with command ' + data);
         boardSerial.write(data,function(error,results) {
             if(results) {
                 console.log('Sent msg to board');
                 boardSerial.drain(function() {
                     //console.log('boardSerial in writeAndDrain: ');
                     //console.log(JSON.stringify(boardSerial));
-                    //resolve(boardSerial);
+                    resolve(boardSerial);
                 });
             } else {
                 console.log('Error [writeAndDrain]: ' + error);
@@ -305,3 +445,9 @@ function writeAndDrain(boardSerial,data) {
     //})
 }
 
+//function processBytes(data) {
+//    var sizeOfData = data.length;
+//    //console.log(data);
+//
+//    console.log('Data: ' + data);
+//}

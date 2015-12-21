@@ -44,9 +44,9 @@ module.exports = {
             var numberOfBytes = dataBuf.byteLength;
             var scaleData = true;
 
-            if (dataBuf[0] != BYTE_START) { reject(Error(kErrorInvalidByteStart)); }
-            if (dataBuf[32] != BYTE_STOP) { reject(Error(kErrorInvalidByteStop)); }
-            if (numberOfBytes != SAMPLE_NUMBER_OF_BYTES) { reject(Error(kErrorInvalidByteLength)); }
+            if (dataBuf[0] != BYTE_START) { resolve(); }
+            if (dataBuf[32] != BYTE_STOP) { resolve(); }
+            if (numberOfBytes != SAMPLE_NUMBER_OF_BYTES) { resolve(); }
 
             var channelData = function () {
                 var out = {};
