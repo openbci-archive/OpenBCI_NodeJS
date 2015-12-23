@@ -32,18 +32,6 @@ const kErrorInvalidByteStart = "Invalid Start Byte";
 const kErrorInvalidByteStop = "Invalid Stop Byte";
 
 module.exports = {
-    scaleFactorAux: SCALE_FACTOR_ACCEL,
-    scaleFactorChannel: SCALE_FACTOR_CHANNEL,
-    sampleMaker: function(length) {
-        var data = new Buffer(0);
-        return function (buffer) {
-            data = Buffer.concat([data, buffer]);
-            while (data.length >= length) {
-                var out = data.slice(0, length);
-                data = data.slice(length);
-            }
-        };
-    },
     convertPacketToSample: function (dataBuf) {
         return new Promise(function(resolve,reject) {
             if(dataBuf === undefined || dataBuf === null) {
@@ -86,10 +74,31 @@ module.exports = {
                 stopByte: dataBuf[numberOfBytes - 1] //byte
             });
         });
-
+    },
+    scaleFactorAux: SCALE_FACTOR_ACCEL,
+    scaleFactorChannel: SCALE_FACTOR_CHANNEL,
+    sampleMaker: function(length) {
+        var data = new Buffer(0);
+        return function (buffer) {
+            data = Buffer.concat([data, buffer]);
+            while (data.length >= length) {
+                var out = data.slice(0, length);
+                data = data.slice(length);
+            }
+        };
+    },
+    samplePacket: function () {
+        var byteSample = 0x45;
+        // test data in OpenBCI serial format V3
+        //var data = 	BYTE_START.toString() + byteSample + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataAux + chunkDataAux + chunkDataAux + BYTE_STOP;
+        var buffy = new Buffer([BYTE_START,byteSample,0,0,0,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,0,1,0,2,BYTE_STOP]);
+        //console.log(buffy);
+        //buffy.write(data,"utf-8");
+        //console.log('Byte stop is ' + BYTE_STOP);
+        //console.log(buffy);
+        return buffy;
     }
-
-}
+};
 
 function interpret24bitAsInt32(threeByteBuffer) {
     const maskForNegativeNum = (255 << (3 * 8));

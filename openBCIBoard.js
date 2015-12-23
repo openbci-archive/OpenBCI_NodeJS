@@ -48,9 +48,14 @@ function OpenBCIFactory() {
         self.lookingForMoney = true;
         self.parser = OpenBCISample.sampleMaker(33);
         self.masterBufferMaxSize = 3300;
-        self.masterBuffer = new Buffer(self.masterBufferMaxSize);
-        self.masterBufferPositionRead = 0;
-        self.masterBufferPositionWrite = 0;
+        self.masterBuffer = {
+            buffer: new Buffer(self.masterBufferMaxSize),
+            positionRead: 0,
+            positionWrite: 0,
+            packetsIn:0,
+            packetsRead:0,
+            looseBytes:0
+        };
 
         //stdin.on('keypress', function(chunk, key) {
         //    process.stdout.write('Get Chunk: ' + chunk + '\n');
@@ -177,6 +182,7 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.streamStart = function() {
         var self = this;
 
+        this.streaming = true;
         return writeAndDrain(self.serial, k.OBCIStreamStart);
         //if(self.streaming === false) {
         //    console.log('Streaming: true');
@@ -217,10 +223,8 @@ function OpenBCIFactory() {
      * Call to stop the stream
      */
     OpenBCIBoard.prototype.streamStop = function() {
-        if(this.streaming) {
-            this.streaming = false;
-            writeAndDrain(this.serial,k.OBCIStreamStop);
-        }
+        this.streaming = false;
+        writeAndDrain(this.serial,k.OBCIStreamStop);
     };
     /**
      * Call to disable the 60Hz line filter
@@ -267,22 +271,21 @@ function OpenBCIFactory() {
                 }
             }
         } else { //ready to open the serial fire hose
-            if(sizeOfData < k.OBCIPacketSize) {
-                /** Store to master buffer*/
-            } else {
+            // send input data to master buffer
+            self.bufMerger(self,data);
 
-            }
-            var slicer = self.parser(data);
-            if(slicer !== undefined && slicer !== null) {
-                if(slicer[0] === 0x0A) {
-                    OpenBCISample.convertPacketToSample(slicer).then(function(sample) {
-                        console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
-                        self.debugSample(sample);
-                        self.emit('sample', sample);
-                    }, function(err) {
-                        self.badPackets++;
-                    });
-                }
+            // parse the master buffer
+            while(self.masterBuffer.packetsRead < self.masterBuffer.packetsIn) {
+                var rawPacket = self.bufPacketStripper(self);
+                OpenBCISample.convertPacketToSample(rawPacket).then(function(sample) {
+                    console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
+                    self.debugSample(sample);
+                    self.emit('sample', sample);
+                }, function(err) {
+                    self.badPackets++;
+                    /*TODO: initiate messed up packet protocol, need to sync back up with good packet */
+                });
+
             }
         }
     };
@@ -310,7 +313,7 @@ function OpenBCIFactory() {
     };
 
     OpenBCIBoard.prototype.debugSample = function(sample) {
-        console.log('-- Sample --');
+        console.log('-- Sample --' + sample.toString());
         console.log('---- Start Byte: ' + sample.startByte.toString('hex'));
         console.log('---- Sample Number: ' + sample.sampleNumber);
         for(var i = 0; i < 8; i++) {
@@ -328,7 +331,81 @@ function OpenBCIFactory() {
         if(this.badPackets > 0) {
             console.log('Dropped a total of ' + this.badPackets + ' packets.');
         }
-    }
+    };
+
+    OpenBCIBoard.prototype.bufMerger = function(self,inputBuffer) {
+        try {
+            var inputBufferSize = inputBuffer.byteLength;
+            if (inputBufferSize > self.masterBufferMaxSize) {
+                console.log("input buffer too large...");
+            } else if (inputBufferSize < (self.masterBufferMaxSize - self.masterBuffer.positionWrite)) {
+                // debug prints
+                //     console.log('Storing input buffer of size: ' + inputBufferSize + ' to the master buffer at position: ' + self.masterBufferPositionWrite);
+                //there is room in the buffer, so fill it
+                inputBuffer.copy(self.masterBuffer.buffer,self.masterBuffer.positionWrite,0);
+                // update the write position
+                self.masterBuffer.positionWrite += inputBufferSize;
+                //store the number of packets read in
+                self.masterBuffer.packetsIn = Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
+            } else {
+                //the new buffer cannot fit all the way into the master buffer, going to need to break it up...
+                var bytesSpaceLeftInMasterBuffer = self.masterBufferMaxSize - self.masterBuffer.positionWrite;
+                // fill the rest of the buffer
+                inputBuffer.copy(self.masterBuffer.buffer,self.masterBuffer.positionWrite,0,bytesSpaceLeftInMasterBuffer);
+                // overwrite the beginning of master buffer
+                var remainingBytesToWriteToMasterBuffer = inputBufferSize - bytesSpaceLeftInMasterBuffer;
+                inputBuffer.copy(self.masterBuffer.buffer,0,bytesSpaceLeftInMasterBuffer);
+                //self.masterBuffer.write(inputBuffer.slice(bytesSpaceLeftInMasterBuffer,inputBufferSize),0,remainingBytesToWriteToMasterBuffer);
+                //move the masterBufferPositionWrite
+                self.masterBuffer.positionWrite = remainingBytesToWriteToMasterBuffer;
+                // store the number of packets read
+                self.masterBuffer.packetsIn = Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
+            }
+        }
+        catch (error) {
+            console.log('Error: ' + error);
+        }
+    };
+
+    OpenBCIBoard.prototype.bufPacketStripper = function(self) {
+        try {
+            // not at end of master buffer
+            if(k.OBCIPacketSize < self.masterBufferMaxSize - self.masterBuffer.positionRead) {
+                // extract packet
+                var rawPacket = self.masterBuffer.buffer.slice(self.masterBuffer.positionRead, self.masterBuffer.positionRead + k.OBCIPacketSize);
+                // move the read position pointer
+                self.masterBuffer.positionRead += k.OBCIPacketSize;
+                // increment packets read
+                self.masterBuffer.packetsRead++;
+                // return this raw packet
+                return rawPacket;
+            } else { //special case because we are at the end of the master buffer (must wrap)
+                // calculate the space left to read from for the partial packet
+                var part1Size = self.masterBufferMaxSize - self.masterBuffer.positionRead;
+                // make the first part of the packet
+                var part1 = self.masterBuffer.buffer.slice(self.masterBuffer.positionRead, self.masterBuffer.positionRead + part1Size);
+                // reset the read position to 0
+                self.masterBuffer.positionRead = 0;
+                // get part 2 size
+                var part2Size = k.OBCIPacketSize - part1Size;
+                // get the second part
+                var part2 = self.masterBuffer.buffer.slice(0, part2Size);
+                // merge the two parts
+                var rawPacket = Buffer.concat([part1,part2], k.OBCIPacketSize);
+                // move the read position pointer
+                self.masterBuffer.positionRead += part2Size;
+                // increment packets read
+                self.masterBuffer.packetsRead++;
+                // return this raw packet
+                return rawPacket;
+            }
+        }
+        catch (error) {
+            console.log('Error: ' + error);
+        }
+    };
 
     // TODO: boardConnectAutomatic
     // TODO: boardCheckConnection (py: check_connection)
@@ -374,24 +451,9 @@ function writeAndDrain(boardSerial,data) {
             }
         })
     });
-    //boardSerial.write(data, function() {
-    //    boardSerial.drain(callback);
-    //})
 }
 
-function bufMerger(self,buffer) {
-        var inputBufferSize = buffer.byteLength;
-        // If the buffer is less than the packet size,
-        if(inputBufferSize < k.OBCIPacketSize) {
-            if(bufferSize < (self.masterBufferMaxSize - self.masterBufferPositionWrite)) {
-                //there is room in the buffer
-                self.masterBuffer.write(buffer,self.masterBufferPositionWrite,inputBufferSize)
-                self.masterBufferPositionWrite += inputBufferSize;
-            } else {
-                //the buffer cannot fill
-            }
-        ;
-};
+
 
 //function processBytes(data) {
 //    var sizeOfData = data.length;

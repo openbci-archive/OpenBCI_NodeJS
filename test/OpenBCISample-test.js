@@ -3,6 +3,12 @@
  */
 var assert = require('assert');
 var OpenBCISample = require('../OpenBCISample');
+//var chai = require('chai')
+//    ,  expect = chai.expect
+//    ,  should = chai.should()
+//    ,  chaiModel = require('./helpers/model')
+//    ,  Assertion = chai.Assertion;
+//var chaiAsPromised = require("chai-as-promised");
 
 
 // Start byte
@@ -27,6 +33,22 @@ function sampleOpenBCIPacket() {
 }
 
 var sampleBuf = sampleOpenBCIPacket();
+
+//Assertion.addProperty('sample', function () {
+//    this.assert(
+//        this._obj instanceof OpenBCISample
+//      , 'expected #{this} to be a Sample'
+//      , 'expected #{this} to not be a Sample'
+//    );
+//});
+//
+//// language chain method
+//Assertion.addMethod('sample',function(type) {
+//    var obj = this._obj;
+//
+//    // first, out instanceof check, shortcut
+//    new Assertion(this._obj).to.be.instanceof(OpenBCISample)
+//});
 
 
 
