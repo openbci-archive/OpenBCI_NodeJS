@@ -17,8 +17,6 @@ const BYTE_START = 0x0A;
 const BYTE_STOP	= 0xC0;
 // For conversion of Volts to uVolts
 const CONVERT_VOLTS_TO_MICROVOLTS = 1000000;
-// The number of bytes per OpenBCI packet
-const SAMPLE_NUMBER_OF_BYTES = 33;
 // The sample rate in Hz
 const SAMPLE_RATE = 250.0;
 // Scale factor for aux data
@@ -36,6 +34,16 @@ const kErrorInvalidByteStop = "Invalid Stop Byte";
 module.exports = {
     scaleFactorAux: SCALE_FACTOR_ACCEL,
     scaleFactorChannel: SCALE_FACTOR_CHANNEL,
+    sampleMaker: function(length) {
+        var data = new Buffer(0);
+        return function (buffer) {
+            data = Buffer.concat([data, buffer]);
+            while (data.length >= length) {
+                var out = data.slice(0, length);
+                data = data.slice(length);
+            }
+        };
+    },
     convertPacketToSample: function (dataBuf) {
         return new Promise(function(resolve,reject) {
             if(dataBuf === undefined || dataBuf === null) {
@@ -58,7 +66,7 @@ module.exports = {
                     count++;
                 }
                 return out;
-            }
+            };
 
             var auxData = function () {
                 var out = {};
@@ -68,7 +76,7 @@ module.exports = {
                     count++;
                 }
                 return out;
-            }
+            };
 
             resolve({
                 startByte: dataBuf[0], //byte

@@ -8,12 +8,14 @@ var serialPort = require('serialport');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var stream = require('stream');
+//require('tty').setRawMode(true);
+//var stdin = process.openStdin();
+//var io = require('socket.io')(80);
+
 
 
 function OpenBCIFactory() {
     var factory = this;
-
-
 
     var _options = {
         baudrate: 115200,
@@ -44,6 +46,21 @@ function OpenBCIFactory() {
         self.portName = portName;
         self.moneyBuf = new Buffer('$$$');
         self.lookingForMoney = true;
+        self.parser = OpenBCISample.sampleMaker(33);
+        self.masterBufferMaxSize = 3300;
+        self.masterBuffer = new Buffer(self.masterBufferMaxSize);
+        self.masterBufferPositionRead = 0;
+        self.masterBufferPositionWrite = 0;
+
+        //stdin.on('keypress', function(chunk, key) {
+        //    process.stdout.write('Get Chunk: ' + chunk + '\n');
+        //    if (key && key.ctrl && key.name == 's') {
+        //        if(self.serial) {
+        //            console.log('Stopping stream');
+        //            writeAndDrain(self.serial, k.OBCIStreamStop);
+        //        }
+        //    }
+        //});
 
         if(connectImmediately) {
             /** Step 1:  Instaniate serialport */
@@ -103,8 +120,7 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.boardConnect = function(portName) {
         var self = this;
 
-        this.connected = true;
-        this.streaming = false;
+        this.connected = false;
         //this.gotMoney = false; //indicates if '$$$' was sent over port yet
 
         var boardSerial = new serialPort.SerialPort(portName, {
@@ -115,147 +131,30 @@ function OpenBCIFactory() {
 
         this.serial = boardSerial;
 
-        return Promise.resolve(boardSerial).then(function(boardSerial){
-            return new Promise(function(resolve,reject) {
-                console.log('0');
-                boardSerial.on('data',function(data) {
-                    self.processBytes(data);
-                });
-                boardSerial.on('open',resolve(boardSerial));
-                boardSerial.on('close',reject('Serial Port Closed!'));
-                boardSerial.on('error',reject('Error on serialport'));
-            }).then(function(boardSerial) {
-                setTimeout(function() {
-                    console.log('Sending soft reset');
-                    return writeAndDrain(boardSerial, k.OBCIMiscSoftReset);
-                },500);
+        return new Promise(function(resolve,reject) {
+            console.log('0');
+            boardSerial.on('data',function(data) {
+                self.processBytes(data);
             });
+            boardSerial.on('open',resolve(boardSerial));
+            boardSerial.on('close',reject('Serial Port Closed!'));
+            boardSerial.on('error',reject('Error on serialport'));
+        }).then(function(boardSerial) {
+            self.connected = true;
+            console.log('taco');
+            setTimeout(function() {
+                console.log('Sending stop command, incase the device was left streaming...');
+                writeAndDrain(boardSerial, k.OBCIStreamStop);
+                boardSerial.flush();
+            },250);
+            setTimeout(function() {
+                console.log('Sending soft reset');
+                Promise.resolve(writeAndDrain(boardSerial, k.OBCIMiscSoftReset));
+            },500);
         });
-
-        //console.log('Attempting to open serial connection to: ' + portName + ' at baud rate: ' + self.options.baudRate);
-        //return new Promise(function(resolve,reject) {
-        //    var boardSerial = new serialPort.SerialPort(portName, {
-        //        baudrate: self.options.baudRate
-        //    },function(err) {
-        //        reject(err);
-        //    });
-        //    resolve(boardSerial);
-        //}).then(function(boardSerial){
-        //    return new Promise(function(resolve,reject) {
-        //        console.log('0');
-        //        boardSerial.on('open',resolve(boardSerial));
-        //        boardSerial.on('close',reject('Serial Port Closed!'));
-        //    });
-        //});
-
-
-        //var boardSerial = new serialPort.SerialPort(portName, {
-        //    baudrate: self.options.baudRate
-        //},function(err) {
-        //    if(err) {
-        //        return Promise.reject('FUCK');
-        //    } else {
-        //        return thisCoolNewPromise(boardSerial)
-        //            .then(function(boardSerial) {
-        //                console.log('1');
-        //            return new Promise(function(resolve,reject) {
-        //                resolve(boardSerial.write(k.OBCIStreamStart));
-        //            });
-        //        }).then(function(boardSerial) {
-        //                console.log('2');
-        //                return new Promise(function(resolve,reject) {
-        //                    boardSerial.on('data',resolve);
-        //                    boardSerial.on('error',reject);
-        //                });
-        //        }).then(function(data) {
-        //                console.log('3');
-        //            console.log('Data! --> ' + data);
-        //            if(self.gotMoney) {
-        //                /** Look for dat money, you dough what na mean */
-        //            } else {
-        //                /** Send to data parser here */
-        //            }
-        //            return Promise.resolve();
-        //        }).catch(function(err) {
-        //            return Promise.reject('Error [boardConnect]' + err);
-        //        });
-        //    }
-        //});
-
-
-        //return new Promise(function(resolve, reject) {
-        //    //console.log('inside the promise, board is: ' + board);
-        //    //self.paused = false;
-        //
-        //    resolve(boardSerial);
-        //
-        //    //var moneyBuf = new Buffer('$$$');
-        //    //resolve(new serialPort.SerialPort(portName, {
-        //    //    baudrate: self.options.baudRate
-        //    //}));
-        //    //self.serial = boardSerial;
-        //    /**
-        //     * STEP 2
-        //     */
-        //
-        //
-        //
-        //    //var temp = function (data) {
-        //        var sizeOfData = data.length;
-        //        //console.log(data);
-        //        for (var i = 0; i < sizeOfData - 2; i++) {
-        //            if (moneyBuf.equals(data.slice(i, i + 3))) {
-        //                console.log('Money!');
-        //                return true;
-        //            }
-        //        }
-        //    //};
-        //    //
-        //    //boardSerial.on('data', function (data) {
-        //    //    var sizeOfData =  data.length;
-        //    //    console.log('Size of data: ' + sizeOfData.toString());
-        //    //    //console.log(data);
-        //    //    //console.log('data recieved: ' + data);
-        //    //    if (self.streaming === false) {
-        //    //        /**
-        //    //         * STEP 4
-        //    //         */
-        //    //        if (temp(data)) {
-        //    //            console.log('og data fired');
-        //    //            boardSerial.removeListener('data', temp);
-        //    //            boardSerial.flush(function () {
-        //    //                resolve(boardSerial);
-        //    //            });
-        //    //        }
-        //    //    }
-        //    //
-        //    //});
-        //
-        //    //board.serial = boardSerial;
-        //}).then(function(boardSerial) {
-        //    boardSerial.on('open',resolve(boardSerial));
-        //    boardSerial.on('close',reject('Serial Port Closed!'));
-        //}).then(function(boardSerial) {
-        //    return new Promise(function(resolve,reject) {
-        //        resolve(boardSerial.write(k.OBCIStreamStart));
-        //    });
-        //}).then(function(boardSerial) {
-        //    boardSerial.on('data',resolve);
-        //    boardSerial.on('error',reject);
-        //}).then(function(data) {
-        //    console.log('Data! --> ' + data);
-        //    if(self.gotMoney) {
-        //        /** Look for dat money, you dough what na mean */
-        //    } else {
-        //        /** Send to data parser here */
-        //    }
-        //    return Promise.resolve();
-        //}).catch(function(err) {
-        //    return Promise.reject('Error [boardConnect]' + err);
-        //});
     };
 
-    OpenBCIBoard.prototype.boardReset = function() {
+    OpenBCIBoard.prototype.boardSoftReset = function() {
         var self = this;
         return writeAndDrain(self.serial, k.OBCIMiscSoftReset);
     };
@@ -275,12 +174,10 @@ function OpenBCIFactory() {
      * Call to start a stream...
      * Returns a promise, on success, with a OpenBCISample
      */
-    OpenBCIBoard.prototype.streamStart = function(boardSerial) {
+    OpenBCIBoard.prototype.streamStart = function() {
         var self = this;
 
-        var serialComs = boardSerial || self.serial;
-
-        return writeAndDrain(serialComs, k.OBCIStreamStart);
+        return writeAndDrain(self.serial, k.OBCIStreamStart);
         //if(self.streaming === false) {
         //    console.log('Streaming: true');
         //    self.streaming = true;
@@ -366,12 +263,28 @@ function OpenBCIFactory() {
                 if (self.moneyBuf.equals(data.slice(i, i + 3))) {
                     console.log('Money!');
                     self.lookingForMoney = false;
+                    self.emit('ready');
                 }
             }
         } else { //ready to open the serial fire hose
-            console.log('The size of the data is: ' + sizeOfData);
-        }
+            if(sizeOfData < k.OBCIPacketSize) {
+                /** Store to master buffer*/
+            } else {
 
+            }
+            var slicer = self.parser(data);
+            if(slicer !== undefined && slicer !== null) {
+                if(slicer[0] === 0x0A) {
+                    OpenBCISample.convertPacketToSample(slicer).then(function(sample) {
+                        console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
+                        self.debugSample(sample);
+                        self.emit('sample', sample);
+                    }, function(err) {
+                        self.badPackets++;
+                    });
+                }
+            }
+        }
     };
 
     OpenBCIBoard.prototype.autoFindOpenBCIBoard = function(callback) {
@@ -389,12 +302,33 @@ function OpenBCIFactory() {
                 }
             });
             if(!foundPort) {
-                callback();
+                callback(null,ports);
             }
             //return false;
             //reject('unable to auto locate bci device');
         })
     };
+
+    OpenBCIBoard.prototype.debugSample = function(sample) {
+        console.log('-- Sample --');
+        console.log('---- Start Byte: ' + sample.startByte.toString('hex'));
+        console.log('---- Sample Number: ' + sample.sampleNumber);
+        for(var i = 0; i < 8; i++) {
+            console.log('---- Channel Data ' + i + ': ' + sample.channelData[i]);
+        }
+        for(var j = 0; j < 3; j++) {
+            console.log('---- Aux Data ' + j + ': ' + sample.auxData[j]);
+        }
+        console.log('---- Stop Byte: ' + sample.stopByte.toString('hex'));
+
+
+    };
+
+    OpenBCIBoard.prototype.debugSession = function() {
+        if(this.badPackets > 0) {
+            console.log('Dropped a total of ' + this.badPackets + ' packets.');
+        }
+    }
 
     // TODO: boardConnectAutomatic
     // TODO: boardCheckConnection (py: check_connection)
@@ -444,6 +378,20 @@ function writeAndDrain(boardSerial,data) {
     //    boardSerial.drain(callback);
     //})
 }
+
+function bufMerger(self,buffer) {
+        var inputBufferSize = buffer.byteLength;
+        // If the buffer is less than the packet size,
+        if(inputBufferSize < k.OBCIPacketSize) {
+            if(bufferSize < (self.masterBufferMaxSize - self.masterBufferPositionWrite)) {
+                //there is room in the buffer
+                self.masterBuffer.write(buffer,self.masterBufferPositionWrite,inputBufferSize)
+                self.masterBufferPositionWrite += inputBufferSize;
+            } else {
+                //the buffer cannot fill
+            }
+        ;
+};
 
 //function processBytes(data) {
 //    var sizeOfData = data.length;

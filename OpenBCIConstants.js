@@ -138,8 +138,12 @@ const kOBCINumberOfChannelsGanglion = 4;
 const kOBCISampleRate125 = 125;
 const kOBCISampleRate250 = 250;
 
-/** Impedance */
-const kOBCIImpedance
+/** Packet Size */
+const kOBCIPacketSize = 33;
+
+/** Notable Bytes */
+const kOBCIByteStart = 0x0A;
+const kOBCIByteStop = 0xC0;
 
 module.exports = {
     /** Turning channels off */
@@ -385,5 +389,10 @@ module.exports = {
     OBCINumberOfChannelsGanglion:kOBCINumberOfChannelsGanglion,
     /** Possible Sample Rates */
     OBCISampleRate125:kOBCISampleRate125,
-    OBCISampleRate250:kOBCISampleRate250
+    OBCISampleRate250:kOBCISampleRate250,
+    /** Packet Size */
+    OBCIPacketSize:kOBCIPacketSize,
+    /** Notable Bytes */
+    OBCIByteStart:kOBCIByteStart,
+    OBCIByteStop:kOBCIByteStop
 }
