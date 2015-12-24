@@ -22,7 +22,7 @@ const SAMPLE_RATE = 250.0;
 // Scale factor for aux data
 const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
 // Scale factor for channelData
-const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1) * CONVERT_VOLTS_TO_MICROVOLTS;
+const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1);
 
 var k = require('./OpenBCIConstants');
 
@@ -48,8 +48,11 @@ module.exports = {
 
         var channelData = function () {
             var out = {};
-            var count = 0;
+            var count = 1;
             for (var i = 2; i <= numberOfBytes - 10; i += 3) {
+                //console.log('\tDataBuf is is: ' + dataBuf.slice(i, i + 3).toString('hex'));
+                //var newNumber = self.interpret24bitAsInt32(dataBuf.slice(i, i + 3));
+                //out[count] = newNumber * SCALE_FACTOR_CHANNEL;
                 out[count] = scaleData ? self.interpret24bitAsInt32(dataBuf.slice(i, i + 3)) * SCALE_FACTOR_CHANNEL : self.interpret24bitAsInt32(dataBuf.slice(i, i + 3));
                 //console.log("in" + dataBuf.slice(i,i+3));
                 //console.log(out[count]);
@@ -103,51 +106,72 @@ module.exports = {
         };
     },
     interpret24bitAsInt32: function(threeByteBuffer) {
-        const maskForNegativeNum = (255 << (3 * 8));
-        const maskForPositiveNum = 255 | (255 << 8) | (255 << 16);
+        //const maskForNegativeNum = (255 << (3 * 8));
+        //const maskForPositiveNum = 255 | (255 << 8) | (255 << 16);
 
-        var newInt = (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
-        // 3byte int in 2s compliment
-        console.log('three ByteBuffer is: ' + threeByteBuffer.toString('hex'));
+        var prefix = 0;
 
-        if (threeByteBuffer[0] > 127) {
-            //this is the two's compliment case
-            //i.e. number is negative so we need to simply
-            //add a byte of 1's on the front
-            console.log('negative number');
-            netInt = newInt | maskForNegativeNum;
-        } else {
-            //I'm pretty sure we don't need this seeing as newInt is already 32-bits
-            // newInt = newInt & maskForPositiveNum;
+        if(threeByteBuffer[0] > 127) {
+            //console.log('\t\tNegative number');
+            prefix = 255;
         }
 
+        var newInt = (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
+
         return newInt;
+        //// 3byte int in 2s compliment
+        //console.log('\tthreeByteBuffer is: ' + threeByteBuffer.toString('hex'));
+        //
+        //if (threeByteBuffer[0] > 127) {
+        //    //this is the two's compliment case
+        //    //i.e. number is negative so we need to simply
+        //    //add a byte of 1's on the front
+        //    console.log('\t\tnegative number');
+        //    netInt = newInt | maskForNegativeNum;
+        //} else {
+        //    //I'm pretty sure we don't need this seeing as newInt is already 32-bits
+        //    newInt = newInt & maskForPositiveNum;
+        //}
+        //
+        //return newInt;
     },
     interpret16bitAsInt32: function(twoByteBuffer) {
-        const maskForNegativeNum = (255 << (3 * 8)) | (255 << (2 * 8));
-        const maskForPositiveNum = 255 | (255 << 8);
 
-        var newInt = (twoByteBuffer[0] << 8) | twoByteBuffer[1];
-        // 3byte int in 2s compliment
-        console.log('twoByteBuffer is: ' + twoByteBuffer.toString('hex'));
-        if (twoByteBuffer[0] > 127) {
-            //this is the two's compliment case
-            //i.e. number is negative so we need to simply
-            //add a byte of 1's on the front
-            console.log('Negative number');
-            netInt = newInt | maskForNegativeNum;
-        } else {
-            //I'm pretty sure we don't need this seeing as newInt is already 32-bits
-            // newInt = newInt & maskForPositiveNum;
+        var prefix = 0;
+
+        if(twoByteBuffer[0] > 127) {
+            //console.log('\t\tNegative number');
+            prefix = 65535; // 0xFFFF
         }
 
+        //var newInt = (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
+        var newInt = (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
+
         return newInt;
+        //const maskForNegativeNum = (255 << (3 * 8)) | (255 << (2 * 8));
+        //const maskForPositiveNum = 255 | (255 << 8);
+        //
+        //var newInt = (twoByteBuffer[0] << 8) | twoByteBuffer[1];
+        //// 3byte int in 2s compliment
+        //console.log('\ttwoByteBuffer is: ' + twoByteBuffer.toString('hex'));
+        //if (twoByteBuffer[0] > 127) {
+        //    //this is the two's compliment case
+        //    //i.e. number is negative so we need to simply
+        //    //add a byte of 1's on the front
+        //    console.log('\t\tNegative number');
+        //    netInt = newInt | maskForNegativeNum;
+        //} else {
+        //    //I'm pretty sure we don't need this seeing as newInt is already 32-bits
+        //    newInt = newInt & maskForPositiveNum;
+        //}
+        //
+        //return newInt;
     },
     samplePacket: function () {
         var byteSample = 0x45;
         // test data in OpenBCI serial format V3
         //var data = 	BYTE_START.toString() + byteSample + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataAux + chunkDataAux + chunkDataAux + BYTE_STOP;
-        var buffy = new Buffer([BYTE_START,byteSample,0,0,0,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,0,1,0,2,BYTE_STOP]);
+        var buffy = new Buffer([BYTE_START,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2,BYTE_STOP]);
         //console.log(buffy);
         //buffy.write(data,"utf-8");
         //console.log('Byte stop is ' + BYTE_STOP);

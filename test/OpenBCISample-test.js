@@ -69,7 +69,7 @@ describe('OpenBCISample',function() {
         });
         it('all the channels should have the same number value as their index * scaleFactor', function() {
             var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            for(var i = 0;i < 8;i++) {
+            for(var i = 1;i <= 8;i++) {
                 assert.equal(sample.channelData[i],OpenBCISample.scaleFactorChannel * i);
             }
         });
@@ -84,9 +84,9 @@ describe('OpenBCISample',function() {
             //console.log(temp);
             var taco = new Buffer([0x81]);
             taco.copy(temp,2);
-            console.log(temp);
+            //console.log(temp);
             var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert(sample.channelData[0], -255 * OpenBCISample.scaleFactorChannel);
+            assert(sample.channelData[1], -8323071 * OpenBCISample.scaleFactorChannel);
 
         });
         it('check to see if negative numbers work on aux data',function() {
@@ -94,11 +94,55 @@ describe('OpenBCISample',function() {
             //console.log(temp);
             var taco = new Buffer([0x81]);
             taco.copy(temp,26);
-            console.log(temp);
+            //console.log(temp);
             var sample = OpenBCISample.convertPacketToSample(temp);
             //OpenBCISample.debugPrettyPrint(sample);
-            assert.equal(sample.auxData[1],-255 * OpenBCISample.scaleFactorAux);
+            assert.equal(sample.auxData[0],-32512 * OpenBCISample.scaleFactorAux);
 
+        });
+    });
+    describe('#interpret24bitAsInt32', function() {
+        it('converts a small positive number', function() {
+            var buf1 = new Buffer([0x00,0x06,0x90]); // 0x000690 === 1680
+            var num = OpenBCISample.interpret24bitAsInt32(buf1);
+            assert.equal(num,1680);
+        });
+        it('converts a large positive number', function() {
+            var buf1 = new Buffer([0x02,0xC0,0x01]); // 0x02C001 === 180225
+            var num = OpenBCISample.interpret24bitAsInt32(buf1);
+            assert.equal(num,180225);
+        });
+        it('converts a small negative number', function() {
+            var buf1 = new Buffer([0xFF,0xFF,0xFF]); // 0xFFFFFF === -1
+            var num = OpenBCISample.interpret24bitAsInt32(buf1);
+            assert.equal(num,-1);
+        });
+        it('converts a large negative number', function() {
+            var buf1 = new Buffer([0x81,0xA1,0x01]); // 0x81A101 === -8281855
+            var num = OpenBCISample.interpret24bitAsInt32(buf1);
+            assert.equal(num,-8281855);
+        });
+    });
+    describe('#interpret16bitAsInt32', function() {
+        it('converts a small positive number', function() {
+            var buf1 = new Buffer([0x06,0x90]); // 0x0690 === 1680
+            var num = OpenBCISample.interpret16bitAsInt32(buf1);
+            assert.equal(num,1680);
+        });
+        it('converts a large positive number', function() {
+            var buf1 = new Buffer([0x02,0xC0]); // 0x02C0 === 704
+            var num = OpenBCISample.interpret16bitAsInt32(buf1);
+            assert.equal(num,704);
+        });
+        it('converts a small negative number', function() {
+            var buf1 = new Buffer([0xFF,0xFF]); // 0xFFFF === -1
+            var num = OpenBCISample.interpret16bitAsInt32(buf1);
+            assert.equal(num,-1);
+        });
+        it('converts a large negative number', function() {
+            var buf1 = new Buffer([0x81,0xA1]); // 0x81A1 === -32351
+            var num = OpenBCISample.interpret16bitAsInt32(buf1);
+            assert.equal(num,-32351);
         });
     });
 });

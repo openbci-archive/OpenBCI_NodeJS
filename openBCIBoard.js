@@ -122,7 +122,7 @@ function OpenBCIFactory() {
     util.inherits(OpenBCIBoard, stream.Stream);
     //OpenBCIBoard.prototype.listPorts = serialPort.listPorts;
 
-    OpenBCIBoard.prototype.boardConnect = function(portName) {
+    OpenBCIBoard.prototype.boardConnect = function(portName,callback) {
         var self = this;
 
         this.connected = false;
@@ -131,32 +131,50 @@ function OpenBCIFactory() {
         var boardSerial = new serialPort.SerialPort(portName, {
             baudrate: self.options.baudRate
         },function(err) {
-            return Promise.reject(err);
+            if(err) {
+                console.log('Serial port not conencted');
+                //return Promise.reject(err);
+                if(callback) {
+                    callback(err);
+                }
+            } else {
+                console.log('Serial port connected');
+                if(callback) {
+                    callback(null);
+                }
+                console.log('0');
+                boardSerial.on('data',function(data) {
+                    self.processBytes(data);
+                });
+                self.connected = true;/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                boardSerial.on('open',function() {
+                    console.log('Serial port open!');
+                    setTimeout(function() {
+                        console.log('Sending stop command, incase the device was left streaming...');
+                        writeAndDrain(boardSerial, k.OBCIStreamStop);
+                        boardSerial.flush();
+                    },1000);
+                    setTimeout(function() {
+                        console.log('Sending soft reset');
+                        Promise.resolve(writeAndDrain(boardSerial, k.OBCIMiscSoftReset));
+                    },1200);
+                    resolve(boardSerial);
+                });
+                boardSerial.on('close',function(){
+                    if(callback) {
+                        callback('Serial Port Closed!');
+                    }
+                });
+                boardSerial.on('error',function() {
+                    if(callback) {
+                        callback('Error on serialport');
+                    }
+                });
+            }
         });
 
-        this.serial = boardSerial;
 
-        return new Promise(function(resolve,reject) {
-            console.log('0');
-            boardSerial.on('data',function(data) {
-                self.processBytes(data);
-            });
-            boardSerial.on('open',resolve(boardSerial));
-            boardSerial.on('close',reject('Serial Port Closed!'));
-            boardSerial.on('error',reject('Error on serialport'));
-        }).then(function(boardSerial) {
-            self.connected = true;
-            console.log('taco');
-            setTimeout(function() {
-                console.log('Sending stop command, incase the device was left streaming...');
-                writeAndDrain(boardSerial, k.OBCIStreamStop);
-                boardSerial.flush();
-            },250);
-            setTimeout(function() {
-                console.log('Sending soft reset');
-                Promise.resolve(writeAndDrain(boardSerial, k.OBCIMiscSoftReset));
-            },500);
-        });
+
     };
 
     OpenBCIBoard.prototype.boardSoftReset = function() {
@@ -277,13 +295,18 @@ function OpenBCIFactory() {
             // parse the master buffer
             while(self.masterBuffer.packetsRead < self.masterBuffer.packetsIn) {
                 var rawPacket = self.bufPacketStripper(self);
-                OpenBCISample.convertPacketToSample(rawPacket).then(function(sample) {
-                    console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
-                    self.debugSample(sample);
+                var newSample = OpenBCISample.convertPacketToSample(rawPacket);
+                if(newSample) {
+                    //console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
                     self.emit('sample', sample);
-                }, function(err) {
+                } else {
                     self.badPackets++;
                     /*TODO: initiate messed up packet protocol, need to sync back up with good packet */
+                }
+                OpenBCISample.convertPacketToSample(rawPacket).then(function(sample) {
+
+                }, function(err) {
+
                 });
 
             }
