@@ -5,30 +5,20 @@ var bciBoard = new board.OpenBCIBoard();
 
 bciBoard.autoFindOpenBCIBoard(function(portName,ports) {
     if(portName) {
-        bciBoard.boardConnect(portName,function(err) {
-            if(err) {
-                console.log('board not connected');
-            } else {
-                console.log('board connected');
-                bciBoard.on('ready',function() {
-                    console.log('Ready to start streaming!');
-                    bciBoard.streamStart();
-                    bciBoard.on('sample',function(sample) {
-                        OpenBCISample.debugPrettyPrint(sample);
-                        //console.log('HOLY SHIT SAMPLE! ' + sample);
-                    });
-
+        bciBoard.boardConnect(portName).then(function(boardSerial) {
+            console.log('board connected');
+            bciBoard.on('ready',function() {
+                console.log('Ready to start streaming!');
+                bciBoard.streamStart();
+                bciBoard.on('sample',function(sample) {
+                    OpenBCISample.debugPrettyPrint(sample);
+                    //console.log('HOLY SHIT SAMPLE! ' + sample);
                 });
-            }
-        })
 
-
-
-        //    .then(function(boardSerial) {
-        //
-        //}).catch(function(err) {
-        //    console.log('Error [setup]: ' + err);
-        //});
+            });
+        }).catch(function(err) {
+            console.log('Error [setup]: ' + err);
+        });
 
     } else {
         /** Display list of ports*/
