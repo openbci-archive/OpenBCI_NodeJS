@@ -312,21 +312,6 @@ function OpenBCIFactory() {
         })
     };
 
-    OpenBCIBoard.prototype.debugSample = function(sample) {
-        console.log('-- Sample --' + sample.toString());
-        console.log('---- Start Byte: ' + sample.startByte.toString('hex'));
-        console.log('---- Sample Number: ' + sample.sampleNumber);
-        for(var i = 0; i < 8; i++) {
-            console.log('---- Channel Data ' + i + ': ' + sample.channelData[i]);
-        }
-        for(var j = 0; j < 3; j++) {
-            console.log('---- Aux Data ' + j + ': ' + sample.auxData[j]);
-        }
-        console.log('---- Stop Byte: ' + sample.stopByte.toString('hex'));
-
-
-    };
-
     OpenBCIBoard.prototype.debugSession = function() {
         if(this.badPackets > 0) {
             console.log('Dropped a total of ' + this.badPackets + ' packets.');

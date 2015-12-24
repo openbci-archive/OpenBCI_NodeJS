@@ -173,8 +173,9 @@ describe('OpenBCIBoard',function() {
             // run through three iterations of stripping packets
             for (var i = 0; i < 3; i++) {
                 var rawPacket = bciBoard.bufPacketStripper(self);
+                var sample = OpenBCISample.convertPacketToSample(rawPacket);
                 //console.log('Sample ' + i + ' has sample number ' + sample.sampleNumber);
-                OpenBCISample.convertPacketToSample(rawPacket).should.eventually.equal(i);
+                assert.equal(sample.sampleNumber,69);
             }
         });
         it('should remove a packet from the master buffer, even at wrap..', function() {
@@ -183,16 +184,18 @@ describe('OpenBCIBoard',function() {
             var buffers = [sampleData[0],sampleData[1],sampleData[2]];
             var totalLength = k.OBCIPacketSize * 3;
 
+            self.masterBuffer.positionWrite = self.masterBufferMaxSize - 10;
+            self.masterBuffer.positionRead = self.masterBuffer.positionWrite;
+
             var multiPacketBuffer = Buffer.concat(buffers,totalLength);
+
+            bciBoard.bufMerger(self,multiPacketBuffer);
 
             // run through three iterations of stripping packets
             for (var i = 0; i < 3; i++) {
                 var rawPacket = bciBoard.bufPacketStripper(self);
-                OpenBCISample.convertPacketToSample(rawPacket).then(function(sample) {
-                    assert(sample.sampleNumber,i);
-                },function(err) {
-                    assert(false);
-                });
+                var sample = OpenBCISample.convertPacketToSample(rawPacket);
+                assert(sample.sampleNumber,i);
             }
         });
     });

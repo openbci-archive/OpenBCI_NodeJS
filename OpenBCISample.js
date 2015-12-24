@@ -24,6 +24,8 @@ const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
 // Scale factor for channelData
 const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1) * CONVERT_VOLTS_TO_MICROVOLTS;
 
+var k = require('./OpenBCIConstants');
+
 /*
  Errors
  */
@@ -33,47 +35,59 @@ const kErrorInvalidByteStop = "Invalid Stop Byte";
 
 module.exports = {
     convertPacketToSample: function (dataBuf) {
-        return new Promise(function(resolve,reject) {
-            if(dataBuf === undefined || dataBuf === null) {
-                reject('data is undefined');
+        if(dataBuf === undefined || dataBuf === null) {
+            reject('data is undefined');
+        }
+        var numberOfBytes = dataBuf.byteLength;
+        var scaleData = true;
+
+        if (dataBuf[0] != BYTE_START) return;
+        if (dataBuf[32] != BYTE_STOP) return;
+        if (numberOfBytes != k.OBCIPacketSize) return;
+
+        var channelData = function () {
+            var out = {};
+            var count = 0;
+            for (var i = 2; i <= numberOfBytes - 10; i += 3) {
+                out[count] = scaleData ? interpret24bitAsInt32(dataBuf.slice(i, i + 3)) * SCALE_FACTOR_CHANNEL : interpret24bitAsInt32(dataBuf.slice(i, i + 3));
+                //console.log("in" + dataBuf.slice(i,i+3));
+                //console.log(out[count]);
+                count++;
             }
-            var numberOfBytes = dataBuf.byteLength;
-            var scaleData = true;
+            return out;
+        };
 
-            if (dataBuf[0] != BYTE_START) { resolve(); }
-            if (dataBuf[32] != BYTE_STOP) { resolve(); }
-            if (numberOfBytes != SAMPLE_NUMBER_OF_BYTES) { resolve(); }
+        var auxData = function () {
+            var out = {};
+            var count = 0;
+            for (var i = numberOfBytes - 7; i < numberOfBytes - 1; i += 2) {
+                out[count] = scaleData ? interpret16bitAsInt32(dataBuf.slice(i, i + 2)) * SCALE_FACTOR_ACCEL : interpret16bitAsInt32(dataBuf.slice(i, i + 2));
+                count++;
+            }
+            return out;
+        };
 
-            var channelData = function () {
-                var out = {};
-                var count = 0;
-                for (var i = 2; i <= numberOfBytes - 10; i += 3) {
-                    out[count] = scaleData ? interpret24bitAsInt32(dataBuf.slice(i, i + 3)) * SCALE_FACTOR_CHANNEL : interpret24bitAsInt32(dataBuf.slice(i, i + 3));
-                    //console.log("in" + dataBuf.slice(i,i+3));
-                    //console.log(out[count]);
-                    count++;
-                }
-                return out;
-            };
+        return {
+            startByte: dataBuf[0], //byte
+            sampleNumber: dataBuf[1], //byte
+            channelData: channelData(), // multiple of 3 bytes
+            auxData: auxData(), // 6 bytes
+            stopByte: dataBuf[numberOfBytes - 1] //byte
+        }
+    },
+    debugPrettyPrint: function(sample) {
+        console.log('-- Sample --');
+        console.log('---- Start Byte: ' + sample.startByte);
+        console.log('---- Sample Number: ' + sample.sampleNumber);
+        for(var i = 0; i < 8; i++) {
+            console.log('---- Channel Data ' + i + ': ' + sample.channelData[i]);
+        }
+        for(var j = 0; j < 3; j++) {
+            console.log('---- Aux Data ' + j + ': ' + sample.auxData[j]);
+        }
+        console.log('---- Stop Byte: ' + sample.stopByte);
 
-            var auxData = function () {
-                var out = {};
-                var count = 0;
-                for (var i = numberOfBytes - 7; i < numberOfBytes - 1; i += 2) {
-                    out[count] = scaleData ? interpret16bitAsInt32(dataBuf.slice(i, i + 2)) * SCALE_FACTOR_ACCEL : interpret16bitAsInt32(dataBuf.slice(i, i + 2));
-                    count++;
-                }
-                return out;
-            };
 
-            resolve({
-                startByte: dataBuf[0], //byte
-                sampleNumber: dataBuf[1], //byte
-                channelData: channelData(), // multiple of 3 bytes
-                auxData: auxData(), // 6 bytes
-                stopByte: dataBuf[numberOfBytes - 1] //byte
-            });
-        });
     },
     scaleFactorAux: SCALE_FACTOR_ACCEL,
     scaleFactorChannel: SCALE_FACTOR_CHANNEL,
@@ -106,10 +120,13 @@ function interpret24bitAsInt32(threeByteBuffer) {
 
 	var newInt = (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
 	// 3byte int in 2s compliment
- 	if (threeByteBuffer[0] > 127) {
+    console.log('three ByteBuffer is: ' + threeByteBuffer.toString('hex'));
+
+    if (threeByteBuffer[0] > 127) {
  		//this is the two's compliment case
  		//i.e. number is negative so we need to simply
  		//add a byte of 1's on the front
+        console.log('negative number');
  		netInt = newInt | maskForNegativeNum;
  	} else {
  		//I'm pretty sure we don't need this seeing as newInt is already 32-bits
@@ -128,10 +145,12 @@ function interpret16bitAsInt32(twoByteBuffer) {
 
 	var newInt = (twoByteBuffer[0] << 8) | twoByteBuffer[1];
 	// 3byte int in 2s compliment
- 	if (twoByteBuffer.readUInt8(0) > 127) {
+    console.log('twoByteBuffer is: ' + twoByteBuffer.toString('hex'));
+ 	if (twoByteBuffer[0] > 127) {
  		//this is the two's compliment case
  		//i.e. number is negative so we need to simply
  		//add a byte of 1's on the front
+        console.log('Negative number');
  		netInt = newInt | maskForNegativeNum;
  	} else {
  		//I'm pretty sure we don't need this seeing as newInt is already 32-bits
