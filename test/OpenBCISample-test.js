@@ -16,40 +16,13 @@ const BYTE_START = 0x0A;
 // Stop byte
 const BYTE_STOP	= 0xC0;
 
-// Fill a buffer with that data
-//This function not operational at the moment
-// something weird is going on when trying to write
-// '\xC0' (the stop byte) to the buffer
-//function sampleOpenBCIPacket() {
-//    var byteSample = 0x45;
-//    // test data in OpenBCI serial format V3
-//    //var data = 	BYTE_START.toString() + byteSample + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataAux + chunkDataAux + chunkDataAux + BYTE_STOP;
-//    var buffy = new Buffer([BYTE_START,byteSample,0,0,0,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,0,1,0,2,BYTE_STOP]);
-//    //console.log(buffy);
-//    //buffy.write(data,"utf-8");
-//    //console.log('Byte stop is ' + BYTE_STOP);
-//    //console.log(buffy);
-//    return buffy;
-//}
+var samplePacket = function () {
+    var byteSample = 0x45;
+    var buffy = new Buffer([0x0A,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2, 0xC0]);
+    return buffy;
+};
 
-var sampleBuf = OpenBCISample.samplePacket();
-
-//Assertion.addProperty('sample', function () {
-//    this.assert(
-//        this._obj instanceof OpenBCISample
-//      , 'expected #{this} to be a Sample'
-//      , 'expected #{this} to not be a Sample'
-//    );
-//});
-//
-//// language chain method
-//Assertion.addMethod('sample',function(type) {
-//    var obj = this._obj;
-//
-//    // first, out instanceof check, shortcut
-//    new Assertion(this._obj).to.be.instanceof(OpenBCISample)
-//});
-
+var sampleBuf = samplePacket();
 
 
 
@@ -80,7 +53,7 @@ describe('OpenBCISample',function() {
             }
         });
         it('check to see if negative numbers work on channel data',function() {
-            var temp = OpenBCISample.samplePacket();
+            var temp = samplePacket();
             //console.log(temp);
             var taco = new Buffer([0x81]);
             taco.copy(temp,2);
@@ -90,7 +63,7 @@ describe('OpenBCISample',function() {
 
         });
         it('check to see if negative numbers work on aux data',function() {
-            var temp = OpenBCISample.samplePacket();
+            var temp = samplePacket();
             //console.log(temp);
             var taco = new Buffer([0x81]);
             taco.copy(temp,26);

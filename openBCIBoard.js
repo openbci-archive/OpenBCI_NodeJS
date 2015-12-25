@@ -150,10 +150,11 @@ function OpenBCIFactory() {
                     console.log('Sending stop command, incase the device was left streaming...');
                     writeAndDrain(boardSerial, k.OBCIStreamStop);
                     boardSerial.flush();
-                },500);
+                },300);
                 setTimeout(function() {
                     console.log('Sending soft reset');
                     Promise.resolve(writeAndDrain(boardSerial, k.OBCIMiscSoftReset));
+                    console.log("Waiting for '$$$'");
                 },750);
                 resolve(boardSerial);
             });
@@ -164,15 +165,12 @@ function OpenBCIFactory() {
                 reject('Error on serialport');
             });
         });
-
-
     };
 
     OpenBCIBoard.prototype.boardSoftReset = function() {
         var self = this;
         return writeAndDrain(self.serial, k.OBCIMiscSoftReset);
     };
-
 
     OpenBCIBoard.prototype.boardDisconnect = function() {
         var self = this;
@@ -190,66 +188,17 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.streamStart = function() {
         var self = this;
-
-        this.streaming = true;
+        self.streaming = true;
         return writeAndDrain(self.serial, k.OBCIStreamStart);
-        //if(self.streaming === false) {
-        //    console.log('Streaming: true');
-        //    self.streaming = true;
-        //    console.log('telling board to start streaming');
-        //    self.serial.parser = serialPort.parsers.readline(0xC0,'hex');
-        //    writeAndDrain(self.serial, k.OBCIStreamStart);
-        //}
-        //return new Promise(function(resolve) {
-        //    //self.serial.removeAllListners(['data']);
-        //    //console.log(serialPort.parsers.byteLength(33) === self.serial.parser);
-        //    self.serial.on('data', function(data) {
-        //        //console.log('new era data recieved: ' + data);
-        //        console.log('Data length: ' + data.byteLength);
-        //        resolve(data);
-        //    });
-        //    self.serial.on('close',function() {
-        //        console.log("Connection closed");
-        //    });
-        //    self.serial.on('error',function(err) {
-        //        console.log('Error! :(' + err);
-        //    });
-        //    //resolve();
-        //}).then(OpenBCISample.convertPacketToSample).then(function(sample) {
-        //    console.log('Got a packet!');
-        //    return Promise.resolve(sample);
-        //},function(error) {
-        //    console.log('Whoops... ' + error);
-        //    return Promise.resolve();
-        //}).catch(function(err) {
-        //    self.badPackets++;
-        //    console.log('Dropped a packet :( -> Total Packets Dropped: ' + self.badPackets);
-        //    return Promise.resolve(err);
-        //});
     };
 
     /**
      * Call to stop the stream
      */
     OpenBCIBoard.prototype.streamStop = function() {
-        this.streaming = false;
+        var self = this;
+        self.streaming = false;
         writeAndDrain(this.serial,k.OBCIStreamStop);
-    };
-    /**
-     * Call to disable the 60Hz line filter
-     */
-    OpenBCIBoard.prototype.filterDisable = function() {
-        if(this.connected) {
-            writeAndDrain(this.serial, k.OBCIFilterDisable);
-        }
-    };
-    /**
-     * Call to enable the 60Hz line filter
-     */
-    OpenBCIBoard.prototype.filterEnable = function() {
-        if(this.connected) {
-            writeAndDrain(this.serial, k.OBCIFilterEnable);
-        }
     };
 
     OpenBCIBoard.prototype.sampleRate = function() {
@@ -272,6 +221,7 @@ function OpenBCIFactory() {
         var self = this;
         var sizeOfData = data.byteLength;
         if(self.lookingForMoney) { //in a reset state
+            console.log(data);
             for (var i = 0; i < sizeOfData - 2; i++) {
                 if (self.moneyBuf.equals(data.slice(i, i + 3))) {
                     console.log('Money!');
@@ -286,6 +236,7 @@ function OpenBCIFactory() {
             // parse the master buffer
             while(self.masterBuffer.packetsRead < self.masterBuffer.packetsIn) {
                 var rawPacket = self.bufPacketStripper(self);
+                console.log(rawPacket);
                 var newSample = OpenBCISample.convertPacketToSample(rawPacket);
                 if(newSample) {
                     console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
@@ -330,9 +281,9 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.bufMerger = function(self,inputBuffer) {
         try {
             var inputBufferSize = inputBuffer.byteLength;
-            if (inputBufferSize > self.masterBufferMaxSize) {
+            if (inputBufferSize > self.masterBufferMaxSize) { /** Critical error condition */
                 console.log("input buffer too large...");
-            } else if (inputBufferSize < (self.masterBufferMaxSize - self.masterBuffer.positionWrite)) {
+            } else if (inputBufferSize < (self.masterBufferMaxSize - self.masterBuffer.positionWrite)) { /**Normal*/
                 // debug prints
                 //     console.log('Storing input buffer of size: ' + inputBufferSize + ' to the master buffer at position: ' + self.masterBufferPositionWrite);
                 //there is room in the buffer, so fill it
@@ -341,8 +292,12 @@ function OpenBCIFactory() {
                 self.masterBuffer.positionWrite += inputBufferSize;
                 //store the number of packets read in
                 self.masterBuffer.packetsIn = Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                // loose bytes results when there is not an even multiple of packets in the inputBuffer
+                //    example: The first time this is ran there are only 68 bytes in the first call to this function
+                //        therefore there are only two packets (66 bytes), these extra two bytes need to be save for the next
+                //        call and be considered in the next iteration so we can keep track of how many bytes we need to read.
                 self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
-            } else {
+            } else { /** Wrap around condition*/
                 //the new buffer cannot fit all the way into the master buffer, going to need to break it up...
                 var bytesSpaceLeftInMasterBuffer = self.masterBufferMaxSize - self.masterBuffer.positionWrite;
                 // fill the rest of the buffer
@@ -355,6 +310,7 @@ function OpenBCIFactory() {
                 self.masterBuffer.positionWrite = remainingBytesToWriteToMasterBuffer;
                 // store the number of packets read
                 self.masterBuffer.packetsIn = Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                // see if statement above for exaplaintion of loose bytes
                 self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
             }
         }
@@ -433,7 +389,6 @@ function writeAndDrain(boardSerial,data) {
         //console.log('boardSerial in [writeAndDrain]: ' + JSON.stringify(boardSerial) + ' with command ' + data);
         boardSerial.write(data,function(error,results) {
             if(results) {
-                console.log('Sent msg to board');
                 boardSerial.drain(function() {
                     //console.log('boardSerial in writeAndDrain: ');
                     //console.log(JSON.stringify(boardSerial));

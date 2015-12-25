@@ -31,10 +31,17 @@ var sampleSelf = function() {
     };
 };
 
+var samplePacket = function () {
+    var byteSample = 0x45;
+    var buffy = new Buffer([0x0A,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2,0xC0]);
+    return buffy;
+};
+
+
 var sampleData = [];
 (function(){
     for(var i = 0;i < 100;i++) {
-        var sample = OpenBCISample.samplePacket();
+        var sample = samplePacket();
         sample.sampleNumber = i;
         sampleData[i] = sample;
     }

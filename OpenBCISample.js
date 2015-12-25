@@ -14,7 +14,7 @@ const ADS1299_GAIN = 24.0;
 // Start byte
 const BYTE_START = 0x0A;
 // Stop byte
-const BYTE_STOP	= 0xC0;
+const BYTE_STOP = 0xC0;
 // For conversion of Volts to uVolts
 const CONVERT_VOLTS_TO_MICROVOLTS = 1000000;
 // The sample rate in Hz
@@ -37,7 +37,7 @@ module.exports = {
     convertPacketToSample: function (dataBuf) {
         var self = this;
         if(dataBuf === undefined || dataBuf === null) {
-            reject('data is undefined');
+            return;
         }
         var numberOfBytes = dataBuf.byteLength;
         var scaleData = true;
@@ -106,9 +106,6 @@ module.exports = {
         };
     },
     interpret24bitAsInt32: function(threeByteBuffer) {
-        //const maskForNegativeNum = (255 << (3 * 8));
-        //const maskForPositiveNum = 255 | (255 << 8) | (255 << 16);
-
         var prefix = 0;
 
         if(threeByteBuffer[0] > 127) {
@@ -116,27 +113,10 @@ module.exports = {
             prefix = 255;
         }
 
-        var newInt = (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
+        return (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
 
-        return newInt;
-        //// 3byte int in 2s compliment
-        //console.log('\tthreeByteBuffer is: ' + threeByteBuffer.toString('hex'));
-        //
-        //if (threeByteBuffer[0] > 127) {
-        //    //this is the two's compliment case
-        //    //i.e. number is negative so we need to simply
-        //    //add a byte of 1's on the front
-        //    console.log('\t\tnegative number');
-        //    netInt = newInt | maskForNegativeNum;
-        //} else {
-        //    //I'm pretty sure we don't need this seeing as newInt is already 32-bits
-        //    newInt = newInt & maskForPositiveNum;
-        //}
-        //
-        //return newInt;
     },
     interpret16bitAsInt32: function(twoByteBuffer) {
-
         var prefix = 0;
 
         if(twoByteBuffer[0] > 127) {
@@ -144,57 +124,6 @@ module.exports = {
             prefix = 65535; // 0xFFFF
         }
 
-        //var newInt = (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
-        var newInt = (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
-
-        return newInt;
-        //const maskForNegativeNum = (255 << (3 * 8)) | (255 << (2 * 8));
-        //const maskForPositiveNum = 255 | (255 << 8);
-        //
-        //var newInt = (twoByteBuffer[0] << 8) | twoByteBuffer[1];
-        //// 3byte int in 2s compliment
-        //console.log('\ttwoByteBuffer is: ' + twoByteBuffer.toString('hex'));
-        //if (twoByteBuffer[0] > 127) {
-        //    //this is the two's compliment case
-        //    //i.e. number is negative so we need to simply
-        //    //add a byte of 1's on the front
-        //    console.log('\t\tNegative number');
-        //    netInt = newInt | maskForNegativeNum;
-        //} else {
-        //    //I'm pretty sure we don't need this seeing as newInt is already 32-bits
-        //    newInt = newInt & maskForPositiveNum;
-        //}
-        //
-        //return newInt;
-    },
-    samplePacket: function () {
-        var byteSample = 0x45;
-        // test data in OpenBCI serial format V3
-        //var data = 	BYTE_START.toString() + byteSample + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataChannel + chunkDataAux + chunkDataAux + chunkDataAux + BYTE_STOP;
-        var buffy = new Buffer([BYTE_START,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2,BYTE_STOP]);
-        //console.log(buffy);
-        //buffy.write(data,"utf-8");
-        //console.log('Byte stop is ' + BYTE_STOP);
-        //console.log(buffy);
-        return buffy;
+        return (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
     }
 };
-
-
-// var bufTemp = new Buffer('\x00\x00\x07');
-// console.log(interpret24bitAsInt32(bufTemp));
-
-
-
-//module.exports = {
-//    convert: function(in) {
-//        var newNum = dataConversion3000(in);
-//        return newNum;
-//    },
-//    dataConverter3000: function() {
-//        const conversionFactor = 69;
-//        return function(dataToConvert) {
-//            return dataToConvert * conversionFactor;
-//        }
-//    }
-//}
