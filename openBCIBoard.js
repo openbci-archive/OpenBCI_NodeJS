@@ -4,13 +4,10 @@
 var k = require('./OpenBCIConstants');
 var OpenBCISample = require('./OpenBCISample');
 var serialPort = require('serialport');
-//var SerialPort = serialPort.SerialPort;
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var stream = require('stream');
-//require('tty').setRawMode(true);
-//var stdin = process.openStdin();
-//var io = require('socket.io')(80);
+
 
 
 
@@ -57,16 +54,6 @@ function OpenBCIFactory() {
             looseBytes:0
         };
 
-        //stdin.on('keypress', function(chunk, key) {
-        //    process.stdout.write('Get Chunk: ' + chunk + '\n');
-        //    if (key && key.ctrl && key.name == 's') {
-        //        if(self.serial) {
-        //            console.log('Stopping stream');
-        //            writeAndDrain(self.serial, k.OBCIStreamStop);
-        //        }
-        //    }
-        //});
-
         if(connectImmediately) {
             /** Step 1:  Instaniate serialport */
 
@@ -79,45 +66,6 @@ function OpenBCIFactory() {
         }
 
     }
-
-
-
-        //callback = callback || function(err) {
-        //        if(err) {
-        //            if(self._events.error) {
-        //                self.emit('error', err);
-        //            } else {
-        //                factory.emit('error', err);
-        //            }
-        //        }
-        //    };
-        //
-        //var err;
-        //
-        //
-        //
-        //if(portName === undefined || portName === null) {
-        //    this.portName = autoFindOpenBCIBoard();
-        //    console.log(this.portName);
-        //} else {
-        //    this.portName = portName;
-        //}
-        //if(!portName) {
-        //    err = new Error('Invalid port specified: ' + portName);
-        //    callback(err);
-        //    return;
-        //}
-
-
-        //this.portName = portName;
-
-        //this.parsers = serialPort.parsers;
-        //if(connectImmediately) {
-        //    process.nextTick(function() {
-        //        self.boardConnect();
-        //    });
-        //}
-    //}
 
     util.inherits(OpenBCIBoard, stream.Stream);
     //OpenBCIBoard.prototype.listPorts = serialPort.listPorts;
