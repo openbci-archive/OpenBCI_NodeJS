@@ -1,6 +1,5 @@
 'use strict';
 
-
 var k = require('./OpenBCIConstants');
 var OpenBCISample = require('./OpenBCISample');
 var serialPort = require('serialport');
@@ -239,13 +238,15 @@ function OpenBCIFactory() {
                 // update the write position
                 self.masterBuffer.positionWrite += inputBufferSize;
                 //store the number of packets read in
-                self.masterBuffer.packetsIn = Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                self.masterBuffer.packetsIn += Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                console.log('Total packets to read: '+ self.masterBuffer.packetsIn);
                 // loose bytes results when there is not an even multiple of packets in the inputBuffer
                 //    example: The first time this is ran there are only 68 bytes in the first call to this function
                 //        therefore there are only two packets (66 bytes), these extra two bytes need to be save for the next
                 //        call and be considered in the next iteration so we can keep track of how many bytes we need to read.
                 self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
             } else { /** Wrap around condition*/
+                console.log('We reached the end of the master buffer');
                 //the new buffer cannot fit all the way into the master buffer, going to need to break it up...
                 var bytesSpaceLeftInMasterBuffer = self.masterBufferMaxSize - self.masterBuffer.positionWrite;
                 // fill the rest of the buffer
@@ -257,7 +258,8 @@ function OpenBCIFactory() {
                 //move the masterBufferPositionWrite
                 self.masterBuffer.positionWrite = remainingBytesToWriteToMasterBuffer;
                 // store the number of packets read
-                self.masterBuffer.packetsIn = Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                self.masterBuffer.packetsIn += Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
+                console.log('Total packets to read: '+ self.masterBuffer.packetsIn);
                 // see if statement above for exaplaintion of loose bytes
                 self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
             }
