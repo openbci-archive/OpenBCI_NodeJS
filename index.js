@@ -1,5 +1,7 @@
 //var openBCIBoard = ;
+var OpenBCISample = require('./OpenBCISample');
 var board = require('./OpenBCIBoard');
+var fs = require('fs');
 
 var bciBoard = new board.OpenBCIBoard();
 
@@ -11,10 +13,9 @@ bciBoard.autoFindOpenBCIBoard(function(portName,ports) {
                 console.log('Ready to start streaming!');
                 bciBoard.streamStart();
                 bciBoard.on('sample',function(sample) {
+                    //fs.write('data.txt',OpenBCISample.debugPrettyPrint(sample),'utf-8');
                     OpenBCISample.debugPrettyPrint(sample);
-                    //console.log('HOLY SHIT SAMPLE! ' + sample);
                 });
-
             });
         }).catch(function(err) {
             console.log('Error [setup]: ' + err);

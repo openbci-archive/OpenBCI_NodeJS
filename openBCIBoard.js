@@ -236,11 +236,11 @@ function OpenBCIFactory() {
             // parse the master buffer
             while(self.masterBuffer.packetsRead < self.masterBuffer.packetsIn) {
                 var rawPacket = self.bufPacketStripper(self);
-                console.log(rawPacket);
+                //console.log(rawPacket);
                 var newSample = OpenBCISample.convertPacketToSample(rawPacket);
                 if(newSample) {
-                    console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
-                    self.emit('sample', sample);
+                    //console.log('Wow, for the first time, you actually got a packet... maybe lets check it out!');
+                    self.emit('sample', newSample);
                 } else {
                     console.log('Bad Packet: ' + self.badPackets);
                     self.badPackets++;

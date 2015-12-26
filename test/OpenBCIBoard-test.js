@@ -33,7 +33,7 @@ var sampleSelf = function() {
 
 var samplePacket = function () {
     var byteSample = 0x45;
-    var buffy = new Buffer([0x0A,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2,0xC0]);
+    var buffy = new Buffer([0xA0,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2,0xC0]);
     return buffy;
 };
 
@@ -175,12 +175,16 @@ describe('OpenBCIBoard',function() {
 
             var multiPacketBuffer = Buffer.concat(buffers,totalLength);
 
+            //console.log(multiPacketBuffer);
+
+
             bciBoard.bufMerger(self,multiPacketBuffer);
 
             // run through three iterations of stripping packets
             for (var i = 0; i < 3; i++) {
                 var rawPacket = bciBoard.bufPacketStripper(self);
                 var sample = OpenBCISample.convertPacketToSample(rawPacket);
+                //console.log(OpenBCISample.debugPrettyPrint(sample));
                 //console.log('Sample ' + i + ' has sample number ' + sample.sampleNumber);
                 assert.equal(sample.sampleNumber,69);
             }

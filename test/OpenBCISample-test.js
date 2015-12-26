@@ -10,16 +10,16 @@ var chai = require('chai')
     ,  Assertion = chai.Assertion;
 //var chaiAsPromised = require("chai-as-promised");
 
-
-// Start byte
-const BYTE_START = 0x0A;
-// Stop byte
-const BYTE_STOP	= 0xC0;
+var k = require('../OpenBCIConstants');
 
 var samplePacket = function () {
     var byteSample = 0x45;
-    var buffy = new Buffer([0x0A,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2, 0xC0]);
+    var buffy = new Buffer([0xA0,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2, 0xC0]);
     return buffy;
+};
+// Actual first byte recieved from device, one time...
+var samplePacketReal = function () {
+    return new Buffer([0xA0,0,0x8F,0xF2,0x40,0x8F,0xDF,0xF4,0x90,0x2B,0xB6,0x8F,0xBF,0xBF,0x7F,0xFF,0xFF,0x7F,0xFF,0xFF,0x94,0x25,0x34,0x20,0xB6,0x7D,0,0xE0,0,0xE0,0x0F,0x70, 0xC0]);
 };
 
 var sampleBuf = samplePacket();
@@ -30,11 +30,11 @@ describe('OpenBCISample',function() {
     describe('#convertPacketToSample', function() {
         it('should have the correct start byte', function() {
             var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(0x0A,sample.startByte);
+            assert.equal(k.OBCIByteStart,sample.startByte);
         });
         it('should have the correct stop byte', function() {
             var sample = OpenBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(0xC0,sample.stopByte);
+            assert.equal(k.OBCIByteStop,sample.stopByte);
         });
         it('should have the correct sample number', function() {
             var sample = OpenBCISample.convertPacketToSample(sampleBuf);

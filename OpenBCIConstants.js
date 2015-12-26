@@ -142,8 +142,14 @@ const kOBCISampleRate250 = 250;
 const kOBCIPacketSize = 33;
 
 /** Notable Bytes */
-const kOBCIByteStart = 0x0A;
+const kOBCIByteStart = 0xA0;
 const kOBCIByteStop = 0xC0;
+
+/** Errors */
+const kErrorInvalidByteLength = "Invalid Packet Byte Length";
+const kErrorInvalidByteStart = "Invalid Start Byte";
+const kErrorInvalidByteStop = "Invalid Stop Byte";
+const kErrorUndefinedOrNullInput = "Undefined or Null Input";
 
 module.exports = {
     /** Turning channels off */
@@ -394,5 +400,10 @@ module.exports = {
     OBCIPacketSize:kOBCIPacketSize,
     /** Notable Bytes */
     OBCIByteStart:kOBCIByteStart,
-    OBCIByteStop:kOBCIByteStop
-}
+    OBCIByteStop:kOBCIByteStop,
+    /** Errors */
+    ErrorInvalidByteLength:kErrorInvalidByteLength,
+    ErrorInvalidByteStart:kErrorInvalidByteStart,
+    ErrorInvalidByteStop:kErrorInvalidByteStop,
+    ErrorUndefinedOrNullInput:kErrorUndefinedOrNullInput
+};

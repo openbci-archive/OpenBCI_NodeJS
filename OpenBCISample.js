@@ -12,13 +12,8 @@ const ADS1299_VREF = 4.5;
 //   Set by it's Arduino code.
 const ADS1299_GAIN = 24.0;
 // Start byte
-const BYTE_START = 0x0A;
-// Stop byte
-const BYTE_STOP = 0xC0;
 // For conversion of Volts to uVolts
 const CONVERT_VOLTS_TO_MICROVOLTS = 1000000;
-// The sample rate in Hz
-const SAMPLE_RATE = 250.0;
 // Scale factor for aux data
 const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
 // Scale factor for channelData
@@ -29,9 +24,7 @@ var k = require('./OpenBCIConstants');
 /*
  Errors
  */
-const kErrorInvalidByteLength = "Invalid Packet Byte Length";
-const kErrorInvalidByteStart = "Invalid Start Byte";
-const kErrorInvalidByteStop = "Invalid Stop Byte";
+
 
 module.exports = {
     convertPacketToSample: function (dataBuf) {
@@ -42,8 +35,8 @@ module.exports = {
         var numberOfBytes = dataBuf.byteLength;
         var scaleData = true;
 
-        if (dataBuf[0] != BYTE_START) return;
-        if (dataBuf[32] != BYTE_STOP) return;
+        if (dataBuf[0] != k.OBCIByteStart) return;
+        if (dataBuf[32] != k.OBCIByteStop) return;
         if (numberOfBytes != k.OBCIPacketSize) return;
 
         var channelData = function () {
@@ -80,18 +73,21 @@ module.exports = {
         }
     },
     debugPrettyPrint: function(sample) {
-        console.log('-- Sample --');
-        console.log('---- Start Byte: ' + sample.startByte);
-        console.log('---- Sample Number: ' + sample.sampleNumber);
-        for(var i = 0; i < 8; i++) {
-            console.log('---- Channel Data ' + i + ': ' + sample.channelData[i]);
-        }
-        for(var j = 0; j < 3; j++) {
-            console.log('---- Aux Data ' + j + ': ' + sample.auxData[j]);
-        }
-        console.log('---- Stop Byte: ' + sample.stopByte);
 
-
+        if(sample === null || sample === undefined) {
+            console.log('== Sample is undefined ==');
+        } else {
+            console.log('-- Sample --');
+            console.log('---- Start Byte: ' + sample.startByte);
+            console.log('---- Sample Number: ' + sample.sampleNumber);
+            for(var i = 1; i <= 8; i++) {
+                console.log('---- Channel Data ' + i + ': ' + sample.channelData[i]);
+            }
+            for(var j = 0; j < 3; j++) {
+                console.log('---- Aux Data ' + j + ': ' + sample.auxData[j]);
+            }
+            console.log('---- Stop Byte: ' + sample.stopByte);
+        }
     },
     scaleFactorAux: SCALE_FACTOR_ACCEL,
     scaleFactorChannel: SCALE_FACTOR_CHANNEL,
