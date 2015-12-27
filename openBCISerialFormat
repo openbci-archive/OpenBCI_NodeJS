@@ -1,0 +1,85 @@
+Start Byte
+0xA0
+10100000
+
+ID
+0-255
+00000001
+
+Channel 0
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Channel 1
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Channel 2
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Channel 3
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Channel 4
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Channel 5
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Channel 6
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Channel 7
+3 bytes
+Signed Int
+00000001
+00000001
+00000001
+
+Aux Data 0
+2 byte
+Signed Int
+00000001
+00000001
+
+Aux Data 1
+2 byte
+Signed Int
+00000001
+00000001
+
+Aux Data 2
+2 byte
+Signed Int
+00000001
+00000001
+
+Stop Byte
+0xC0
+10100000

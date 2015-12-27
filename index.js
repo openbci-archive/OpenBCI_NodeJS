@@ -1,29 +1,39 @@
-var serialport = require('serialport');
-var openBCIBoard = require("./openBCIBoard");
+var OpenBCISample = require('./OpenBCISample');
+var OpenBCIBoard = require('./OpenBCIBoard');
 
-var board = {
-  baudrate : 115200,
-  port: "/dev/ttyUSB0"
-};
+var ourBoard = new OpenBCIBoard.OpenBCIBoard();
 
-var ourSerial = new openBCIBoard.createBoard(board);
+ourBoard.autoFindOpenBCIBoard(function(portName,ports) {
+    if(portName) {
+        ourBoard.boardConnect(portName).then(function(boardSerial) {
+            console.log('board connected');
+            ourBoard.on('ready',function() {
+                console.log('Ready to start streaming!');
+                ourBoard.streamStart();
+                ourBoard.on('sample',function(sample) {
+                    OpenBCISample.debugPrettyPrint(sample);
+                });
+            });
+        }).catch(function(err) {
+            console.log('Error [setup]: ' + err);
+        });
 
-ourSerial.open(function(err){
-  if (err){
-    console.log(err);
-  } else {
-    console.log("open");
-    ourSerial.on("data", function(data){
-      console.log(data.toString());
-    });
-    ourSerial.write('b');
-  }
+    } else {
+        /** Display list of ports*/
+        console.log('Port not found... check ports for other ports');
+    }
 });
 
 process.on('SIGINT', function() {
     console.log("Caught interrupt signal");
-    if (ourSerial){
-        ourSerial.close();
-    }
-    process.exit();
+    ourBoard.debugSession();
+    ourBoard.boardDisconnect().then(function(success){
+        console.log('Serial port closed in the nic of time!');
+        process.exit();
+    }, function(error) {
+        console.log('No serial port to close...');
+        process.exit();
+    });
 });
+
+
