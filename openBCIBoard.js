@@ -71,7 +71,7 @@ function OpenBCIFactory() {
 
     }
 
-    // This allows use to use the emitter class so freely in the index.js method
+    // This allows us to use the emitter class freely outside of the module
     util.inherits(OpenBCIBoard, stream.Stream);
 
     /**
