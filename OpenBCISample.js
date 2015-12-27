@@ -65,11 +65,11 @@ module.exports = {
         };
 
         return {
-            startByte: dataBuf[0], //byte
-            sampleNumber: dataBuf[1], //byte
+            startByte: dataBuf[0], // byte
+            sampleNumber: dataBuf[1], // byte
             channelData: channelData(), // multiple of 3 bytes
-            auxData: auxData(), // 6 bytes
-            stopByte: dataBuf[numberOfBytes - 1] //byte
+            auxData: auxData(), // multiple of 2 bytes
+            stopByte: dataBuf[numberOfBytes - 1] // byte
         }
     },
     debugPrettyPrint: function(sample) {

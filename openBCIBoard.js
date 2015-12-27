@@ -105,7 +105,7 @@ function OpenBCIFactory() {
             boardSerial.on('open',function() {
                 console.log('Serial port open!');
                 setTimeout(function() {
-                    console.log('Sending stop command, incase the device was left streaming...');
+                    console.log('Sending stop command, in case the device was left streaming...');
                     writeAndDrain(boardSerial, k.OBCIStreamStop);
                     boardSerial.flush();
                 },300);
@@ -214,7 +214,7 @@ function OpenBCIFactory() {
     };
 
     /**
-     * Purpose: Consider the 'processBytes' mehtod to be the work horse of this
+     * Purpose: Consider the 'processBytes' method to be the work horse of this
      *              entire framework. This method gets called any time there is new
      *              data coming in on the serial port. If you are familiar with the
      *              'serialport' package, then every time data is emitted, this function
@@ -262,7 +262,7 @@ function OpenBCIFactory() {
      *              of the port of the OpenBCI board, or a list of all the ports
      *              so you can offer a drop down menu to the user to pick from!
      *
-     * Note: This method is used for convience and should be used when trying to
+     * Note: This method is used for convenience and should be used when trying to
      *           connect to a board. If you find a case (i.e. a platform (linux,
      *           windows...) that this does not work, please open an issue and
      *           we will add support!
@@ -294,7 +294,7 @@ function OpenBCIFactory() {
      * Purpose: Merge an input buffer with the master buffer. Takes into account
      *              wrapping around the master buffer if we run out of space in
      *              the master buffer. Note that if you are not reading bytes from
-     *              master buffer, you will loose them if you continue to call this
+     *              master buffer, you will lose them if you continue to call this
      *              method due to the overwrite nature of buffers
      * Author: AJ Keller (@pushtheworldllc)
      * @param self
@@ -318,7 +318,7 @@ function OpenBCIFactory() {
                 console.log('Total packets to read: '+ self.masterBuffer.packetsIn);
                 // loose bytes results when there is not an even multiple of packets in the inputBuffer
                 //    example: The first time this is ran there are only 68 bytes in the first call to this function
-                //        therefore there are only two packets (66 bytes), these extra two bytes need to be save for the next
+                //        therefore there are only two packets (66 bytes), these extra two bytes need to be saved for the next
                 //        call and be considered in the next iteration so we can keep track of how many bytes we need to read.
                 self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
             } else { /** Wrap around condition*/
@@ -336,7 +336,7 @@ function OpenBCIFactory() {
                 // store the number of packets read
                 self.masterBuffer.packetsIn += Math.floor((inputBufferSize + self.masterBuffer.looseBytes) / k.OBCIPacketSize);
                 console.log('Total packets to read: '+ self.masterBuffer.packetsIn);
-                // see if statement above for exaplaintion of loose bytes
+                // see if statement above for explanation of loose bytes
                 self.masterBuffer.looseBytes = (inputBufferSize + self.masterBuffer.looseBytes) % k.OBCIPacketSize;
             }
         }
@@ -435,7 +435,7 @@ function OpenBCIFactory() {
     };
 
     /**
-     * Purpose: Nice convience method to print some session details
+     * Purpose: Nice convenience method to print some session details
      * Author: AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.debugSession = function() {
