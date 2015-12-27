@@ -6,10 +6,10 @@ Author: AJ Keller
 Constants for interpreting the EEG data
 */
 // Reference voltage for ADC in ADS1299.
-//   Set by it's hardware.
+//   Set by its hardware.
 const ADS1299_VREF = 4.5;
 // Assumed gain setting for ADS1299.
-//   Set by it's Arduino code.
+//   Set by its Arduino code.
 const ADS1299_GAIN = 24.0;
 // Start byte
 // For conversion of Volts to uVolts
