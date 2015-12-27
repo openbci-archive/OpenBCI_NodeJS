@@ -15,10 +15,13 @@ function OpenBCIFactory() {
 
     var _options = {
         baudrate: 115200,
-        daisy: false,
-        parser: serialPort.parsers.byteLength(33)
+        daisy: false
     };
 
+    /**
+     * Purpose: The initialization method to call first, before any other method.
+     * Author: AJ Keller (@pushtheworldllc)
+     */
     function OpenBCIBoard(portName,options,connectImmediately) {
         var self = this;
         var args = Array.prototype.slice.call(arguments);
@@ -38,12 +41,13 @@ function OpenBCIFactory() {
         opts.daisy = options.daisy || options.daisy || _options.daisy;
 
         self.badPackets = 0;
+        self.bytesIn = 0;
         self.options = opts;
         self.portName = portName;
         self.moneyBuf = new Buffer('$$$');
         self.lookingForMoney = true;
-        self.parser = OpenBCISample.sampleMaker(33);
         self.masterBufferMaxSize = 3300;
+        // Buffer used to store bytes in and read packets from
         self.masterBuffer = {
             buffer: new Buffer(self.masterBufferMaxSize),
             positionRead: 0,
@@ -53,6 +57,7 @@ function OpenBCIFactory() {
             looseBytes:0
         };
 
+        //TODO: Add connect immediately functionality, suggest this to be the default...
         if(connectImmediately) {
             /** Step 1:  Instaniate serialport */
 
@@ -66,16 +71,22 @@ function OpenBCIFactory() {
 
     }
 
+    // This allows use to use the emitter class so freely in the index.js method
     util.inherits(OpenBCIBoard, stream.Stream);
-    //OpenBCIBoard.prototype.listPorts = serialPort.listPorts;
 
+    /**
+     * Purpose: The essential precursor method to be called initially to establish a
+     *              serial connection to the OpenBCI board.
+     * @param portName - a string that contains the port name of the OpenBCIBoard.
+     * @returns {Promise} if the board was able to connect. If at any time the serial port
+     *              closes or errors then this promise will be rejected, and this should be
+     *              observed and taken care of in the most front facing user methods.
+     * Author: AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.boardConnect = function(portName) {
         var self = this;
 
         this.connected = false;
-        //this.gotMoney = false; //indicates if '$$$' was sent over port yet
-
-
 
         return new Promise(function(resolve,reject) {
             var boardSerial = new serialPort.SerialPort(portName, {
@@ -86,7 +97,7 @@ function OpenBCIFactory() {
             self.serial = boardSerial;
             console.log('Serial port connected');
 
-            console.log('0');
+            //console.log('0');
             boardSerial.on('data',function(data) {
                 self.processBytes(data);
             });
@@ -114,24 +125,41 @@ function OpenBCIFactory() {
         });
     };
 
+    /**
+     * Purpose: Sends a soft reset command to the board
+     * @returns {Promise}
+     * Note: The softReset command MUST be sent to the board before you can start
+     *           streaming.
+     * Author: AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.boardSoftReset = function() {
         var self = this;
         return writeAndDrain(self.serial, k.OBCIMiscSoftReset);
     };
 
+    /**
+     * Purpose: Stops the stream and closes the serial port
+     * @returns {Promise}
+     * Author: AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.boardDisconnect = function() {
         var self = this;
-        return new Promise(function(resolve, reject) {
+        var closingPromise = new Promise(function(resolve, reject) {
             if(self.connected === false) { reject(Error('No open serial connection')); }
             self.serial.close(function() {
                 Promise.resolve('Closed the serial connection!');
             })
         });
+        return self.streamStop().then(closingPromise());
     };
 
     /**
-     * Call to start a stream...
-     * Returns a promise, on success, with a OpenBCISample
+     * Purpose: Send a stop streaming command to the board.
+     * @returns {Promise} indicating if the signal was able to be sent.
+     * Note: You must have successfully connected to an OpenBCI board using the boardConnect
+     *           method. Just because the signal was able to be sent to the board, does not
+     *           mean the board will start streaming.
+     * Author: AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.streamStart = function() {
         var self = this;
@@ -140,33 +168,65 @@ function OpenBCIFactory() {
     };
 
     /**
-     * Call to stop the stream
+     * Purpose: Send a stop streaming command to the board.
+     * @returns {Promise} indicating if the signal was able to be sent.
+     * Note: You must have successfully connected to an OpenBCI board using the boardConnect
+     *           method. Just because the signal was able to be sent to the board, does not
+     *           mean the board stopped streaming.
+     * Author: AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.streamStop = function() {
         var self = this;
         self.streaming = false;
-        writeAndDrain(this.serial,k.OBCIStreamStop);
+        return writeAndDrain(self.serial,k.OBCIStreamStop);
     };
 
+    /**
+     * Purpose: This function is used as a convenience method to determine what the current
+     *              sample rate is.
+     * @returns {Number} The sampe rate
+     * Note: This is dependent on if you configured the board correctly on setup options
+     * Author: AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.sampleRate = function() {
-        if(this.daisy) {
+        var self = this;
+        if(self.options.daisy) {
             return k.OBCISampleRate125;
         } else {
             return k.OBCISampleRate250;
         }
     };
 
+    /**
+     * Purpose: This function is used as a convenience method to determine how many
+     *              channels the current board is using.
+     * @returns {Number} A number
+     * Note: This is dependent on if you configured the board correctly on setup options
+     * Author: AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.numberOfChannels = function() {
-        if(this.daisy) {
+        var self = this;
+        if(self.options.daisy) {
             return k.OBCINumberOfChannelsDaisy;
         } else {
             return k.OBCINumberOfChannelsDefault;
         }
     };
 
+    /**
+     * Purpose: Consider the 'processBytes' mehtod to be the work horse of this
+     *              entire framework. This method gets called any time there is new
+     *              data coming in on the serial port. If you are familiar with the
+     *              'serialport' package, then every time data is emitted, this function
+     *              gets sent the input data.
+     *
+     * Author: AJ Keller (@pushtheworldllc)
+     * @param data
+     */
     OpenBCIBoard.prototype.processBytes = function(data) {
         var self = this;
         var sizeOfData = data.byteLength;
+        self.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
         if(self.lookingForMoney) { //in a reset state
             console.log(data);
             for (var i = 0; i < sizeOfData - 2; i++) {
@@ -197,6 +257,19 @@ function OpenBCIFactory() {
         }
     };
 
+    /**
+     * Purpose: Automatically find an OpenBCI board. Returns either the name
+     *              of the port of the OpenBCI board, or a list of all the ports
+     *              so you can offer a drop down menu to the user to pick from!
+     *
+     * Note: This method is used for convience and should be used when trying to
+     *           connect to a board. If you find a case (i.e. a platform (linux,
+     *           windows...) that this does not work, please open an issue and
+     *           we will add support!
+     *
+     * Author: AJ Keller (@pushtheworldllc)
+     * @param callback -> returns (portname,ports)
+     */
     OpenBCIBoard.prototype.autoFindOpenBCIBoard = function(callback) {
         var macSerialPrefix = 'usbserial-D';
         var self = this;
@@ -207,25 +280,28 @@ function OpenBCIFactory() {
                 if (port.comName.search(macSerialPrefix) > 0) {
                     self.portName = port.comName;
                     console.log('found');
-                    callback(port.comName);
+                    callback(port.comName); //return the portname
                     foundPort = true;
                 }
             });
             if(!foundPort) {
                 callback(null,ports);
             }
-            //return false;
-            //reject('unable to auto locate bci device');
         })
     };
 
-    OpenBCIBoard.prototype.debugSession = function() {
-        if(this.badPackets > 0) {
-            console.log('Dropped a total of ' + this.badPackets + ' packets.');
-        }
-    };
-
+    /**
+     * Purpose: Merge an input buffer with the master buffer. Takes into account
+     *              wrapping around the master buffer if we run out of space in
+     *              the master buffer. Note that if you are not reading bytes from
+     *              master buffer, you will loose them if you continue to call this
+     *              method due to the overwrite nature of buffers
+     * Author: AJ Keller (@pushtheworldllc)
+     * @param self
+     * @param inputBuffer
+     */
     OpenBCIBoard.prototype.bufMerger = function(self,inputBuffer) {
+        // we do a try, catch, paradigm to prevent fatal crashes while trying to read from the buffer
         try {
             var inputBufferSize = inputBuffer.byteLength;
             if (inputBufferSize > self.masterBufferMaxSize) { /** Critical error condition */
@@ -269,6 +345,12 @@ function OpenBCIFactory() {
         }
     };
 
+    /**
+     * Purpose: Strip packets from the master buffer
+     * @param self - the main OpenBCIObject
+     * @returns {Buffer} A buffer containing a packet of 33 bytes long, ready to be read.
+     * Author: AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.bufPacketStripper = function(self) {
         try {
             // not at end of master buffer
@@ -307,15 +389,68 @@ function OpenBCIFactory() {
         }
     };
 
-    // TODO: boardConnectAutomatic
+    /**
+     * Purpose: This prints the total number of packets that were not able to be read
+     * Author: AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.printPacketsBad = function() {
+        var self = this;
+        if(self.badPackets > 1) {
+            console.log('Dropped a total of ' + self.badPackets + ' packets.');
+        } else if (self.badPackets === 1) {
+            console.log('Dropped a total of 1 packet.');
+        } else {
+            console.log('No packets dropped.');
+        }
+    };
+
+    /**
+     * Purpose: This prints the total bytes in
+     * Author: AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.printBytesIn = function() {
+        var self = this;
+        if(self.bytesIn > 1) {
+            console.log('Read in ' + self.bytesIn + ' bytes.');
+        } else if (self.bytesIn === 1) {
+            console.log('Read one 1 packet in.');
+        } else {
+            console.log('Read no packets.');
+        }
+    };
+
+    /**
+     * Purpose: This prints the total number of packets that have been read
+     * Author: AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.printPacketsRead = function() {
+        var self = this;
+        if(self.masterBuffer.packetsRead > 1) {
+            console.log('Read ' + self.masterBuffer.packetsRead + ' packets.');
+        } else if (self.masterBuffer.packetsIn === 1) {
+            console.log('Read 1 packet.');
+        } else {
+            console.log('No packets read.');
+        }
+    };
+
+    /**
+     * Purpose: Nice convience method to print some session details
+     * Author: AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.debugSession = function() {
+        var self = this;
+        self.printBytesIn();
+        self.printPacketsRead();
+        self.printPacketsBad();
+    };
+
     // TODO: boardCheckConnection (py: check_connection)
     // TODO: boardReconnect (py: reconnect)
     // TODO: boardTestAuto
     // TODO: getNbAUXChannels
     // TODO: printIncomingText (py: print_incomming_text)
     // TODO: printRegisterSettings (py: print)register_settings)
-    // TODO: printBytesIn (py: print_bytes_in)
-    // TODO: printPacketsIn (py: print_packets_in)
     // TODO: warn
 
     factory.OpenBCIBoard = OpenBCIBoard;
@@ -324,15 +459,13 @@ function OpenBCIFactory() {
 
 util.inherits(OpenBCIFactory, EventEmitter);
 
-
-
 module.exports = new OpenBCIFactory();
 
 /**
  * Should be used to send data to the board
  * @param boardSerial
  * @param data
- * @param callback
+ * @returns {Promise} if signal was able to be sent
  */
 function writeAndDrain(boardSerial,data) {
     return new Promise(function(resolve,reject) {
@@ -351,12 +484,3 @@ function writeAndDrain(boardSerial,data) {
         })
     });
 }
-
-
-
-//function processBytes(data) {
-//    var sizeOfData = data.length;
-//    //console.log(data);
-//
-//    console.log('Data: ' + data);
-//}
