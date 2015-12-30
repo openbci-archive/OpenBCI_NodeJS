@@ -151,6 +151,9 @@ const kErrorInvalidByteStart = "Invalid Start Byte";
 const kErrorInvalidByteStop = "Invalid Stop Byte";
 const kErrorUndefinedOrNullInput = "Undefined or Null Input";
 
+/** Max Master Buffer Size */
+const kOBCIMasterBufferSize = kOBCIPacketSize * 100;
+
 module.exports = {
     /** Turning channels off */
     OBCIChannelOff_1:kOBCIChannelOff_1,
@@ -405,5 +408,7 @@ module.exports = {
     ErrorInvalidByteLength:kErrorInvalidByteLength,
     ErrorInvalidByteStart:kErrorInvalidByteStart,
     ErrorInvalidByteStop:kErrorInvalidByteStop,
-    ErrorUndefinedOrNullInput:kErrorUndefinedOrNullInput
+    ErrorUndefinedOrNullInput:kErrorUndefinedOrNullInput,
+    /** Max Master Buffer Size */
+    OBCIMasterBufferSize:kOBCIMasterBufferSize
 };

@@ -2,7 +2,7 @@
   "name": "openbci-sdk",
   "version": "0.1.0",
   "description": "A fully NodeJS based API for the OpenBCI board connecting to the hardware directly over serial",
-  "main": "index.js",
+  "main": "./openBCIBoard",
   "scripts": {
     "start": "node index",
     "test": "mocha test"
@@ -14,6 +14,7 @@
   "author": "AJ Keller <aj@pushtheworld.us> (www.openbci.com)",
   "license": "MIT",
   "dependencies": {
+    "gaussian": "^1.0.0",
     "serialport": "^2.0.2"
   },
   "directories": {

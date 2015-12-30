@@ -1,7 +1,7 @@
 /*
 Author: AJ Keller
 */
-
+var gaussian = require('gaussian');
 /*
 Constants for interpreting the EEG data
 */
@@ -89,18 +89,6 @@ module.exports = {
             console.log('---- Stop Byte: ' + sample.stopByte);
         }
     },
-    scaleFactorAux: SCALE_FACTOR_ACCEL,
-    scaleFactorChannel: SCALE_FACTOR_CHANNEL,
-    sampleMaker: function(length) {
-        var data = new Buffer(0);
-        return function (buffer) {
-            data = Buffer.concat([data, buffer]);
-            while (data.length >= length) {
-                var out = data.slice(0, length);
-                data = data.slice(length);
-            }
-        };
-    },
     interpret24bitAsInt32: function(threeByteBuffer) {
         var prefix = 0;
 
@@ -121,5 +109,89 @@ module.exports = {
         }
 
         return (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
+    },
+    newSample: function() {
+        return {
+            startByte: k.OBCIByteStart,
+            sampleNumber:0,
+            channelData: [],
+            auxData: [],
+            stopByte: k.OBCIByteStop
+        }
+    },
+    randomSample: function(numberOfChannels,sampleRateHz) {
+        var self = this;
+        const distribution = gaussian(0,2);
+        const sineWaveFreqHz10 = 10;
+        const sineWaveFreqHz50 = 50;
+        const sineWaveFreqHz60 = 60;
+        const pi = Math.PI;
+        const sqrt2 = Math.sqrt(2);
+        const uVolts = 1000000;
+
+        var sinePhaseRad = new Array(numberOfChannels+1); //prevent index error with '+1'
+        sinePhaseRad.fill(0);
+
+        var auxData = [0,0,0];
+
+        return function(previousSampleNumber) {
+            var newSample = self.newSample();
+
+            //console.log('New Sample: ' + JSON.stringify(newSample));
+
+            for(var i = 1; i <= numberOfChannels; i++) { //channels are 1 indexed
+                newSample.channelData[i] = distribution.ppf(Math.random())*Math.sqrt(sampleRateHz/2)/uVolts;
+
+                switch (i) {
+                    case 1: // scale first channel higher
+                        newSample.channelData[i] *= 10;
+                        break;
+                    case 2:
+                        sinePhaseRad[i] += 2 * pi * sineWaveFreqHz10 / sampleRateHz;
+                        if (sinePhaseRad[i] > 2 * pi) {
+                            sinePhaseRad[i] -= 2 * pi;
+                        }
+                        newSample.channelData[i] += (10 * sqrt2 * Math.sin(sinePhaseRad[i]))/uVolts;
+                        break;
+                    case 3:
+                        sinePhaseRad[i] += 2 * pi * sineWaveFreqHz50 / sampleRateHz;
+                        if (sinePhaseRad[i] > 2 * pi) {
+                            sinePhaseRad[i] -= 2 * pi;
+                        }
+                        newSample.channelData[i] += (50 * sqrt2 * Math.sin(sinePhaseRad[i]))/uVolts;
+                        break;
+                    case 4:
+                        sinePhaseRad[i] += 2 * pi * sineWaveFreqHz60 / sampleRateHz;
+                        if (sinePhaseRad[i] > 2 * pi) {
+                            sinePhaseRad[i] -= 2 * pi;
+                        }
+                        newSample.channelData[i] += (50 * sqrt2 * Math.sin(sinePhaseRad[i]))/uVolts;
+                        break;
+
+                }
+            }
+            newSample.sampleNumber = previousSampleNumber + 1;
+            newSample.auxData = auxData;
+
+            return newSample;
+        };
+    },
+    scaleFactorAux: SCALE_FACTOR_ACCEL,
+    scaleFactorChannel: SCALE_FACTOR_CHANNEL,
+    sampleMaker: function(length) {
+        var data = new Buffer(0);
+        return function (buffer) {
+            data = Buffer.concat([data, buffer]);
+            while (data.length >= length) {
+                var out = data.slice(0, length);
+                data = data.slice(length);
+            }
+        };
     }
 };
+
+
+/**
+ * Purpose: Create a sample object with mock data
+ * Author: AJ Keller (@pushtheworldllc)
+ */
