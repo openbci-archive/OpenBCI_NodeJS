@@ -5,10 +5,8 @@ var chai = require('chai'),
     OpenBCISample = openBCIBoard.OpenBCISample;
 
 
-//console.log(openBCIBoard.OpenBCIBoard);
-
 describe('openbci-sdk',function() {
-    describe('#boardConnect', function() {
+    xdescribe('#connect', function() {
         this.timeout(10000);
         var running = false;
         beforeEach(function(done) {
@@ -16,13 +14,13 @@ describe('openbci-sdk',function() {
 
             ourBoard.autoFindOpenBCIBoard(function(portName,ports) {
                 if(portName) {
-                    ourBoard.boardConnect(portName).then(function(boardSerial) {
+                    ourBoard.connect(portName).then(function(boardSerial) {
                         console.log('board connected');
                         ourBoard.on('ready',function() {
                             console.log('Ready to start streaming!');
                             ourBoard.streamStart();
                             ourBoard.on('sample',function(sample) {
-                                OpenBCISample.debugPrettyPrint(sample);
+                                //OpenBCISample.debugPrettyPrint(sample);
                             });
                         });
                     }).catch(function(err) {
@@ -37,7 +35,7 @@ describe('openbci-sdk',function() {
                 }
             });
             setTimeout(function() {
-                ourBoard.streamStop().then(ourBoard.boardDisconnect()).then(function(msg) {
+                ourBoard.streamStop().then(ourBoard.disconnect()).then(function(msg) {
                     running = true;
                     done();
                 }, function(err) {
@@ -50,16 +48,13 @@ describe('openbci-sdk',function() {
             expect(running).equals(true);
         });
     });
-    xdescribe('#boardSimulator', function() {
+    describe('#boardSimulator', function() {
         var running = false;
         beforeEach(function(done) {
             var ourBoard = new openBCIBoard.OpenBCIBoard();
 
-            ourBoard.boardSimulateStart().then(function() {
+            ourBoard.simulatorStart().then(function() {
                 console.log('Simulator started');
-                ourBoard.on('ready',function() {
-                    console.log('ready recieved');
-                });
                 ourBoard.on('sample',function(sample) {
                     OpenBCISample.debugPrettyPrint(sample);
                 });
@@ -67,7 +62,7 @@ describe('openbci-sdk',function() {
                 console.log('Error [simulator]: ' + err);
             });
             setTimeout(function() {
-                ourBoard.boardSimulateStop().then(function() {
+                ourBoard.simulateStop().then(function() {
                     running = true;
                     done();
                 },function(err) {

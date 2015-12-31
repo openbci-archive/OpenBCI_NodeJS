@@ -1,29 +1,17 @@
-/*
-Author: AJ Keller
-*/
 var gaussian = require('gaussian');
-/*
-Constants for interpreting the EEG data
-*/
+/** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
 //   Set by its hardware.
 const ADS1299_VREF = 4.5;
 // Assumed gain setting for ADS1299.
 //   Set by its Arduino code.
 const ADS1299_GAIN = 24.0;
-// Start byte
-// For conversion of Volts to uVolts
-const CONVERT_VOLTS_TO_MICROVOLTS = 1000000;
 // Scale factor for aux data
 const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
 // Scale factor for channelData
 const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1);
 
 var k = require('./OpenBCIConstants');
-
-/*
- Errors
- */
 
 
 module.exports = {
@@ -177,21 +165,5 @@ module.exports = {
         };
     },
     scaleFactorAux: SCALE_FACTOR_ACCEL,
-    scaleFactorChannel: SCALE_FACTOR_CHANNEL,
-    sampleMaker: function(length) {
-        var data = new Buffer(0);
-        return function (buffer) {
-            data = Buffer.concat([data, buffer]);
-            while (data.length >= length) {
-                var out = data.slice(0, length);
-                data = data.slice(length);
-            }
-        };
-    }
+    scaleFactorChannel: SCALE_FACTOR_CHANNEL
 };
-
-
-/**
- * Purpose: Create a sample object with mock data
- * Author: AJ Keller (@pushtheworldllc)
- */

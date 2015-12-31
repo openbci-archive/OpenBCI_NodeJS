@@ -27,7 +27,7 @@ var sampleBuf = samplePacket();
 
 
 describe('OpenBCISample',function() {
-    xdescribe('#convertPacketToSample', function() {
+    describe('#convertPacketToSample', function() {
         it('should have the correct start byte', function() {
             var sample = OpenBCISample.convertPacketToSample(sampleBuf);
             assert.equal(k.OBCIByteStart,sample.startByte);
@@ -74,7 +74,7 @@ describe('OpenBCISample',function() {
 
         });
     });
-    xdescribe('#interpret24bitAsInt32', function() {
+    describe('#interpret24bitAsInt32', function() {
         it('converts a small positive number', function() {
             var buf1 = new Buffer([0x00,0x06,0x90]); // 0x000690 === 1680
             var num = OpenBCISample.interpret24bitAsInt32(buf1);
@@ -96,7 +96,7 @@ describe('OpenBCISample',function() {
             assert.equal(num,-8281855);
         });
     });
-    xdescribe('#interpret16bitAsInt32', function() {
+    describe('#interpret16bitAsInt32', function() {
         it('converts a small positive number', function() {
             var buf1 = new Buffer([0x06,0x90]); // 0x0690 === 1680
             var num = OpenBCISample.interpret16bitAsInt32(buf1);

@@ -3,7 +3,7 @@
 
 #openbci-sdk
 
-An NPM module for OpenBCI
+An NPM module for OpenBCI ~ written with love by Push The World
 
 ##Working with the Module
 
@@ -18,14 +18,14 @@ var ourBoard = new OpenBCIBoard.OpenBCIBoard();
 ```
 
 'ready' event
------------
+------------
 
 You MUST wait for the 'ready' event to be emitted before streaming/talking with the board. The ready happens asynchronously 
 so installing the 'sample' listener and writing before the ready event might result in... nothing at all.
 
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.boardConnect(portName).then(function(boardSerial) {
+ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
         /** Start streaming, reading registers, what ever your heart desires  */
     });
@@ -38,13 +38,23 @@ Samples
 -------
 The power of this module is in using the sample emitter, to be provided with samples to do with as you wish.
 
-To actually get a sample you need to
-1. Start streaming
-2. Install the 'sample' event emitter
+A sample is an object that has the following properties:
+1. `startByte` (`Number`  should be `0xA0`)
+1. `sampleNumber` (a `Number` between 0-255) 
+1. `channelData` (channel data indexed starting at 1 [1,2,3,4,5,6,7,8] filled with floating point `Numbers`)
+1. `auxData` (aux data indexed starting at 0 [0,1,2] filled with floating point `Numbers`)
+1. `stopByte` (`Number` should be `0xC0`)
 
+'sample' event
+------------
+To get a sample you need to
+1. Call `.connect(serialPortName)`
+1. Install the 'ready' event emitter on resolved promise
+1. In callback for 'ready' emitter, call `streamStart()`
+1. Install the 'sample' event emitter
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.boardConnect(portName).then(function(boardSerial) {
+ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();
         ourBoard.on('sample',function(sample) {
@@ -55,12 +65,33 @@ ourBoard.boardConnect(portName).then(function(boardSerial) {
     /** Handle connection errors */
 });            
 ```
-A sample is an object that has the following properties:
-1. startByte (number)
-2. sampleNumber (number)
-3. channelData (channel data indexed starting at 1 [1,2,3,4,5,6,7,8])
-4. auxData (aux data indexed starting at 0 [0,1,2])
-5. stopByte
+Close the connection with `.streamStop()` and disconnect with `.boardDisconnect()`
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.streamStop().then(ourBoard.disconnect());
+```
+
+Simulating
+----------
+To start the simulator test samples:
+1. Call `.boardSimulateStart()`
+1. Install the 'ready' event emitter on resolved promise
+1. In callback for 'ready' emitter, call `streamStart()`
+1. Install the 'sample' event emitter
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.simulatorStart().then(function() {
+    ourBoard.on('sample',function(sample) {
+        /** Work with sample */
+    });
+}).catch(function(err) {
+    console.log('Error [simulator]: ' + err);
+});
+```
+To stop the simulator:
+```js
+ourBoard.simulatorStop()
+```
 
 Auto-finding boards
 -------------------
@@ -76,7 +107,7 @@ ourBoard.autoFindOpenBCIBoard(function(portName,ports) {
     if(portName) {
         /** 
         * Connect to the board with portName
-        * i.e. ourBoard.boardConnect(portName).....
+        * i.e. ourBoard.connect(portName).....
         */
 
     } else {
@@ -91,8 +122,8 @@ ourBoard.autoFindOpenBCIBoard(function(portName,ports) {
 Running
 -------
 1. Plug usb module into serial port
-2. Turn OpenBCI device on
-3. Type `npm start` into the terminal in the project directory
+1. Turn OpenBCI device on
+1. Type `npm start` into the terminal in the project directory
 
 Testing
 -------

@@ -129,6 +129,9 @@ const kOBCIChannelMaxNumber16   = 'C';
 const kOBCIFilterDisable ='g';
 const kOBCIFilterEnable = 'f';
 
+/** Triggers */
+const kOBCITrigger = '`';
+
 /** Possible number of channels */
 const kOBCINumberOfChannelsDaisy = 16;
 const kOBCINumberOfChannelsDefault = 8;
@@ -392,6 +395,8 @@ module.exports = {
     /** Filters */
     OBCIFilterDisable:kOBCIFilterDisable,
     OBCIFilterEnable:kOBCIFilterEnable,
+    /** Triggers */
+    OBCITrigger:kOBCITrigger,
     /** Possible number of channels */
     OBCINumberOfChannelsDaisy:kOBCINumberOfChannelsDaisy,
     OBCINumberOfChannelsDefault:kOBCINumberOfChannelsDefault,

@@ -7,9 +7,6 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var stream = require('stream');
 
-
-
-
 function OpenBCIFactory() {
     var factory = this;
 
@@ -85,7 +82,7 @@ function OpenBCIFactory() {
      *              observed and taken care of in the most front facing user methods.
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardConnect = function(portName) {
+    OpenBCIBoard.prototype.connect = function(portName) {
         var self = this;
 
         this.connected = false;
@@ -134,7 +131,7 @@ function OpenBCIFactory() {
      *           streaming.
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardSoftReset = function() {
+    OpenBCIBoard.prototype.softReset = function() {
         var self = this;
         return writeAndDrain(self.serial, k.OBCIMiscSoftReset);
     };
@@ -144,7 +141,7 @@ function OpenBCIFactory() {
      * @returns {Promise}
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardDisconnect = function() {
+    OpenBCIBoard.prototype.disconnect = function() {
         var self = this;
         var closingPromise = new Promise(function(resolve, reject) {
             if(self.connected === false) { reject(Error('No open serial connection')); }
@@ -161,7 +158,7 @@ function OpenBCIFactory() {
      * @returns {Promise}
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardSimulateStart = function() {
+    OpenBCIBoard.prototype.simulatorStart = function() {
         var self = this;
 
         return new Promise(function(resolve,reject) {
@@ -171,8 +168,6 @@ function OpenBCIFactory() {
             } else {
                 // start simulating
                 self.isSimulating = true;
-                self.emit('ready',resolve());
-                console.log('made it here');
                 // generateSample is a func that takes the previous sample number
                 var generateSample = OpenBCISample.randomSample(self.numberOfChannels(),self.sampleRate());
 
@@ -181,9 +176,10 @@ function OpenBCIFactory() {
                 self.simulator = setInterval(function() {
                     //console.log('Interval...');
                     var newSample = generateSample(oldSample.sampleNumber);
-                    console.log(JSON.stringify(newSample));
+                    //console.log(JSON.stringify(newSample));
                     self.emit('sample',newSample);
                     oldSample = newSample;
+                    resolve();
                 }, 100);
 
             }
@@ -197,7 +193,7 @@ function OpenBCIFactory() {
      * @returns {Promise}
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardSimulateStop = function() {
+    OpenBCIBoard.prototype.simulateStop = function() {
         var self = this;
 
         return new Promise(function(resolve,reject) {
@@ -218,7 +214,7 @@ function OpenBCIFactory() {
     /**
      * Purpose: Send a stop streaming command to the board.
      * @returns {Promise} indicating if the signal was able to be sent.
-     * Note: You must have successfully connected to an OpenBCI board using the boardConnect
+     * Note: You must have successfully connected to an OpenBCI board using the connect
      *           method. Just because the signal was able to be sent to the board, does not
      *           mean the board will start streaming.
      * Author: AJ Keller (@pushtheworldllc)
@@ -232,7 +228,7 @@ function OpenBCIFactory() {
     /**
      * Purpose: Send a stop streaming command to the board.
      * @returns {Promise} indicating if the signal was able to be sent.
-     * Note: You must have successfully connected to an OpenBCI board using the boardConnect
+     * Note: You must have successfully connected to an OpenBCI board using the connect
      *           method. Just because the signal was able to be sent to the board, does not
      *           mean the board stopped streaming.
      * Author: AJ Keller (@pushtheworldllc)
