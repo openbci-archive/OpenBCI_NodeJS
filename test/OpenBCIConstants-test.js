@@ -357,62 +357,88 @@ describe('OpenBCIConstants', function() {
     });
     describe('should return the right command for each channel', function(){
         it('Channel 1', function() {
-            assert.equal('1', k.commandChannelForCmd(1));
+            var expectation = '1';
+            var result = k.commandChannelForCmd(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 2', function() {
-            assert.equal('2', k.commandChannelForCmd(2));
+            var expectation = '2';
+            var result = k.commandChannelForCmd(2);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 3', function() {
-            assert.equal('3', k.commandChannelForCmd(3));
+            var expectation = '3';
+            var result = k.commandChannelForCmd(3);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 4', function() {
-            assert.equal('4', k.commandChannelForCmd(4));
+            var expectation = '4';
+            var result = k.commandChannelForCmd(4);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 5', function() {
-            assert.equal('5', k.commandChannelForCmd(5));
+            var expectation = '5';
+            var result = k.commandChannelForCmd(5);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 6', function() {
-            assert.equal('6', k.commandChannelForCmd(6));
+            var expectation = '6';
+            var result = k.commandChannelForCmd(6);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 7', function() {
-            assert.equal('7', k.commandChannelForCmd(7));
+            var expectation = '7';
+            var result = k.commandChannelForCmd(7);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 8', function() {
-            assert.equal('8', k.commandChannelForCmd(8));
+            var expectation = '8';
+            var result = k.commandChannelForCmd(8);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 9', function() {
-            assert.equal('Q', k.commandChannelForCmd(9));
+            var expectation = 'Q';
+            var result = k.commandChannelForCmd(9);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 10', function() {
-            assert.equal('W', k.commandChannelForCmd(10));
+            var expectation = 'W';
+            var result = k.commandChannelForCmd(10);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 11', function() {
-            assert.equal('E', k.commandChannelForCmd(11));
+            var expectation = 'E';
+            var result = k.commandChannelForCmd(11);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 12', function() {
-            assert.equal('R', k.commandChannelForCmd(12));
+            var expectation = 'R';
+            var result = k.commandChannelForCmd(12);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 13', function() {
-            assert.equal('T', k.commandChannelForCmd(13));
+            var expectation = 'T';
+            var result = k.commandChannelForCmd(13);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 14', function() {
-            assert.equal('Y', k.commandChannelForCmd(14));
+            var expectation = 'Y';
+            var result = k.commandChannelForCmd(14);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 15', function() {
-            assert.equal('U', k.commandChannelForCmd(15));
+            var expectation = 'U';
+            var result = k.commandChannelForCmd(15);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 16', function() {
-            assert.equal('I', k.commandChannelForCmd(16));
+            var expectation = 'I';
+            var result = k.commandChannelForCmd(16);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Invalid channel request', function() {
-            k.commandChannelForCmd(17, function(error) {
-                assert(error);
-            });
-        });
-        it('Nothing is called back when valid channel', function() {
-            k.commandChannelForCmd(1, function(error) {
-                assert(error, null);
-            });
+            var result = k.commandChannelForCmd(17);
+            return expect(result).to.be.rejected;
         });
     });
     describe('should return correct channel off command for number', function(){
@@ -501,64 +527,90 @@ describe('OpenBCIConstants', function() {
             return expect(result).to.be.rejected;
         });
     });
-    describe('should return correct channel off command for number', function(){
+    describe('should return correct channel on command for number', function(){
         it('Channel 1', function() {
-            assert.equal('!', k.commandChannelOn(1));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 2', function() {
-            assert.equal('@', k.commandChannelOn(2));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 3', function() {
-            assert.equal('#', k.commandChannelOn(3));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 4', function() {
-            assert.equal('$', k.commandChannelOn(4));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 5', function() {
-            assert.equal('%', k.commandChannelOn(5));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 6', function() {
-            assert.equal('^', k.commandChannelOn(6));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 7', function() {
-            assert.equal('&', k.commandChannelOn(7));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 8', function() {
-            assert.equal('*', k.commandChannelOn(8));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 9', function() {
-            assert.equal('Q', k.commandChannelOn(9));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 10', function() {
-            assert.equal('W', k.commandChannelOn(10));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 11', function() {
-            assert.equal('E', k.commandChannelOn(11));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 12', function() {
-            assert.equal('R', k.commandChannelOn(12));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 13', function() {
-            assert.equal('T', k.commandChannelOn(13));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 14', function() {
-            assert.equal('Y', k.commandChannelOn(14));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 15', function() {
-            assert.equal('U', k.commandChannelOn(15));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 16', function() {
-            assert.equal('I', k.commandChannelOn(16));
+            var expectation = '!';
+            var result = k.commandChannelOn(1);
+            return expect(result).to.eventually.equal(expectation);
         });
         it('Invalid channel request', function() {
-            k.commandChannelOn(17, function(error) {
-                assert(error);
-            });
-        });
-        it('Nothing is called back when valid channel', function() {
-            k.commandChannelOn(1, function(error) {
-                assert(error, null);
-            });
+            var result = k.commandChannelOn(17);
+            return expect(result).to.be.rejected;
         });
     });
     describe('Number of channels',function() {
@@ -578,6 +630,428 @@ describe('OpenBCIConstants', function() {
         });
         it('should be 250',function () {
             assert.equal(250, k.OBCISampleRate250);
+        });
+    });
+    describe('#getChannelSetter', function() {
+        //'channel 1, power on, gain 24, inputType normal, bias include, srb2 connect, srb1 dissconnect'
+        describe('channel input selection works', function() {
+            //this.timeout(5000);
+            it('channel 2', function() {
+                k.getChannelSetter(2,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('2');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('channel 5', function() {
+                k.getChannelSetter(5,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('5');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('channel 9', function() {
+                k.getChannelSetter(9,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('Q');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('channel 15', function() {
+                k.getChannelSetter(15,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('U');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid channel selection', function() {
+                k.getChannelSetter(0,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getChannelSetter('0',false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('power selection works', function() {
+            it('on', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[2].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('off', function() {
+                k.getChannelSetter(1,true,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[2].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getChannelSetter(1,'taco',24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('gain selection works', function() {
+            it('1x', function() {
+                k.getChannelSetter(1,false,1,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('2x', function() {
+                k.getChannelSetter(1,false,2,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('4x', function() {
+                k.getChannelSetter(1,false,4,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('3');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('6x', function() {
+                k.getChannelSetter(1,false,6,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('4');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('8x', function() {
+                k.getChannelSetter(1,false,8,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('5');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('12x', function() {
+                k.getChannelSetter(1,false,12,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('6');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('24x', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('7');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getChannelSetter(1,false,'24','normal',true,true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid gain setting', function() {
+                k.getChannelSetter(1,false,5,'normal',true,true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('input type', function() {
+            it('normal', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('shorted', function() {
+                k.getChannelSetter(1,false,24,'shorted',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('biasMethod', function() {
+                k.getChannelSetter(1,false,24,'biasMethod',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('2');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('mvdd', function() {
+                k.getChannelSetter(1,false,24,'mvdd',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('3');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('temp', function() {
+                k.getChannelSetter(1,false,24,'temp',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('4');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('testsig', function() {
+                k.getChannelSetter(1,false,24,'testsig',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('5');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('biasDrp', function() {
+                k.getChannelSetter(1,false,24,'biasDrp',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('6');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('biasDrn', function() {
+                k.getChannelSetter(1,false,24,'biasDrn',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('7');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid setting', function() {
+                k.getChannelSetter(1,false,24,'taco',true,true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getChannelSetter(1,false,24,1,true,true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('bias selection works', function() {
+            it('Include', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[5].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Remove', function() {
+                k.getChannelSetter(1,false,24,'normal',false,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[5].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getChannelSetter(1,false,24,'normal','taco',true,false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('SRB2 selection works', function() {
+            it('Connect', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[6].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Disconnect', function() {
+                k.getChannelSetter(1,false,24,'normal',true,false,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[6].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getChannelSetter(1,false,24,'normal',true,'taco',false).then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('SRB1 selection works', function() {
+            it('Connect', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,true).then(function(arrayOfCommands) {
+                    arrayOfCommands[7].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Disconnect', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[7].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getChannelSetter(1,false,24,'normal',true,true,'taco').then(function(arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+    });
+    describe('#getChannelSetter', function() {
+        describe('channel input selection works', function () {
+            it('channel 2', function () {
+                k.getImpedanceSetter(2, false, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('2');
+                    done();
+                }, function (err) {
+                    done(err);
+                });
+            });
+            it('channel 5', function () {
+                k.getImpedanceSetter(5, false, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('5');
+                    done();
+                }, function (err) {
+                    done(err);
+                });
+            });
+            it('channel 9', function () {
+                k.getImpedanceSetter(9, false, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('Q');
+                    done();
+                }, function (err) {
+                    done(err);
+                });
+            });
+            it('channel 15', function () {
+                k.getImpedanceSetter(15, false, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[1].should.equal('U');
+                    done();
+                }, function (err) {
+                    done(err);
+                });
+            });
+            it('Invalid channel selection', function () {
+                k.getImpedanceSetter(0, false, false).then(function (arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function (err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function () {
+                k.getImpedanceSetter('1', false, false).then(function (arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function (err) {
+                    done(err);
+                });
+            });
+        });
+        describe('P Input selection works', function() {
+            it('Test Signal Applied', function() {
+                k.getImpedanceSetter(0, true, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[2].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Test Signal Not Applied', function() {
+                k.getImpedanceSetter(0, false, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[2].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getImpedanceSetter(0, 'taco', false).then(function (arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('N Input selection works', function() {
+            it('Test Signal Applied', function() {
+                k.getImpedanceSetter(0, true, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('1');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Test Signal Not Applied', function() {
+                k.getImpedanceSetter(0, false, false).then(function (arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('0');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Invalid type', function() {
+                k.getImpedanceSetter(0, false, 'taco').then(function (arrayOfCommands) {
+                    done('Should have rejected promise');
+                }, function(err) {
+                    done(err);
+                });
+            });
+        });
+        describe('Prefix and postfix commands work', function() {
+            it('Set', function() {
+                k.getImpedanceSetter(0, true, true).then(function (arrayOfCommands) {
+                    arrayOfCommands[0].should.equal('z');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('Latch', function() {
+                k.getImpedanceSetter(0, true, true).then(function (arrayOfCommands) {
+                    arrayOfCommands[4].should.equal('Z');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
         });
     });
 });

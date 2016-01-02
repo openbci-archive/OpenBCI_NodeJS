@@ -23,7 +23,9 @@
   "devDependencies": {
     "chai": "^3.4.1",
     "chai-as-promised": "^5.2.0",
-    "mocha": "^2.3.4"
+    "mocha": "^2.3.4",
+    "sandboxed-module": "^2.0.3",
+    "sinon": "^1.17.2"
   },
   "repository": {
     "type": "git",
