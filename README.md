@@ -65,7 +65,7 @@ ourBoard.connect(portName).then(function(boardSerial) {
     /** Handle connection errors */
 });            
 ```
-Close the connection with `.streamStop()` and disconnect with `.boardDisconnect()`
+Close the connection with `.streamStop()` and disconnect with `.disconnect()`
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.streamStop().then(ourBoard.disconnect());
@@ -74,7 +74,7 @@ ourBoard.streamStop().then(ourBoard.disconnect());
 Simulating
 ----------
 To start the simulator test samples:
-1. Call `.boardSimulateStart()`
+1. Call `.simulatorStart()`
 1. Install the 'ready' event emitter on resolved promise
 1. In callback for 'ready' emitter, call `streamStart()`
 1. Install the 'sample' event emitter

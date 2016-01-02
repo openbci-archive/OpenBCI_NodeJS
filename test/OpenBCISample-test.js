@@ -5,10 +5,8 @@ var assert = require('assert');
 var OpenBCISample = require('../OpenBCISample');
 var chai = require('chai')
     ,  expect = chai.expect
-    ,  should = chai.should()
-    //,  chaiModel = require('./helpers/model')
-    ,  Assertion = chai.Assertion;
-//var chaiAsPromised = require("chai-as-promised");
+    ,  should = chai.should();
+var chaiAsPromised = require("chai-as-promised");
 
 var k = require('../OpenBCIConstants');
 

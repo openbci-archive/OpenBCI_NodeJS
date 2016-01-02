@@ -193,7 +193,7 @@ function OpenBCIFactory() {
      * @returns {Promise}
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.simulateStop = function() {
+    OpenBCIBoard.prototype.simulatorStop = function() {
         var self = this;
 
         return new Promise(function(resolve,reject) {

@@ -56,13 +56,13 @@ describe('openbci-sdk',function() {
             ourBoard.simulatorStart().then(function() {
                 console.log('Simulator started');
                 ourBoard.on('sample',function(sample) {
-                    OpenBCISample.debugPrettyPrint(sample);
+                    //OpenBCISample.debugPrettyPrint(sample);
                 });
             }).catch(function(err) {
                 console.log('Error [simulator]: ' + err);
             });
             setTimeout(function() {
-                ourBoard.simulateStop().then(function() {
+                ourBoard.simulatorStop().then(function() {
                     running = true;
                     done();
                 },function(err) {
