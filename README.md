@@ -35,24 +35,22 @@ ourBoard.connect(portName).then(function(boardSerial) {
 });            
 ```
 
-Samples
--------
+Sample properties:
+------------------
+1. `startByte` (`Number`  should be `0xA0`)
+2. `sampleNumber` (a `Number` between 0-255) 
+3. `channelData` (channel data indexed starting at 1 [1,2,3,4,5,6,7,8] filled with floating point `Numbers`)
+4. `auxData` (aux data indexed starting at 0 [0,1,2] filled with floating point `Numbers`)
+5. `stopByte` (`Number` should be `0xC0`)
+
 The power of this module is in using the sample emitter, to be provided with samples to do with as you wish.
 
-A sample is an object that has the following properties:
-1. `startByte` (`Number`  should be `0xA0`)
-1. `sampleNumber` (a `Number` between 0-255) 
-1. `channelData` (channel data indexed starting at 1 [1,2,3,4,5,6,7,8] filled with floating point `Numbers`)
-1. `auxData` (aux data indexed starting at 0 [0,1,2] filled with floating point `Numbers`)
-1. `stopByte` (`Number` should be `0xC0`)
-
-'sample' event
-------------
-To get a sample you need to
+To get a 'sample' event, you need to:
+-------------------------------------
 1. Call `.connect(serialPortName)`
-1. Install the 'ready' event emitter on resolved promise
-1. In callback for 'ready' emitter, call `streamStart()`
-1. Install the 'sample' event emitter
+2. Install the 'ready' event emitter on resolved promise
+3. In callback for 'ready' emitter, call `streamStart()`
+4. Install the 'sample' event emitter
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
@@ -72,13 +70,12 @@ var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.streamStop().then(ourBoard.disconnect());
 ```
 
-Simulating
-----------
 To start the simulator test samples:
+----------
 1. Call `.simulatorStart()`
-1. Install the 'ready' event emitter on resolved promise
-1. In callback for 'ready' emitter, call `streamStart()`
-1. Install the 'sample' event emitter
+2. Install the 'ready' event emitter on resolved promise
+3. In callback for 'ready' emitter, call `streamStart()`
+4. Install the 'sample' event emitter
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.simulatorStart().then(function() {
