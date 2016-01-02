@@ -5,7 +5,7 @@
  */
 
 var assert = require('assert');
-var OpenBCIBoard = require('../OpenBCIBoard');
+var OpenBCIBoard = require('../openBCIBoard');
 var OpenBCISample = OpenBCIBoard.OpenBCISample;
 var k = OpenBCIBoard.OpenBCIConstants;
 var chai = require('chai')
