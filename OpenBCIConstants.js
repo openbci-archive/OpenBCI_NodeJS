@@ -129,6 +129,9 @@ const kOBCIChannelMaxNumber16   = 'C';
 const kOBCIFilterDisable ='g';
 const kOBCIFilterEnable = 'f';
 
+/** Triggers */
+const kOBCITrigger = '`';
+
 /** Possible number of channels */
 const kOBCINumberOfChannelsDaisy = 16;
 const kOBCINumberOfChannelsDefault = 8;
@@ -151,6 +154,9 @@ const kErrorInvalidByteStart = "Invalid Start Byte";
 const kErrorInvalidByteStop = "Invalid Stop Byte";
 const kErrorUndefinedOrNullInput = "Undefined or Null Input";
 
+/** Max Master Buffer Size */
+const kOBCIMasterBufferSize = kOBCIPacketSize * 100;
+
 module.exports = {
     /** Turning channels off */
     OBCIChannelOff_1:kOBCIChannelOff_1,
@@ -169,46 +175,62 @@ module.exports = {
     OBCIChannelOff_14:kOBCIChannelOff_14,
     OBCIChannelOff_15:kOBCIChannelOff_15,
     OBCIChannelOff_16:kOBCIChannelOff_16,
-    commandChannelOff: function(channelNumber,callback) {
-        switch (channelNumber) {
-            case 1:
-                return kOBCIChannelOff_1;
-            case 2:
-                return kOBCIChannelOff_2;
-            case 3:
-                return kOBCIChannelOff_3;
-            case 4:
-                return kOBCIChannelOff_4;
-            case 5:
-                return kOBCIChannelOff_5;
-            case 6:
-                return kOBCIChannelOff_6;
-            case 7:
-                return kOBCIChannelOff_7;
-            case 8:
-                return kOBCIChannelOff_8;
-            case 9:
-                return kOBCIChannelOff_9;
-            case 10:
-                return kOBCIChannelOff_10;
-            case 11:
-                return kOBCIChannelOff_11;
-            case 12:
-                return kOBCIChannelOff_12;
-            case 13:
-                return kOBCIChannelOff_13;
-            case 14:
-                return kOBCIChannelOff_14;
-            case 15:
-                return kOBCIChannelOff_15;
-            case 16:
-                return kOBCIChannelOff_16;
-            default:
-                if(callback) {
-                    callback('Error [commandChannelOff]: Invalid Channel Number')
-                }
-                return;
-        }
+    commandChannelOff: function(channelNumber) {
+        return new Promise(function(resolve,reject) {
+            switch (channelNumber) {
+                case 1:
+                    resolve(kOBCIChannelOff_1);
+                    break;
+                case 2:
+                    resolve(kOBCIChannelOff_2);
+                    break;
+                case 3:
+                    resolve(kOBCIChannelOff_3);
+                    break;
+                case 4:
+                    resolve(kOBCIChannelOff_4);
+                    break;
+                case 5:
+                    resolve(kOBCIChannelOff_5);
+                    break;
+                case 6:
+                    resolve(kOBCIChannelOff_6);
+                    break;
+                case 7:
+                    resolve(kOBCIChannelOff_7);
+                    break;
+                case 8:
+                    resolve(kOBCIChannelOff_8);
+                    break;
+                case 9:
+                    resolve(kOBCIChannelOff_9);
+                    break;
+                case 10:
+                    resolve(kOBCIChannelOff_10);
+                    break;
+                case 11:
+                    resolve(kOBCIChannelOff_11);
+                    break;
+                case 12:
+                    resolve(kOBCIChannelOff_12);
+                    break;
+                case 13:
+                    resolve(kOBCIChannelOff_13);
+                    break;
+                case 14:
+                    resolve(kOBCIChannelOff_14);
+                    break;
+                case 15:
+                    resolve(kOBCIChannelOff_15);
+                    break;
+                case 16:
+                    resolve(kOBCIChannelOff_16);
+                    break;
+                default:
+                    reject('Error [commandChannelOff]: Invalid Channel Number');
+                    break;
+            }
+        });
     },
     /** Turning channels on */
     OBCIChannelOn_1:kOBCIChannelOn_1,
@@ -389,6 +411,8 @@ module.exports = {
     /** Filters */
     OBCIFilterDisable:kOBCIFilterDisable,
     OBCIFilterEnable:kOBCIFilterEnable,
+    /** Triggers */
+    OBCITrigger:kOBCITrigger,
     /** Possible number of channels */
     OBCINumberOfChannelsDaisy:kOBCINumberOfChannelsDaisy,
     OBCINumberOfChannelsDefault:kOBCINumberOfChannelsDefault,
@@ -405,5 +429,7 @@ module.exports = {
     ErrorInvalidByteLength:kErrorInvalidByteLength,
     ErrorInvalidByteStart:kErrorInvalidByteStart,
     ErrorInvalidByteStop:kErrorInvalidByteStop,
-    ErrorUndefinedOrNullInput:kErrorUndefinedOrNullInput
+    ErrorUndefinedOrNullInput:kErrorUndefinedOrNullInput,
+    /** Max Master Buffer Size */
+    OBCIMasterBufferSize:kOBCIMasterBufferSize
 };

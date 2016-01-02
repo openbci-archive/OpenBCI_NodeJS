@@ -7,15 +7,13 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var stream = require('stream');
 
-
-
-
 function OpenBCIFactory() {
     var factory = this;
 
     var _options = {
         baudrate: 115200,
-        daisy: false
+        daisy: false,
+        simulate: false
     };
 
     /**
@@ -24,38 +22,39 @@ function OpenBCIFactory() {
      */
     function OpenBCIBoard(portName,options,connectImmediately) {
         var self = this;
-        var args = Array.prototype.slice.call(arguments);
-
-
+        //var args = Array.prototype.slice.call(arguments);
 
         options = (typeof options !== 'function') && options || {};
-
         var opts = {};
 
         connectImmediately = (connectImmediately === undefined || connectImmediately === null) ? true : connectImmediately;
-
         stream.Stream.call(this);
 
+        /** Configuring Options */
         opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
-
         opts.daisy = options.daisy || options.daisy || _options.daisy;
-
-        self.badPackets = 0;
-        self.bytesIn = 0;
+        opts.simulate = options.simulate || options.simulate || _options.simulate;
         self.options = opts;
-        self.portName = portName;
-        self.moneyBuf = new Buffer('$$$');
-        self.lookingForMoney = true;
-        self.masterBufferMaxSize = 3300;
-        // Buffer used to store bytes in and read packets from
-        self.masterBuffer = {
-            buffer: new Buffer(self.masterBufferMaxSize),
+
+        /** Properties (keep alphabetical) */
+        // Bools
+        self.isLookingForMoney = true;
+        self.isSimulating = false;
+        // Buffers
+        self.masterBuffer = { // Buffer used to store bytes in and read packets from
+            buffer: new Buffer(k.OBCIMasterBufferSize),
             positionRead: 0,
             positionWrite: 0,
             packetsIn:0,
             packetsRead:0,
             looseBytes:0
         };
+        self.moneyBuf = new Buffer('$$$');
+        // Numbers
+        self.badPackets = 0;
+        self.bytesIn = 0;
+        // Strings
+        self.portName = portName;
 
         //TODO: Add connect immediately functionality, suggest this to be the default...
         if(connectImmediately) {
@@ -83,7 +82,7 @@ function OpenBCIFactory() {
      *              observed and taken care of in the most front facing user methods.
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardConnect = function(portName) {
+    OpenBCIBoard.prototype.connect = function(portName) {
         var self = this;
 
         this.connected = false;
@@ -132,7 +131,7 @@ function OpenBCIFactory() {
      *           streaming.
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardSoftReset = function() {
+    OpenBCIBoard.prototype.softReset = function() {
         var self = this;
         return writeAndDrain(self.serial, k.OBCIMiscSoftReset);
     };
@@ -142,21 +141,80 @@ function OpenBCIFactory() {
      * @returns {Promise}
      * Author: AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.boardDisconnect = function() {
+    OpenBCIBoard.prototype.disconnect = function() {
         var self = this;
         var closingPromise = new Promise(function(resolve, reject) {
             if(self.connected === false) { reject(Error('No open serial connection')); }
             self.serial.close(function() {
-                Promise.resolve('Closed the serial connection!');
-            })
+                resolve('Closed the serial connection!');
+            });
         });
-        return self.streamStop().then(closingPromise());
+        return closingPromise;
+    };
+
+    /**
+     * Purpose: To start simulating an open bci board
+     * Note: Must be called after the constructor
+     * @returns {Promise}
+     * Author: AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.simulatorStart = function() {
+        var self = this;
+
+        return new Promise(function(resolve,reject) {
+            if(self.isSimulating) {
+                // already running simulator
+                reject('Simulator Already Running');
+            } else {
+                // start simulating
+                self.isSimulating = true;
+                // generateSample is a func that takes the previous sample number
+                var generateSample = OpenBCISample.randomSample(self.numberOfChannels(),self.sampleRate());
+
+                var oldSample = OpenBCISample.newSample();
+                oldSample.sampleNumber = 0;
+                self.simulator = setInterval(function() {
+                    //console.log('Interval...');
+                    var newSample = generateSample(oldSample.sampleNumber);
+                    //console.log(JSON.stringify(newSample));
+                    self.emit('sample',newSample);
+                    oldSample = newSample;
+                    resolve();
+                }, 100);
+
+            }
+
+        });
+    };
+
+    /**
+     * Purpose: To stop simulating an open bci board
+     * Note: Must be called after the constructor
+     * @returns {Promise}
+     * Author: AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.simulatorStop = function() {
+        var self = this;
+
+        return new Promise(function(resolve,reject) {
+            if(self.isSimulating) {
+                // stop simulating
+                self.isSimulating = false;
+                if(self.simulator) {
+                    clearInterval(self.simulator);
+                }
+                resolve();
+            } else {
+                // no simulator to stop...
+                reject('No simulator to stop!');
+            }
+        });
     };
 
     /**
      * Purpose: Send a stop streaming command to the board.
      * @returns {Promise} indicating if the signal was able to be sent.
-     * Note: You must have successfully connected to an OpenBCI board using the boardConnect
+     * Note: You must have successfully connected to an OpenBCI board using the connect
      *           method. Just because the signal was able to be sent to the board, does not
      *           mean the board will start streaming.
      * Author: AJ Keller (@pushtheworldllc)
@@ -170,15 +228,16 @@ function OpenBCIFactory() {
     /**
      * Purpose: Send a stop streaming command to the board.
      * @returns {Promise} indicating if the signal was able to be sent.
-     * Note: You must have successfully connected to an OpenBCI board using the boardConnect
+     * Note: You must have successfully connected to an OpenBCI board using the connect
      *           method. Just because the signal was able to be sent to the board, does not
      *           mean the board stopped streaming.
      * Author: AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.streamStop = function() {
-        var self = this;
-        self.streaming = false;
-        return writeAndDrain(self.serial,k.OBCIStreamStop);
+        //var self = this;
+        this.streaming = false;
+        console.log('Serial: ' + this.serial + ' sending stop command of ' + k.OBCIStreamStop);
+        return writeAndDrain(this.serial,k.OBCIStreamStop);
     };
 
     /**
@@ -227,12 +286,12 @@ function OpenBCIFactory() {
         var self = this;
         var sizeOfData = data.byteLength;
         self.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
-        if(self.lookingForMoney) { //in a reset state
+        if(self.isLookingForMoney) { //in a reset state
             console.log(data);
             for (var i = 0; i < sizeOfData - 2; i++) {
                 if (self.moneyBuf.equals(data.slice(i, i + 3))) {
                     console.log('Money!');
-                    self.lookingForMoney = false;
+                    self.isLookingForMoney = false;
                     self.emit('ready');
                 }
             }
@@ -304,9 +363,9 @@ function OpenBCIFactory() {
         // we do a try, catch, paradigm to prevent fatal crashes while trying to read from the buffer
         try {
             var inputBufferSize = inputBuffer.byteLength;
-            if (inputBufferSize > self.masterBufferMaxSize) { /** Critical error condition */
+            if (inputBufferSize > k.OBCIMasterBufferSize) { /** Critical error condition */
                 console.log("input buffer too large...");
-            } else if (inputBufferSize < (self.masterBufferMaxSize - self.masterBuffer.positionWrite)) { /**Normal*/
+            } else if (inputBufferSize < (k.OBCIMasterBufferSize - self.masterBuffer.positionWrite)) { /**Normal*/
                 // debug prints
                 //     console.log('Storing input buffer of size: ' + inputBufferSize + ' to the master buffer at position: ' + self.masterBufferPositionWrite);
                 //there is room in the buffer, so fill it
@@ -324,7 +383,7 @@ function OpenBCIFactory() {
             } else { /** Wrap around condition*/
                 console.log('We reached the end of the master buffer');
                 //the new buffer cannot fit all the way into the master buffer, going to need to break it up...
-                var bytesSpaceLeftInMasterBuffer = self.masterBufferMaxSize - self.masterBuffer.positionWrite;
+                var bytesSpaceLeftInMasterBuffer = k.OBCIMasterBufferSize - self.masterBuffer.positionWrite;
                 // fill the rest of the buffer
                 inputBuffer.copy(self.masterBuffer.buffer,self.masterBuffer.positionWrite,0,bytesSpaceLeftInMasterBuffer);
                 // overwrite the beginning of master buffer
@@ -354,9 +413,10 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.bufPacketStripper = function(self) {
         try {
             // not at end of master buffer
-            if(k.OBCIPacketSize < self.masterBufferMaxSize - self.masterBuffer.positionRead) {
+            var rawPacket;
+            if(k.OBCIPacketSize < k.OBCIMasterBufferSize - self.masterBuffer.positionRead) {
                 // extract packet
-                var rawPacket = self.masterBuffer.buffer.slice(self.masterBuffer.positionRead, self.masterBuffer.positionRead + k.OBCIPacketSize);
+                rawPacket = self.masterBuffer.buffer.slice(self.masterBuffer.positionRead, self.masterBuffer.positionRead + k.OBCIPacketSize);
                 // move the read position pointer
                 self.masterBuffer.positionRead += k.OBCIPacketSize;
                 // increment packets read
@@ -365,7 +425,7 @@ function OpenBCIFactory() {
                 return rawPacket;
             } else { //special case because we are at the end of the master buffer (must wrap)
                 // calculate the space left to read from for the partial packet
-                var part1Size = self.masterBufferMaxSize - self.masterBuffer.positionRead;
+                var part1Size = k.OBCIMasterBufferSize - self.masterBuffer.positionRead;
                 // make the first part of the packet
                 var part1 = self.masterBuffer.buffer.slice(self.masterBuffer.positionRead, self.masterBuffer.positionRead + part1Size);
                 // reset the read position to 0
@@ -375,7 +435,7 @@ function OpenBCIFactory() {
                 // get the second part
                 var part2 = self.masterBuffer.buffer.slice(0, part2Size);
                 // merge the two parts
-                var rawPacket = Buffer.concat([part1,part2], k.OBCIPacketSize);
+                rawPacket = Buffer.concat([part1,part2], k.OBCIPacketSize);
                 // move the read position pointer
                 self.masterBuffer.positionRead += part2Size;
                 // increment packets read
@@ -454,6 +514,8 @@ function OpenBCIFactory() {
     // TODO: warn
 
     factory.OpenBCIBoard = OpenBCIBoard;
+    factory.OpenBCIConstants = k;
+    factory.OpenBCISample = OpenBCISample;
 
 }
 
@@ -462,10 +524,11 @@ util.inherits(OpenBCIFactory, EventEmitter);
 module.exports = new OpenBCIFactory();
 
 /**
- * Should be used to send data to the board
+ * Purpose: Should be used to send data to the board
  * @param boardSerial
  * @param data
  * @returns {Promise} if signal was able to be sent
+ * Author: AJ Keller (@pushtheworldllc)
  */
 function writeAndDrain(boardSerial,data) {
     return new Promise(function(resolve,reject) {

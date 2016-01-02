@@ -6,8 +6,8 @@
 
 var assert = require('assert');
 var OpenBCIBoard = require('../OpenBCIBoard');
-var OpenBCISample = require('../OpenBCISample');
-var k = require('../OpenBCIConstants');
+var OpenBCISample = OpenBCIBoard.OpenBCISample;
+var k = OpenBCIBoard.OpenBCIConstants;
 var chai = require('chai')
     ,  expect = chai.expect
     ,  should = chai.should();
@@ -19,7 +19,6 @@ var bciBoard = new OpenBCIBoard.OpenBCIBoard();
 
 var sampleSelf = function() {
     return {
-        masterBufferMaxSize: 3300,
         masterBuffer: {
             buffer: new Buffer(3300),
             positionRead:0,
@@ -148,7 +147,7 @@ describe('OpenBCIBoard',function() {
         it('should wrap the input buffer around the master buffer',function() {
             var self = sampleSelf();
             var spaceRemaingInMasterBuffer = 15;
-            var originalWritePosition = self.masterBufferMaxSize - spaceRemaingInMasterBuffer;
+            var originalWritePosition = k.OBCIMasterBufferSize - spaceRemaingInMasterBuffer;
 
             self.masterBuffer.positionWrite = originalWritePosition;
 
@@ -195,7 +194,7 @@ describe('OpenBCIBoard',function() {
             var buffers = [sampleData[0],sampleData[1],sampleData[2]];
             var totalLength = k.OBCIPacketSize * 3;
 
-            self.masterBuffer.positionWrite = self.masterBufferMaxSize - 10;
+            self.masterBuffer.positionWrite = k.OBCIMasterBufferSize - 10;
             self.masterBuffer.positionRead = self.masterBuffer.positionWrite;
 
             var multiPacketBuffer = Buffer.concat(buffers,totalLength);

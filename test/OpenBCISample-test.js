@@ -5,10 +5,8 @@ var assert = require('assert');
 var OpenBCISample = require('../OpenBCISample');
 var chai = require('chai')
     ,  expect = chai.expect
-    ,  should = chai.should()
-    //,  chaiModel = require('./helpers/model')
-    ,  Assertion = chai.Assertion;
-//var chaiAsPromised = require("chai-as-promised");
+    ,  should = chai.should();
+var chaiAsPromised = require("chai-as-promised");
 
 var k = require('../OpenBCIConstants');
 
@@ -116,6 +114,15 @@ describe('OpenBCISample',function() {
             var buf1 = new Buffer([0x81,0xA1]); // 0x81A1 === -32351
             var num = OpenBCISample.interpret16bitAsInt32(buf1);
             assert.equal(num,-32351);
+        });
+    });
+    describe('#randomSample', function() {
+        it('should generate a random sample',function() {
+            var generateSample = OpenBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);
+            var oldSampleNumber = 0;
+            var newSample = generateSample(oldSampleNumber);
+            console.log(JSON.stringify(newSample));
+            assert(newSample.sampleNumber,oldSampleNumber+1);
         });
     });
 });
