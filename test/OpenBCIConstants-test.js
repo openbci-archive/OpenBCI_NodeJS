@@ -2,7 +2,7 @@
  * Created by ajk on 12/16/15.
  */
 var assert = require('assert');
-var k = require('../OpenBCIConstants');
+var k = require('../openBCIConstants');
 var chai = require('chai')
     ,  expect = chai.expect
     ,  should = chai.should();

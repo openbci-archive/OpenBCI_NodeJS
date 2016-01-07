@@ -2,13 +2,13 @@
  * Created by ajk on 12/15/15.
  */
 var assert = require('assert');
-var OpenBCISample = require('../OpenBCISample');
+var OpenBCISample = require('../openBCISample');
 var chai = require('chai')
     ,  expect = chai.expect
     ,  should = chai.should();
 var chaiAsPromised = require("chai-as-promised");
 
-var k = require('../OpenBCIConstants');
+var k = OpenBCISample.k;
 
 var samplePacket = function () {
     var byteSample = 0x45;

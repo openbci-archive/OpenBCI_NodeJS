@@ -1,8 +1,8 @@
 {
   "name": "openbci-sdk",
-  "version": "0.1.2",
+  "version": "0.1.6",
   "description": "A fully NodeJS based API for the OpenBCI board connecting to the hardware directly over serial",
-  "main": "./openBCIBoard",
+  "main": "openBCIBoard",
   "scripts": {
     "start": "node index",
     "test": "mocha test"
@@ -34,5 +34,8 @@
   "bugs": {
     "url": "https://github.com/openbci/openbci-js-sdk/issues"
   },
-  "homepage": "https://github.com/openbci/openbci-js-sdk#readme"
+  "homepage": "https://github.com/openbci/openbci-js-sdk#readme",
+  "engines": {
+    "node": ">=4.0.0"
+  }
 }

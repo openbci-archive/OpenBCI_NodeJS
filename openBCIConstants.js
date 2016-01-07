@@ -3,7 +3,7 @@
  * Purpose: This file folds all the constants for the
  *     OpenBCI Board
  */
-
+'use strict';
 /** Turning channels off */
 const kOBCIChannelOff_1 = '1';
 const kOBCIChannelOff_2 = '2';
@@ -178,6 +178,9 @@ const kOBCIMasterBufferSize = kOBCIPacketSize * 100;
 /** Impedance Calculation Variables */
 const kOBCILeadOffDriveInAmps = 0.000000006;
 
+/** Command send delay */
+const kOBCIWriteIntervalDelayMS = 10;
+
 module.exports = {
     /** Turning channels off */
     OBCIChannelOff_1:kOBCIChannelOff_1,
@@ -331,45 +334,6 @@ module.exports = {
                     break;
             }
         });
-        switch (channelNumber) {
-            case 1:
-                return kOBCIChannelOn_1;
-            case 2:
-                return kOBCIChannelOn_2;
-            case 3:
-                return kOBCIChannelOn_3;
-            case 4:
-                return kOBCIChannelOn_4;
-            case 5:
-                return kOBCIChannelOn_5;
-            case 6:
-                return kOBCIChannelOn_6;
-            case 7:
-                return kOBCIChannelOn_7;
-            case 8:
-                return kOBCIChannelOn_8;
-            case 9:
-                return kOBCIChannelOn_9;
-            case 10:
-                return kOBCIChannelOn_10;
-            case 11:
-                return kOBCIChannelOn_11;
-            case 12:
-                return kOBCIChannelOn_12;
-            case 13:
-                return kOBCIChannelOn_13;
-            case 14:
-                return kOBCIChannelOn_14;
-            case 15:
-                return kOBCIChannelOn_15;
-            case 16:
-                return kOBCIChannelOn_16;
-            default:
-                if(callback) {
-                    callback()
-                }
-                return;
-        }
     },
     /** Test Signal Control Commands */
     OBCITestSignalConnectToDC:kOBCITestSignalConnectToDC,
@@ -536,7 +500,9 @@ module.exports = {
     /** Channel Setter Maker */
     getChannelSetter:channelSetter,
     /** Impedance Setter Maker */
-    getImpedanceSetter:impedanceSetter
+    getImpedanceSetter:impedanceSetter,
+    /** Command send delay */
+    OBCIWriteIntervalDelayMS:kOBCIWriteIntervalDelayMS
 };
 
 /**
@@ -649,11 +615,12 @@ function impedanceSetter(channelNumber,pInputApplied,nInputApplied) {
         commandChannelForCmd(channelNumber).then(command => {
             var outputArray = [
                 kOBCIChannelImpedanceSet,
+                command,
                 cmdNInputApplied,
                 cmdPInputApplied,
                 kOBCIChannelImpedanceLatch
             ];
-            console.log(outputArray);
+            //console.log(outputArray);
             resolve(outputArray);
         });
     });

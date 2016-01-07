@@ -98,6 +98,61 @@ To stop the simulator:
 ourBoard.simulatorStop()
 ```
 
+Impedance (signal quality)
+--------------------------
+Measuring impedance is a vital tool in ensuring great data is collected. 
+
+* **Good** impedance is < 5k Ohms
+* **Ok** impedance is 5 to 10k Ohms
+* **Bad** impedance is > 10k Ohms
+
+To test for impedance we must apply a known test signal to which either the P, N, or both channels and then apply a little math.
+
+When you start measuring for electrode impedance's, a new additional property called `impedanceArray` (indexed 1,2,3,4,5,6,7,8), can be found on the sample object from the emitted by 'sample'.
+
+**Note: You must be streaming in order to measure impedance's. Takes up to 2 seconds to start measuring impedances.**
+
+To start measuring all channels impedance's:
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.connect(portName).then(function(boardSerial) {
+    ourBoard.on('ready',function() {
+        ourBoard.impedanceTestStartAll().then(() => {
+            ourBoard.streamStart();
+        });
+        ourBoard.on('sample',function(sample) {
+            /** Do normal Sample actions */
+            if(sample.impedanceArray) {
+                /** Work with impedance array */
+            }
+        });
+    });
+}).catch(function(err) {
+    /** Handle connection errors */
+});            
+```
+
+To stop measuring impedance's:
+```js
+ourBoard.impedanceTestStopAll();
+```
+
+To apply the test signal to a specific input of a specific channel (i.e. Channel 2 test signal applied to P input and not N input):
+```js
+ourBoard.impedanceTestStartChannel(2,true,false);
+```
+
+To stop applying the test signal to a specific channel (i.e. Stop applying signal to channel 2):
+```js
+ourBoard.impedanceTestStopChannel(2);
+```
+
+To stop calculating impedance's every time there is a new sample:
+```js
+ourBoard.impedanceTestCalculatingStop();
+```
+You would call `.impedanceTestCalculatingStop()` if you were measuring the impedance for a specified channel. You do NOT need to call `.impedanceTestCalculatingStop()` after calling `.impedanceTestStopAll()` because it is called for you.
+
 Auto-finding boards
 -------------------
 You must have the OpenBCI board connected to the PC before trying to automatically find it.
@@ -126,7 +181,7 @@ Reference Guide
 
 ### OpenBCIBoard (options)
 
-Create new instance of an OpenBCI board on `portName`.
+Create new instance of an OpenBCI board.
 
 **_options (optional)_**
 
@@ -238,6 +293,50 @@ A number specifying which channel you want to get data on. Only 1-8 at this time
 
 **_Returns_** a promise, fulfilled if the command was sent to the board and the `.processBytes()` function is ready to reach for the specified channel.
 
+### .impedanceTestStartAll()
+
+To apply test signals to all the channels and all inputs on an OpenBCI board. 
+
+**Note, you must be connected in order to set the test commands. Also this method can take up to 2 seconds to send all commands!**
+
+**_Returns_** a promise, fulfilled once all the commands are sent to the board. 
+
+### .impedanceTestStopAll()
+
+To stop applying test signals to all the channels and inputs on an OpenBCI board. 
+
+**Note, you must be connected in order to set the test commands. Also this method can take up to 2 seconds to send all commands!**
+
+**_Returns_** a promise, fulfilled once all the commands are sent to the board. 
+
+### .impedanceTestStartChannel(channelNumber,pInput,nInput)
+
+To apply the impedance test signal to an input for any given channel.
+
+**_channelNumber_** 
+
+A number specifying which channel you want to get apply the test signal to. Only 1-8 at this time.
+
+**_pInput_** 
+
+A bool true if you want to apply the test signal to the P input, false to not apply the test signal.
+
+**_nInput_** 
+
+A bool true if you want to apply the test signal to the N input, false to not apply the test signal.
+
+### .impedanceTestCalculatingStart()
+
+To start calculating impedance's every time there is a new sample.
+
+**Note, this is automatically called by `.impedanceTestStartAll()` and `.impedanceTestStartChannel()`**
+
+### .impedanceTestCalculatingStop()
+
+To stop calculating impedance's every time there is a new sample.
+
+**Note, this is automatically called by `.impedanceTestStopAll()`**
+
 ### .numberOfChannels()
 
 Get the current number of channels available to use. (i.e. 8 or 16).
@@ -346,13 +445,17 @@ ourBoard.write('o');
 
 ## Events
 
-### .on('ready', callback)
-
-### .on('sample', callback)
-
 ### .on('query', callback)
 
 Emitted resulting in a call to `.getChannelSettings()` with the channelSettingsObject
+
+### .on('ready', callback)
+
+Emitted when the board is in a ready to start streaming state.
+
+### .on('sample', callback)
+
+Emitted when there is a new sample available. 
 
 ## Dev Notes
 Running

@@ -1,3 +1,4 @@
+'use strict';
 var gaussian = require('gaussian');
 /** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
@@ -11,7 +12,7 @@ const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
 // Scale factor for channelData
 const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1);
 
-var k = require('./OpenBCIConstants');
+var k = require('./openBCIConstants');
 
 
 module.exports = {
@@ -179,5 +180,6 @@ module.exports = {
         };
     },
     scaleFactorAux: SCALE_FACTOR_ACCEL,
-    scaleFactorChannel: SCALE_FACTOR_CHANNEL
+    scaleFactorChannel: SCALE_FACTOR_CHANNEL,
+    k:k
 };
