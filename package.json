@@ -1,6 +1,6 @@
 {
   "name": "openbci-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A fully NodeJS based API for the OpenBCI board connecting to the hardware directly over serial",
   "main": "./openBCIBoard",
   "scripts": {
