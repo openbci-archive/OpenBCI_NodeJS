@@ -77,6 +77,20 @@ module.exports = {
             console.log('---- Stop Byte: ' + sample.stopByte);
         }
     },
+    impedanceCalculation: function(sampleObject) {
+        const sqrt2 = Math.sqrt(2);
+        return new Promise((resolve,reject) => {
+            if(sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
+            if(sampleObject.channelData === undefined || sampleObject.channelData === null) reject('Channel cannot be null or undefined');
+
+            var impedanceArray = [];
+            for (var i = 1; i <= k.OBCINumberOfChannelsDefault; i++) {
+                impedanceArray[i] = (sqrt2 * sampleObject.channelData[i]) / k.OBCILeadOffDriveInAmps;
+            }
+            sampleObject.impedanceArray = impedanceArray;
+            resolve(sampleObject);
+        });
+    },
     interpret24bitAsInt32: function(threeByteBuffer) {
         var prefix = 0;
 

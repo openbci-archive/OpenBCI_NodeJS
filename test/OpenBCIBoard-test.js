@@ -47,11 +47,11 @@ var sampleData = [];
 }());
 
 describe('OpenBCIBoard',function() {
-    describe('#bufMerger',function() {
+    describe('#_bufMerger',function() {
         it('should write the buffer to the empty master buffer', function() {
             var self = sampleSelf();
             // console.log(sampleData[0]);
-            bciBoard.bufMerger(self, sampleData[0]);
+            bciBoard._bufMerger(self, sampleData[0]);
 
             // test to see if buffers match
             assert.equal(0,sampleData[0].compare(self.masterBuffer.buffer.slice(0, k.OBCIPacketSize)));
@@ -68,7 +68,7 @@ describe('OpenBCIBoard',function() {
             var tinyBufferSize = 10; //tiny because its smaller than a packet
             var tinyBuffer = sampleData[0].slice(0,tinyBufferSize);
 
-            bciBoard.bufMerger(self, tinyBuffer);
+            bciBoard._bufMerger(self, tinyBuffer);
 
             // test to see if buffers match
             assert.equal(0,tinyBuffer.compare(self.masterBuffer.buffer.slice(0, tinyBufferSize)));
@@ -90,7 +90,7 @@ describe('OpenBCIBoard',function() {
 
             var multiPacketBuffer = Buffer.concat(buffers,totalLength);
 
-            bciBoard.bufMerger(self, multiPacketBuffer);
+            bciBoard._bufMerger(self, multiPacketBuffer);
 
             // test to see if buffers match
             assert.equal(0,multiPacketBuffer.compare(self.masterBuffer.buffer.slice(0, totalLength)));
@@ -117,7 +117,7 @@ describe('OpenBCIBoard',function() {
 
             var multiPacketBuffer = Buffer.concat(buffers,totalLength);
 
-            bciBoard.bufMerger(self, multiPacketBuffer);
+            bciBoard._bufMerger(self, multiPacketBuffer);
 
             // test to see if buffers match
             assert.equal(0,multiPacketBuffer.compare(self.masterBuffer.buffer.slice(0, totalLength)));
@@ -133,7 +133,7 @@ describe('OpenBCIBoard',function() {
             var originalWritePosition = 69;
             self.masterBuffer.positionWrite = originalWritePosition;
 
-            bciBoard.bufMerger(self, sampleData[0]);
+            bciBoard._bufMerger(self, sampleData[0]);
 
             // test to see if the master buffer contains the correct data
             assert.equal(0,sampleData[0].compare(self.masterBuffer.buffer.slice(originalWritePosition, originalWritePosition + k.OBCIPacketSize)));
@@ -151,7 +151,7 @@ describe('OpenBCIBoard',function() {
 
             self.masterBuffer.positionWrite = originalWritePosition;
 
-            bciBoard.bufMerger(self, sampleData[0]);
+            bciBoard._bufMerger(self, sampleData[0]);
 
             // test to see that the end of master buffer contains half of sample
             assert.equal(0,sampleData[0].slice(0,spaceRemaingInMasterBuffer).compare(self.masterBuffer.buffer.slice(originalWritePosition)));
@@ -165,7 +165,7 @@ describe('OpenBCIBoard',function() {
             assert.equal(self.masterBuffer.looseBytes,0);
         });
     });
-    describe('#bufPacketStripper', function() {
+    describe('#_bufPacketStripper', function() {
         it('should remove a packet from the master buffer', function() {
             var self = sampleSelf();
 
@@ -177,11 +177,11 @@ describe('OpenBCIBoard',function() {
             //console.log(multiPacketBuffer);
 
 
-            bciBoard.bufMerger(self,multiPacketBuffer);
+            bciBoard._bufMerger(self,multiPacketBuffer);
 
             // run through three iterations of stripping packets
             for (var i = 0; i < 3; i++) {
-                var rawPacket = bciBoard.bufPacketStripper(self);
+                var rawPacket = bciBoard._bufPacketStripper(self);
                 var sample = OpenBCISample.convertPacketToSample(rawPacket);
                 //console.log(OpenBCISample.debugPrettyPrint(sample));
                 //console.log('Sample ' + i + ' has sample number ' + sample.sampleNumber);
@@ -199,11 +199,11 @@ describe('OpenBCIBoard',function() {
 
             var multiPacketBuffer = Buffer.concat(buffers,totalLength);
 
-            bciBoard.bufMerger(self,multiPacketBuffer);
+            bciBoard._bufMerger(self,multiPacketBuffer);
 
             // run through three iterations of stripping packets
             for (var i = 0; i < 3; i++) {
-                var rawPacket = bciBoard.bufPacketStripper(self);
+                var rawPacket = bciBoard._bufPacketStripper(self);
                 var sample = OpenBCISample.convertPacketToSample(rawPacket);
                 assert(sample.sampleNumber,i);
             }
