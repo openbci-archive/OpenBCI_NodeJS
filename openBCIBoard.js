@@ -58,19 +58,13 @@ function OpenBCIFactory() {
         this.isLookingForKeyInBuffer = true;
         this.isSimulating = false;
         // Buffers
-        this.masterBuffer = { // Buffer used to store bytes in and read packets from
-            buffer: new Buffer(k.OBCIMasterBufferSize),
-            positionRead: 0,
-            positionWrite: 0,
-            packetsIn:0,
-            packetsRead:0,
-            looseBytes:0
-        };
+        this.masterBuffer = masterBufferMaker();
         this.moneyBuf = new Buffer('$$$');
         this.searchingBuf = this.moneyBuf;
         // Objects
         this.writer = null;
         // Numbers
+        this.badPackets = 0;
         this.commandsToWrite = 0;
         // Strings
 
@@ -181,6 +175,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.streamStop = function() {
         this.streaming = false;
+        this._reset();
         return this.write(k.OBCIStreamStop);
     };
 
@@ -511,6 +506,7 @@ function OpenBCIFactory() {
                 if(this.simulator) {
                     clearInterval(this.simulator);
                 }
+                this._reset();
                 resolve();
             } else {
                 // no simulator to stop...
@@ -605,13 +601,13 @@ function OpenBCIFactory() {
                     }
 
                 } else {
-                    console.log('Bad Packet: ' + this.badPackets);
                     this.badPackets++;
-                    /*TODO: initiate messed up packet protocol, need to sync back up with good packet */
+                    this._bufAlign();
                 }
             }
         }
     };
+
 
     /**
      * Purpose: Automatically find an OpenBCI board. Returns either the name
@@ -740,6 +736,35 @@ function OpenBCIFactory() {
         catch (error) {
             console.log('Error: ' + error);
         }
+    };
+
+    OpenBCIBoard.prototype._bufAlign = function() {
+        var startingReadPosition = this.masterBuffer.positionRead;
+        console.log('Starting read position: '+ startingReadPosition);
+        var aligned = false;
+
+        while (!aligned) {
+            this.masterBuffer.positionRead++;
+            if(this.masterBuffer.positionRead === startingReadPosition) {
+                console.log('Wrapped around and hit the starting point again');
+                aligned = true; // give up and try again at some later point in time when new stuff has been loaded in.
+            } else if (this.masterBuffer.positionRead >= k.OBCIMasterBufferSize) { // Wrap around condition
+                this.masterBuffer.positionRead = 0;
+                console.log('Wrapped around')
+            } else {
+                console.log(this.masterBuffer.buffer[this.masterBuffer.positionRead] + ' === ' + k.OBCIByteStart);
+                if (this.masterBuffer.buffer[this.masterBuffer.positionRead] === k.OBCIByteStart) {
+
+                    aligned = true;
+                }
+            }
+        }
+    };
+
+    OpenBCIBoard.prototype._reset = function() {
+        this.masterBuffer = masterBufferMaker();
+        this.searchingBuf = this.moneyBuf;
+        this.badPackets = 0;
     };
 
     /**
@@ -901,4 +926,15 @@ function getChannelSettingsObj(rawChannelBuffer) {
         }
         resolve(channelSettingsObject);
     });
+}
+
+function masterBufferMaker() {
+    return { // Buffer used to store bytes in and read packets from
+        buffer: new Buffer(k.OBCIMasterBufferSize),
+        positionRead: 0,
+        positionWrite: 0,
+        packetsIn:0,
+        packetsRead:0,
+        looseBytes:0
+    };
 }

@@ -212,6 +212,59 @@ describe('OpenBCIBoard',function() {
             }
         });
     });
+    describe('#_bufAlign',function() {
+        beforeEach(function() {
+            bciBoard = new OpenBCIBoard.OpenBCIBoard();
+            sampleData = [];
+            (function(){
+                for(var i = 0;i < 100;i++) {
+                    var sample = samplePacket();
+                    sample.sampleNumber = i;
+                    sampleData[i] = sample;
+                }
+            }());
+        });
+        it('should fix a buffer', function() {
+            var buffers = [sampleData[0],sampleData[1],sampleData[2]];
+            var totalLength = k.OBCIPacketSize * 3;
+
+
+            var multiPacketBuffer = Buffer.concat(buffers,totalLength);
+
+            //console.log(multiPacketBuffer);
+
+            var bytesToHackOffSample = 10;
+            var expectedNewPositionRead = k.OBCIPacketSize - bytesToHackOffSample;
+
+            bciBoard._bufMerger(multiPacketBuffer.slice(10,totalLength));
+
+            bciBoard._bufAlign();
+
+            assert(expectedNewPositionRead,bciBoard.masterBuffer.positionRead);
+
+        });
+        it('should wrap & then fix a buffer', function() {
+            var buffers = [sampleData[0],sampleData[1],sampleData[2]];
+            var totalLength = k.OBCIPacketSize * 3;
+
+
+            var multiPacketBuffer = Buffer.concat(buffers,totalLength);
+
+            var bytesFromEndOfBuffer = 5;
+
+            bciBoard.masterBuffer.positionRead = k.OBCIMasterBufferSize - bytesFromEndOfBuffer;
+
+            var bytesToHackOffSample = 10;
+            var expectedNewPositionRead = bytesToHackOffSample - bytesFromEndOfBuffer;
+
+            bciBoard._bufMerger(multiPacketBuffer.slice(10,totalLength));
+
+            bciBoard._bufAlign();
+
+            assert(expectedNewPositionRead,bciBoard.masterBuffer.positionRead);
+
+        });
+    });
 });
 
 function debugPrintBufferCompare(buf1,buf2) {
