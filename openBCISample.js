@@ -173,7 +173,11 @@ module.exports = {
 
                 }
             }
-            newSample.sampleNumber = previousSampleNumber + 1;
+            if (previousSampleNumber == 255) {
+                newSample.sampleNumber = 0;
+            } else {
+                newSample.sampleNumber = previousSampleNumber + 1;
+            }
             newSample.auxData = auxData;
 
             return newSample;
