@@ -162,6 +162,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.streamStart = function() {
         this.streaming = true;
+        this._reset();
         return this.write(k.OBCIStreamStart);
     };
 
@@ -175,7 +176,6 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.streamStop = function() {
         this.streaming = false;
-        this._reset();
         return this.write(k.OBCIStreamStop);
     };
 
@@ -472,6 +472,8 @@ function OpenBCIFactory() {
                 reject('Simulator Already Running');
             } else {
                 // start simulating
+                this.connected = true;
+                this.streaming = true;
                 this.isSimulating = true;
                 // generateSample is a func that takes the previous sample number
                 var generateSample = openBCISample.randomSample(this.numberOfChannels(),this.sampleRate());
@@ -485,7 +487,7 @@ function OpenBCIFactory() {
                     this.emit('sample',newSample);
                     oldSample = newSample;
                     resolve();
-                }, 20);
+                }, 4);
 
             }
 
@@ -503,6 +505,8 @@ function OpenBCIFactory() {
             if(this.isSimulating) {
                 // stop simulating
                 this.isSimulating = false;
+                this.connected = false;
+                this.streaming = false;
                 if(this.simulator) {
                     clearInterval(this.simulator);
                 }
