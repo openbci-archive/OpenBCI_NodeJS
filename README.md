@@ -27,6 +27,34 @@ var ourBoard = require('openbci-sdk').OpenBCIBoard({
 });
 ```
 
+Or if you don't have a board and want to use synthetic data:
+
+```js
+var ourBoard = require('openbci-sdk').OpenBCIBoard({
+    simulate: true
+});
+```
+
+Auto-finding boards
+-------------------
+You must have the OpenBCI board connected to the PC before trying to automatically find it.
+
+If a port is not automatically found, then call `.listPorts()` to get a list of all serial ports this would be a good place to present a drop down picker list to the user, so they may manually select the serial port name.
+
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.autoFindOpenBCIBoard().then(portName => {
+    if(portName) {
+        /** 
+        * Connect to the board with portName
+        * i.e. ourBoard.connect(portName).....
+        */
+    } else {
+        /**Unable to auto find OpenBCI board*/
+    }
+});
+```
+
 'ready' event
 ------------
 
@@ -48,11 +76,13 @@ Sample properties:
 ------------------
 * `startByte` (`Number`  should be `0xA0`)
 * `sampleNumber` (a `Number` between 0-255) 
-* `channelData` (channel data indexed starting at 1 [1,2,3,4,5,6,7,8] filled with floating point `Numbers`)
+* `channelData` (channel data indexed at 0 filled with floating point `Numbers` in Volts)
 * `auxData` (aux data indexed starting at 0 [0,1,2] filled with floating point `Numbers`)
 * `stopByte` (`Number` should be `0xC0`)
 
 The power of this module is in using the sample emitter, to be provided with samples to do with as you wish.
+
+You can also start the simulator by sending `.connect(portName)` with `portName` equal to `'/dev/tty.openBCISimulator'`.
 
 To get a 'sample' event, you need to:
 -------------------------------------
@@ -79,102 +109,102 @@ var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.streamStop().then(ourBoard.disconnect());
 ```
 
-To start the simulator test samples:
-----------
-1. Call `.simulatorStart()`
-2. In callback for 'ready' emitter, call `streamStart()`
-3. Install the 'sample' event emitter
-```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.simulatorStart().then(function() {
-    ourBoard.on('sample',function(sample) {
-        /** Work with sample */
-    });
-}).catch(function(err) {
-    console.log('Error [simulator]: ' + err);
-});
-```
-To stop the simulator:
-```js
-ourBoard.simulatorStop()
-```
-
-Impedance (signal quality)
---------------------------
+Auto Test - (Using impedance to determine signal quality)
+---------------------------------------------------------
 Measuring impedance is a vital tool in ensuring great data is collected. 
 
-* **Good** impedance is < 5k Ohms
-* **Ok** impedance is 5 to 10k Ohms
-* **Bad** impedance is > 10k Ohms
+**_IMPORTANT!_** Measuring impedance takes time, so *only test what you must*
 
-To test for impedance we must apply a known test signal to which either the P, N, or both channels and then apply a little math.
+Your OpenBCI board will have electrodes hooked up to either a P input, N input or in some cases both inputs. 
 
-When you start measuring for electrode impedance's, a new additional property called `impedanceArray` (indexed 1,2,3,4,5,6,7,8), can be found on the sample object from the emitted by 'sample'.
+To test specific inputs of channels:
 
-**Note: You must be streaming in order to measure impedance's. Takes up to 2 seconds to start measuring impedances.**
+1. Connect to board.
+2. Start streaming.
+3. Install the 'impedanceArray' emitter
+4. Call `.impedanceTestChannels()` with your configuration array
 
-To start measuring all channels impedance's:
+A configuration array looks like, for an 8 channel board, `['-','N','n','p','P','-','b','b']`
+
+Where there are the same number of elements as channels and each element can be either:
+
+* `p` or `P` (only test P input)
+* `n` or `N` (only test N input)
+* `b` or `B` (test both inputs) (takes 66% longer to run then previous two `p` or `n`)
+* `-` (ignore channel)
+
+Without further ado, here is an example:
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
-        ourBoard.impedanceTestStartAll().then(() => {
-            ourBoard.streamStart();
+        ourBoard.streamStart();
+        ourBoard.once('impedanceArray', impedanceArray => {
+            /** Work with impedance Array */
         });
-        ourBoard.on('sample',function(sample) {
-            /** Do normal Sample actions */
-            if(sample.impedanceArray) {
-                /** Work with impedance array */
-            }
-        });
+        ourBoard.impedanceTestChannels(['n','N','n','p','P','p','b','B']).catch(err => console.log(err));
     });
 }).catch(function(err) {
     /** Handle connection errors */
-});            
+}); 
 ```
 
-To stop measuring impedance's:
+But wait! What is this `impedanceArray`? An Array of Objects, for each object:
 ```js
-ourBoard.impedanceTestStopAll();
+[{
+    channel: 1,
+    P: {
+        data: [], 
+        average: -1, 
+        text: 'init'
+    },
+    N: {
+        data: [], 
+        average: -1, 
+        text: 'init'
+    }
+},
+{
+    // Continues for each channel up to the amount of channels on board (8 or 16)
+},...];
 ```
 
-To apply the test signal to a specific input of a specific channel (i.e. Channel 2 test signal applied to P input and not N input):
-```js
-ourBoard.impedanceTestStartChannel(2,true,false);
-```
+Where:
 
-To stop applying the test signal to a specific channel (i.e. Stop applying signal to channel 2):
-```js
-ourBoard.impedanceTestStopChannel(2);
-```
+* *channel* is the channel number (`impedanceArray[0]` is channel 1, `impedanceArray[6]` is channel 7)
+* *P* is the P input data (Note: P is capitalized)
+  * *data* is an array of raw impedances values that were recorded over 250ms
+  * *average* is an average impedance value taken from `data` array. To get this value we remove outliers from the `data` array and average the cleaned data.
+  * *text* is a text interpretation of the `average`
+    * **Good** impedance is < 5k Ohms
+    * **Ok** impedance is 5 to 10k Ohms
+    * **Bad** impedance is > 10k Ohms
+    * **None** impedance is > 1M Ohms
+* *N* is the N input data (Note: N is capitalized) (see above for what N object consists of)
 
-To stop calculating impedance's every time there is a new sample:
-```js
-ourBoard.impedanceTestCalculatingStop();
-```
-You would call `.impedanceTestCalculatingStop()` if you were measuring the impedance for a specified channel. You do NOT need to call `.impedanceTestCalculatingStop()` after calling `.impedanceTestStopAll()` because it is called for you.
+To run an impedance test on all imputs:
 
-Auto-finding boards
--------------------
-You must have the OpenBCI board connected to the PC before trying to automatically find it.
+1. Connect to board
+2. Start streaming
+3. Install the 'impedanceObject'
+4. Call `.impedanceTestAllChannels()`
 
-If a port is not automatically found, then a list of ports will be returned, this would be a 
-good place to present a drop down picker list to the user, so they may manually select the 
-serial port name.
+**Note: Takes up to 5 seconds to start measuring impedances. There is an unknown number of samples taken. Not always 60!**
+
+For example:
 
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.autoFindOpenBCIBoard().then((value) => {
-    if(Array.isArray(value)) {
-        /**Unable to auto find OpenBCI board*/
-    } else {
-        /** 
-        * Connect to the board with portName
-        * i.e. ourBoard.connect(portName).....
-        */
-    }
-});
+ourBoard.connect(portName).then(function(boardSerial) {
+    ourBoard.streamStart();
+    ourBoard.on('impedanceArray', impedanceArray => {
+        /** Work with impedance */
+    });
+    ourBoard.impedanceTestAllChannels();
+}
 ```
+
+See Reference Guide for a complete list of impedance tests.
 
 Reference Guide
 ---------------
@@ -188,9 +218,16 @@ Create new instance of an OpenBCI board.
 
 Board optional configurations.
 
+* `boardType` Specifies type of OpenBCI board (3 possible boards)
+  * `default` - 8 Channel OpenBCI board (Default)
+  * `daisy` - 8 Channel board with Daisy Module
+    (NOTE: THIS IS IN-OP AT THIS TIME DUE TO NO ACCESS TO ACCESSORY BOARD)
+  * `ganglion` - 4 Channel board
+    (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
 * `baudRate` Baud Rate, defaults to 115200. Manipulating this is allowed if firmware on board has been previously configured.
-* `daisy` Daisy chain board is connected to the OpenBCI board. (NOTE: THIS IS IN-OP AT THIS TIME DUE TO NO ACCESS TO ACCESSORY BOARD)
 * `verbose` To output more messages to the command line.
+* `simulate` Full functionality, just synthetic data.
+* `simulatorSampleRate` - The sample rate to use for the simulator (Default is `250`)
 
 **Note, we have added support for either all lowercase OR camelcase of the options, use whichever style you prefer.**
 
@@ -200,7 +237,7 @@ Automatically find an OpenBCI board.
 
 **Note: This will always return an Array of `COM` ports on Windows**
 
-**_Returns_** a promise, fulfilled with a `portName` such as `/dev/tty.*` on Mac/Linux or an 'Array' of all the serial ports.
+**_Returns_** a promise, fulfilled with a `portName` such as `/dev/tty.*` on Mac/Linux.
 
 ### .channelOff(channelNumber)
 
@@ -270,7 +307,7 @@ The essential precursor method to be called initially to establish a serial conn
 
 The system path of the OpenBCI board serial port to open. For example, `/dev/tty` on Mac/Linux or `COM1` on Windows.
 
-**_Returns_** a promise, fulfilled by a successful serial connection to the board, containing the serial port object that was opened. The promise will be rejected at any time if the serial port has an 'error' or 'close' event emitted.
+**_Returns_** a promise, fulfilled by a successful serial connection to the board The promise will be rejected at any time if the serial port has an 'error' or 'close' event emitted.
 
 ### .debugSession()
 
@@ -294,49 +331,167 @@ A number specifying which channel you want to get data on. Only 1-8 at this time
 
 **_Returns_** a promise, fulfilled if the command was sent to the board and the `.processBytes()` function is ready to reach for the specified channel.
 
-### .impedanceTestStartAll()
+### .impedanceTestAllChannels()
 
-To apply test signals to all the channels and all inputs on an OpenBCI board. 
+To apply test signals to the channels on the OpenBCI board used to test for impedance. This can take a little while to actually run (<8 seconds)!
 
-**Note, you must be connected in order to set the test commands. Also this method can take up to 2 seconds to send all commands!**
+Don't forget to install the `impedanceArray` emitter to receive the impendances!
 
-**_Returns_** a promise, fulfilled once all the commands are sent to the board. 
+**Note, you must be connected in order to set the test commands. Also this method can take up to 5 seconds to send all commands!**
 
-### .impedanceTestStopAll()
+**_Returns_** a promise upon completion of test.  
 
-To stop applying test signals to all the channels and inputs on an OpenBCI board. 
+### .impedanceTestChannels(arrayOfCommands)
 
-**Note, you must be connected in order to set the test commands. Also this method can take up to 2 seconds to send all commands!**
+**_arrayOfCommands_** 
 
-**_Returns_** a promise, fulfilled once all the commands are sent to the board. 
+The array of configurations where there are the same number of elements as channels and each element can be either:
+                            
+* `p` or `P` (only test P input)
+* `n` or `N` (only test N input)
+* `b` or `B` (test both inputs) (takes 66% longer to run then previous two `p` or `n`)
+* `-` (ignore channel)
 
-### .impedanceTestStartChannel(channelNumber,pInput,nInput)
+Don't forget to install the `impedanceArray` emitter to receive the impendances!
 
-To apply the impedance test signal to an input for any given channel.
+**Note, you must be connected in order to set the test commands. Also this method can take up to 5 seconds to send all commands!**
 
-**_channelNumber_** 
+**_Returns_** a promise upon completion of test.  
 
-A number specifying which channel you want to get apply the test signal to. Only 1-8 at this time.
+### .impedanceTestChannel(channelNumber)
 
-**_pInput_** 
+Run a complete impedance test on a single channel, applying the test signal individually to P & N inputs.
 
-A bool true if you want to apply the test signal to the P input, false to not apply the test signal.
+**_channelNumber_**
 
-**_nInput_** 
+A Number, specifies which channel you want to test.
 
-A bool true if you want to apply the test signal to the N input, false to not apply the test signal.
+**_Returns_** a promise that resolves a single channel impedance object.
 
-### .impedanceTestCalculatingStart()
+Example:
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.connect(portName).then(function(boardSerial) {
+    ourBoard.on('ready',function() {
+        ourBoard.streamStart();
+        ourBoard.impedanceTestChannel(1)
+            .then(impedanceObject => {
+                /** Do something with impedanceObject! */
+            })
+            .catch(err => console.log(err));
+    });
+}).catch(function(err) {
+    /** Handle connection errors */
+}); 
+```
+Where an impedance for this method call would look like:
+```js
+{
+    channel: 1,
+    P: {
+        data: [3456.324,2204.5,...], 
+        average: 2394.45, 
+        text: 'good'
+    },
+    N: {
+        data: [5436.324,9404.5,...], 
+        average: 7694.45, 
+        text: 'ok'
+    }
+}
+```
 
-To start calculating impedance's every time there is a new sample.
+### .impedanceTestChannelInputP(channelNumber)
 
-**Note, this is automatically called by `.impedanceTestStartAll()` and `.impedanceTestStartChannel()`**
+Run impedance test on a single channel, applying the test signal only to P input.
 
-### .impedanceTestCalculatingStop()
+**_channelNumber_**
 
-To stop calculating impedance's every time there is a new sample.
+A Number, specifies which channel you want to test.
 
-**Note, this is automatically called by `.impedanceTestStopAll()`**
+**_Returns_** a promise that resolves a single channel impedance object.
+
+Example:
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.connect(portName).then(function(boardSerial) {
+    ourBoard.on('ready',function() {
+        ourBoard.streamStart();
+        ourBoard.impedanceTestChannelInputP(1)
+            .then(impedanceObject => {
+                /** Do something with impedanceObject! */
+            })
+            .catch(err => console.log(err));
+    });
+}).catch(function(err) {
+    /** Handle connection errors */
+}); 
+```
+Where an impedance for this method call would look like:
+```js
+{
+    channel: 1,
+    P: {
+        data: [3456.324,2204.5,...], 
+        average: 2394.45, 
+        text: 'good'
+    },
+    N: {
+        data: [], 
+        average: -1, 
+        text: 'init'
+    }
+}
+```
+
+### .impedanceTestChannelInputN(channelNumber)
+
+Run impedance test on a single channel, applying the test signal only to N input.
+
+**_channelNumber_**
+
+A Number, specifies which channel you want to test.
+
+**_Returns_** a promise that resolves a single channel impedance object.
+
+Example:
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.connect(portName).then(function(boardSerial) {
+    ourBoard.on('ready',function() {
+        ourBoard.streamStart();
+        ourBoard.impedanceTestChannelInputN(1)
+            .then(impedanceObject => {
+                /** Do something with impedanceObject! */
+            })
+            .catch(err => console.log(err));
+    });
+}).catch(function(err) {
+    /** Handle connection errors */
+}); 
+```
+Where an impedance for this method call would look like:
+```js
+{
+    channel: 1,
+    P: {
+        data: [], 
+        average: -1, 
+        text: 'init'
+    },
+    N: {
+        data: [5436.324,9404.5,...], 
+        average: 7694.45, 
+        text: 'ok'
+    }
+}
+```
+
+### .listPorts()
+
+List available ports so the user can choose a device when not automatically found.
+
+**_Returns_** a promise, fulfilled with a list of available serial ports.
 
 ### .numberOfChannels()
 
@@ -374,19 +529,19 @@ Get the current sample rate.
 
 ### .simulatorStart()
 
-To start simulating an OpenBCI board. 
+To enter simulate mode. Must call `.connect()` after.
 
 **Note, must be called after the constructor.**
 
-**_Returns_** a promise, if the simulator was able to start.
+**_Returns_** a promise, fulfilled if able to enter simulate mode, reject if not.
 
 ### .simulatorStop()
 
-To stop simulating an OpenBCI board. 
+To leave simulate mode. 
 
 **Note, must be called after the constructor.**
 
-**_Returns_** a promise, if the simulator was able to stop.
+**_Returns_** a promise, fulfilled if able to stop simulate mode, reject if not.
 
 ### .softReset()
 
@@ -402,7 +557,7 @@ Sends a start streaming command to the board.
 
 **Note, You must have called and fulfilled `.connect()` AND observed a `'ready'` emitter before calling this method.**
 
-**_Returns_** a promise, fulfilled if the command was sent to the write queue.
+**_Returns_** a promise, fulfilled if the command was sent to the write queue, rejected if unable.
 
 ### .streamStop()
 
@@ -410,7 +565,7 @@ Sends a stop streaming command to the board.
 
 **Note, You must have called and fulfilled `.connect()` AND observed a `'ready'` emitter before calling this method.**
 
-**_Returns_** a promise, fulfilled if the command was sent to the write queue.
+**_Returns_** a promise, fulfilled if the command was sent to the write queue, rejected if unable.
 
 ### .write(data)
 
@@ -420,7 +575,7 @@ Send commands to the board. Due to the OpenBCI board firmware, a 10ms spacing **
 
 Either a single character or an Array of characters
 
-**_Returns_** a promise, fulfilled if the board has been connected and `dataToWrite` has been added to the write queue
+**_Returns_** a promise, fulfilled if the board has been connected and `dataToWrite` has been added to the write queue, rejected if there were any problems.
 
 **Example**
 
@@ -446,9 +601,25 @@ ourBoard.write('o');
 
 ## Events
 
+### .on('close', callback)
+
+Emitted when the serial connection to the board is closed.
+
+### .on('error', callback)
+
+Emitted when there is an on the serial port.
+
+### .on('impedanceArray', callback)
+
+Emitted when there is a new impedanceArray available.
+
 ### .on('query', callback)
 
 Emitted resulting in a call to `.getChannelSettings()` with the channelSettingsObject
+
+### .on('rawDataPacket', callback)
+
+Emitted when there is a new raw data packet available.
 
 ### .on('ready', callback)
 
@@ -456,17 +627,39 @@ Emitted when the board is in a ready to start streaming state.
 
 ### .on('sample', callback)
 
-Emitted when there is a new sample available. 
+Emitted when there is a new sample available.
+
+## Properties 
+
+### connected
+
+A bool, true if connected to an OpenBCI board, false if not.
+
+### streaming
+
+A bool, true if streaming data from an OpenBCI board, false if not.
 
 ## Dev Notes
 Running
 -------
-1. Plug usb module into serial port
-1. Turn OpenBCI device on
-1. Type `npm start` into the terminal in the project directory
+1. `npm install -D`
+2. Plug usb module into serial port
+3. Turn OpenBCI device on
+4. Type `npm start` into the terminal in the project directory
 
 Testing
 -------
 ```
 npm test
 ```
+
+## Contribute to the library
+1. Fork it!
+2. Create your feature branch: `git checkout -b my-new-feature`
+3. Make changes and ensure tests all pass. (`npm test`)
+4. Commit your changes: `git commit -m 'Add some feature'`
+5. Push to the branch: `git push origin my-new-feature`
+6. Submit a pull request :D
+
+## License
+MIT

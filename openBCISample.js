@@ -1,5 +1,8 @@
 'use strict';
 var gaussian = require('gaussian');
+var outliers = require('outliers');
+var stats = require('scientific-statistics');
+
 /** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
 //   Set by its hardware.
@@ -12,8 +15,8 @@ const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
 // Scale factor for channelData
 const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1);
 
-var k = require('./openBCIConstants');
 
+var k = require('./openBCIConstants');
 
 module.exports = {
     convertPacketToSample: function (dataBuf) {
@@ -24,30 +27,26 @@ module.exports = {
         var numberOfBytes = dataBuf.byteLength;
         var scaleData = true;
 
+        if (numberOfBytes != k.OBCIPacketSize) return;
         if (dataBuf[0] != k.OBCIByteStart) return;
         if (dataBuf[32] != k.OBCIByteStop) return;
-        if (numberOfBytes != k.OBCIPacketSize) return;
 
         var channelData = function () {
-            var out = {};
-            var count = 1;
+            var out = [];
+            var count = 0;
             for (var i = 2; i <= numberOfBytes - 10; i += 3) {
-                //console.log('\tDataBuf is is: ' + dataBuf.slice(i, i + 3).toString('hex'));
-                //var newNumber = self.interpret24bitAsInt32(dataBuf.slice(i, i + 3));
-                //out[count] = newNumber * SCALE_FACTOR_CHANNEL;
-                out[count] = scaleData ? self.interpret24bitAsInt32(dataBuf.slice(i, i + 3)) * SCALE_FACTOR_CHANNEL : self.interpret24bitAsInt32(dataBuf.slice(i, i + 3));
-                //console.log("in" + dataBuf.slice(i,i+3));
-                //console.log(out[count]);
+                var number = self.interpret24bitAsInt32(dataBuf.slice(i, i + 3));
+                out.push(number * SCALE_FACTOR_CHANNEL);
                 count++;
             }
             return out;
         };
 
         var auxData = function () {
-            var out = {};
+            var out = [];
             var count = 0;
             for (var i = numberOfBytes - 7; i < numberOfBytes - 1; i += 2) {
-                out[count] = scaleData ? self.interpret16bitAsInt32(dataBuf.slice(i, i + 2)) * SCALE_FACTOR_ACCEL : self.interpret16bitAsInt32(dataBuf.slice(i, i + 2));
+                out.push(scaleData ? self.interpret16bitAsInt32(dataBuf.slice(i, i + 2)) * SCALE_FACTOR_ACCEL : self.interpret16bitAsInt32(dataBuf.slice(i, i + 2)));
                 count++;
             }
             return out;
@@ -61,16 +60,45 @@ module.exports = {
             stopByte: dataBuf[numberOfBytes - 1] // byte
         }
     },
-    debugPrettyPrint: function(sample) {
+    convertSampleToPacket: function(sample) {
+        var packetBuffer = new Buffer(k.OBCIPacketSize);
+        packetBuffer.fill(0);
 
+        // start byte
+        packetBuffer[0] = k.OBCIByteStart;
+
+        // sample number
+        packetBuffer[1] = sample.sampleNumber;
+
+        // channel data
+        for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+            var threeByteBuffer = this.floatTo3ByteBuffer(sample.channelData[i]);
+
+            threeByteBuffer.copy(packetBuffer, 2 + (i * 3));
+        }
+
+        for (var j = 0; j < 3; j++) {
+            var twoByteBuffer = this.floatTo2ByteBuffer(sample.auxData[j]);
+
+            twoByteBuffer.copy(packetBuffer, (k.OBCIPacketSize - 1 - 6) + (i * 2));
+        }
+
+
+        // stop byte
+        packetBuffer[k.OBCIPacketSize - 1] = k.OBCIByteStop;
+
+        return packetBuffer;
+    },
+
+    debugPrettyPrint: function(sample) {
         if(sample === null || sample === undefined) {
             console.log('== Sample is undefined ==');
         } else {
             console.log('-- Sample --');
             console.log('---- Start Byte: ' + sample.startByte);
             console.log('---- Sample Number: ' + sample.sampleNumber);
-            for(var i = 1; i <= 8; i++) {
-                console.log('---- Channel Data ' + i + ': ' + sample.channelData[i]);
+            for(var i = 0; i < 8; i++) {
+                console.log('---- Channel Data ' + (i + 1) + ': ' + sample.channelData[i]);
             }
             for(var j = 0; j < 3; j++) {
                 console.log('---- Aux Data ' + j + ': ' + sample.auxData[j]);
@@ -78,19 +106,79 @@ module.exports = {
             console.log('---- Stop Byte: ' + sample.stopByte);
         }
     },
-    impedanceCalculation: function(sampleObject) {
+    /**
+     * @description Convert float number into three byte buffer. This is the opposite of .interpret24bitAsInt32()
+     * @param float - The number you want to convert
+     * @returns {Buffer} - 3-byte buffer containing the float
+     */
+    floatTo3ByteBuffer: function(float) {
+        var intBuf = new Buffer(3); // 3 bytes for 24 bits
+        intBuf.fill(0); // Fill the buffer with 0s
+
+        var temp = float / SCALE_FACTOR_CHANNEL; // Convert to counts
+
+        temp = Math.floor(temp); // Truncate counts number
+
+        // Move into buffer
+        intBuf[2] = temp & 255;
+        intBuf[1] = (temp & (255 << 8)) >> 8;
+        intBuf[0] = (temp & (255 << 16)) >> 16;
+
+        return intBuf;
+    },
+    /**
+     * @description Convert float number into three byte buffer. This is the opposite of .interpret24bitAsInt32()
+     * @param float - The number you want to convert
+     * @returns {Buffer} - 3-byte buffer containing the float
+     */
+    floatTo2ByteBuffer: function(float) {
+        var intBuf = new Buffer(2); // 2 bytes for 16 bits
+        intBuf.fill(0); // Fill the buffer with 0s
+
+        var temp = float / SCALE_FACTOR_ACCEL; // Convert to counts
+
+        temp = Math.floor(temp); // Truncate counts number
+
+        //console.log('Num: ' + temp);
+
+        // Move into buffer
+        intBuf[1] = temp & 255;
+        intBuf[0] = (temp & (255 << 8)) >> 8;
+
+        return intBuf;
+    },
+    /**
+     * Purpose: Calculate the impedance for one channel only.
+     * @param sampleObject - Standard OpenBCI sample object
+     * @param channelNumber - Number, the channel you want to calculate impedance for.
+     * @returns {Promise} - Fullfilled with impedance vaule for the specified channel.
+     * Author: AJ Keller
+     */
+    impedanceCalculationForChannel: function(sampleObject,channelNumber) {
         const sqrt2 = Math.sqrt(2);
         return new Promise((resolve,reject) => {
             if(sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
             if(sampleObject.channelData === undefined || sampleObject.channelData === null) reject('Channel cannot be null or undefined');
+            if(channelNumber < 1 || channelNumber > k.OBCINumberOfChannelsDefault) reject('Channel number invalid.');
 
-            var impedanceArray = [];
-            for (var i = 1; i <= k.OBCINumberOfChannelsDefault; i++) {
-                impedanceArray[i] = (sqrt2 * sampleObject.channelData[i]) / k.OBCILeadOffDriveInAmps;
+            var index = channelNumber - 1;
+
+            if (sampleObject.channelData[index] < 0) {
+                sampleObject.channelData[index] *= -1;
             }
-            sampleObject.impedanceArray = impedanceArray;
-            resolve(sampleObject);
+            var impedance = (sqrt2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
+            resolve(impedance);
         });
+    },
+    interpret16bitAsInt32: function(twoByteBuffer) {
+        var prefix = 0;
+
+        if(twoByteBuffer[0] > 127) {
+            //console.log('\t\tNegative number');
+            prefix = 65535; // 0xFFFF
+        }
+
+        return (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
     },
     interpret24bitAsInt32: function(threeByteBuffer) {
         var prefix = 0;
@@ -103,15 +191,24 @@ module.exports = {
         return (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
 
     },
-    interpret16bitAsInt32: function(twoByteBuffer) {
-        var prefix = 0;
-
-        if(twoByteBuffer[0] > 127) {
-            //console.log('\t\tNegative number');
-            prefix = 65535; // 0xFFFF
+    impedanceArray: (numberOfChannels) => {
+        var impedanceArray = [];
+        for (var i = 0; i < numberOfChannels; i++) {
+            impedanceArray.push(newImpedanceObject(i+1));
         }
-
-        return (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
+        return impedanceArray;
+    },
+    impedanceObject: newImpedanceObject,
+    impedanceSummarize: (singleInputObject) => {
+        var median = stats.median(singleInputObject.data);
+        if (median > k.OBCIImpedanceThresholdBadMax) { // The case for no load (super high impedance)
+            singleInputObject.average = median;
+            singleInputObject.text = k.OBCIImpedanceTextNone;
+        } else {
+            var cleanedData = singleInputObject.data.filter(outliers()); // Remove outliers
+            singleInputObject.average =  stats.mean(cleanedData); // Get average numerical impedance
+            singleInputObject.text = k.getTextForRawImpedance(singleInputObject.average); // Get textual impedance
+        }
     },
     newSample: function() {
         return {
@@ -142,7 +239,7 @@ module.exports = {
 
             //console.log('New Sample: ' + JSON.stringify(newSample));
 
-            for(var i = 1; i <= numberOfChannels; i++) { //channels are 1 indexed
+            for(var i = 0; i < numberOfChannels; i++) { //channels are 0 indexed
                 newSample.channelData[i] = distribution.ppf(Math.random())*Math.sqrt(sampleRateHz/2)/uVolts;
 
                 switch (i) {
@@ -187,3 +284,19 @@ module.exports = {
     scaleFactorChannel: SCALE_FACTOR_CHANNEL,
     k:k
 };
+
+function newImpedanceObject(channelNumber) {
+    return {
+        channel: channelNumber,
+        P: {
+            data: [],
+            average: -1,
+            text: k.OBCIImpedanceTextInit
+        },
+        N: {
+            data: [],
+            average: -1,
+            text: k.OBCIImpedanceTextInit
+        }
+    }
+}

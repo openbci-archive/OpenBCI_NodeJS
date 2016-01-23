@@ -36,3 +36,7 @@ myOutput.txt
 
 # Local npm builds for testing end in .tgz
 *.tgz
+
+# For git
+*.orig
+

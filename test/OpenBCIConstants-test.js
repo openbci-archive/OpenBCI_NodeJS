@@ -636,7 +636,7 @@ describe('OpenBCIConstants', function() {
         //'channel 1, power on, gain 24, inputType normal, bias include, srb2 connect, srb1 dissconnect'
         describe('channel input selection works', function() {
             //this.timeout(5000);
-            it('channel 2', function() {
+            it('channel 2', function(done) {
                 k.getChannelSetter(2,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[1].should.equal('2');
                     done();
@@ -644,7 +644,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('channel 5', function() {
+            it('channel 5', function(done) {
                 k.getChannelSetter(5,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[1].should.equal('5');
                     done();
@@ -652,7 +652,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('channel 9', function() {
+            it('channel 9', function(done) {
                 k.getChannelSetter(9,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[1].should.equal('Q');
                     done();
@@ -660,7 +660,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('channel 15', function() {
+            it('channel 15', function(done) {
                 k.getChannelSetter(15,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[1].should.equal('U');
                     done();
@@ -668,23 +668,15 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Invalid channel selection', function() {
-                k.getChannelSetter(0,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid channel selection', function(done) {
+                k.getChannelSetter(0,false,24,'normal',true,true,false).should.be.rejected.and.notify(done);
             });
-            it('Invalid type', function() {
-                k.getChannelSetter('0',false,24,'normal',true,true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getChannelSetter('0',false,24,'normal',true,true,false).should.be.rejected.and.notify(done);
             });
         });
         describe('power selection works', function() {
-            it('on', function() {
+            it('on', function(done) {
                 k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[2].should.equal('0');
                     done();
@@ -692,7 +684,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('off', function() {
+            it('off', function(done) {
                 k.getChannelSetter(1,true,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[2].should.equal('1');
                     done();
@@ -700,16 +692,12 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Invalid type', function() {
-                k.getChannelSetter(1,'taco',24,'normal',true,true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getChannelSetter(1,'taco',24,'normal',true,true,false).should.be.rejected.and.notify(done);
             });
         });
         describe('gain selection works', function() {
-            it('1x', function() {
+            it('1x', function(done) {
                 k.getChannelSetter(1,false,1,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[3].should.equal('0');
                     done();
@@ -717,7 +705,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('2x', function() {
+            it('2x', function(done) {
                 k.getChannelSetter(1,false,2,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[3].should.equal('1');
                     done();
@@ -725,63 +713,55 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('4x', function() {
+            it('4x', function(done) {
                 k.getChannelSetter(1,false,4,'normal',true,true,false).then(function(arrayOfCommands) {
+                    arrayOfCommands[3].should.equal('2');
+                    done();
+                }, function(err) {
+                    done(err);
+                });
+            });
+            it('6x', function(done) {
+                k.getChannelSetter(1,false,6,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[3].should.equal('3');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('6x', function() {
-                k.getChannelSetter(1,false,6,'normal',true,true,false).then(function(arrayOfCommands) {
+            it('8x', function(done) {
+                k.getChannelSetter(1,false,8,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[3].should.equal('4');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('8x', function() {
-                k.getChannelSetter(1,false,8,'normal',true,true,false).then(function(arrayOfCommands) {
+            it('12x', function(done) {
+                k.getChannelSetter(1,false,12,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[3].should.equal('5');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('12x', function() {
-                k.getChannelSetter(1,false,12,'normal',true,true,false).then(function(arrayOfCommands) {
+            it('24x', function(done) {
+                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[3].should.equal('6');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('24x', function() {
-                k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
-                    arrayOfCommands[3].should.equal('7');
-                    done();
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getChannelSetter(1,false,'24','normal',true,true,false).should.be.rejected.and.notify(done);
             });
-            it('Invalid type', function() {
-                k.getChannelSetter(1,false,'24','normal',true,true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
-            });
-            it('Invalid gain setting', function() {
-                k.getChannelSetter(1,false,5,'normal',true,true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid gain setting', function(done) {
+                k.getChannelSetter(1,false,5,'normal',true,true,false).should.be.rejected.and.notify(done);
             });
         });
         describe('input type', function() {
-            it('normal', function() {
+            it('normal', function(done) {
                 k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('0');
                     done();
@@ -789,7 +769,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('shorted', function() {
+            it('shorted', function(done) {
                 k.getChannelSetter(1,false,24,'shorted',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('1');
                     done();
@@ -797,7 +777,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('biasMethod', function() {
+            it('biasMethod', function(done) {
                 k.getChannelSetter(1,false,24,'biasMethod',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('2');
                     done();
@@ -805,7 +785,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('mvdd', function() {
+            it('mvdd', function(done) {
                 k.getChannelSetter(1,false,24,'mvdd',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('3');
                     done();
@@ -813,7 +793,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('temp', function() {
+            it('temp', function(done) {
                 k.getChannelSetter(1,false,24,'temp',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('4');
                     done();
@@ -821,15 +801,15 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('testsig', function() {
-                k.getChannelSetter(1,false,24,'testsig',true,true,false).then(function(arrayOfCommands) {
+            it('testsig', function(done) {
+                k.getChannelSetter(1,false,24,'testSig',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('5');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('biasDrp', function() {
+            it('biasDrp', function(done) {
                 k.getChannelSetter(1,false,24,'biasDrp',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('6');
                     done();
@@ -837,7 +817,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('biasDrn', function() {
+            it('biasDrn', function(done) {
                 k.getChannelSetter(1,false,24,'biasDrn',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[4].should.equal('7');
                     done();
@@ -845,23 +825,15 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Invalid setting', function() {
-                k.getChannelSetter(1,false,24,'taco',true,true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid setting', function(done) {
+                k.getChannelSetter(1,false,24,'taco',true,true,false).should.be.rejected.and.notify(done);
             });
-            it('Invalid type', function() {
-                k.getChannelSetter(1,false,24,1,true,true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getChannelSetter(1,false,24,1,true,true,false).should.be.rejected.and.notify(done);
             });
         });
         describe('bias selection works', function() {
-            it('Include', function() {
+            it('Include', function(done) {
                 k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[5].should.equal('1');
                     done();
@@ -869,7 +841,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Remove', function() {
+            it('Remove', function(done) {
                 k.getChannelSetter(1,false,24,'normal',false,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[5].should.equal('0');
                     done();
@@ -877,16 +849,12 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Invalid type', function() {
-                k.getChannelSetter(1,false,24,'normal','taco',true,false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getChannelSetter(1,false,24,'normal','taco',true,false).should.be.rejected.and.notify(done);
             });
         });
         describe('SRB2 selection works', function() {
-            it('Connect', function() {
+            it('Connect', function(done) {
                 k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[6].should.equal('1');
                     done();
@@ -894,7 +862,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Disconnect', function() {
+            it('Disconnect', function(done) {
                 k.getChannelSetter(1,false,24,'normal',true,false,false).then(function(arrayOfCommands) {
                     arrayOfCommands[6].should.equal('0');
                     done();
@@ -902,16 +870,12 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Invalid type', function() {
-                k.getChannelSetter(1,false,24,'normal',true,'taco',false).then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getChannelSetter(1,false,24,'normal',true,'taco',false).should.be.rejected.and.notify(done);
             });
         });
         describe('SRB1 selection works', function() {
-            it('Connect', function() {
+            it('Connect', function(done) {
                 k.getChannelSetter(1,false,24,'normal',true,true,true).then(function(arrayOfCommands) {
                     arrayOfCommands[7].should.equal('1');
                     done();
@@ -919,7 +883,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Disconnect', function() {
+            it('Disconnect', function(done) {
                 k.getChannelSetter(1,false,24,'normal',true,true,false).then(function(arrayOfCommands) {
                     arrayOfCommands[7].should.equal('0');
                     done();
@@ -927,18 +891,14 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Invalid type', function() {
-                k.getChannelSetter(1,false,24,'normal',true,true,'taco').then(function(arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getChannelSetter(1, false, 24, 'normal', true, true, 'taco').should.be.rejected.and.notify(done);
             });
         });
     });
-    describe('#getChannelSetter', function() {
+    describe('#getImpedanceSetter', function() {
         describe('channel input selection works', function () {
-            it('channel 2', function () {
+            it('channel 2', function (done) {
                 k.getImpedanceSetter(2, false, false).then(function (arrayOfCommands) {
                     arrayOfCommands[1].should.equal('2');
                     done();
@@ -946,7 +906,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('channel 5', function () {
+            it('channel 5', function (done) {
                 k.getImpedanceSetter(5, false, false).then(function (arrayOfCommands) {
                     arrayOfCommands[1].should.equal('5');
                     done();
@@ -954,7 +914,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('channel 9', function () {
+            it('channel 9', function (done) {
                 k.getImpedanceSetter(9, false, false).then(function (arrayOfCommands) {
                     arrayOfCommands[1].should.equal('Q');
                     done();
@@ -962,7 +922,7 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('channel 15', function () {
+            it('channel 15', function (done) {
                 k.getImpedanceSetter(15, false, false).then(function (arrayOfCommands) {
                     arrayOfCommands[1].should.equal('U');
                     done();
@@ -970,82 +930,67 @@ describe('OpenBCIConstants', function() {
                     done(err);
                 });
             });
-            it('Invalid channel selection', function () {
-                k.getImpedanceSetter(0, false, false).then(function (arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function (err) {
-                    done(err);
-                });
+            it('Invalid channel selection', function (done) {
+                k.getImpedanceSetter(0, false, false).should.be.rejected.and.notify(done);
             });
-            it('Invalid type', function () {
-                k.getImpedanceSetter('1', false, false).then(function (arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function (err) {
-                    done(err);
-                });
+            it('Invalid type', function (done) {
+                k.getImpedanceSetter('1', false, false).should.be.rejected.and.notify(done);
             });
         });
-        describe('P Input selection works', function() {
+        describe('P Input selection works', function(done) {
             it('Test Signal Applied', function() {
-                k.getImpedanceSetter(0, true, false).then(function (arrayOfCommands) {
+                k.getImpedanceSetter(1, true, false).then(function (arrayOfCommands) {
                     arrayOfCommands[2].should.equal('1');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('Test Signal Not Applied', function() {
-                k.getImpedanceSetter(0, false, false).then(function (arrayOfCommands) {
+            it('Test Signal Not Applied', function(done) {
+                k.getImpedanceSetter(1, false, false).then(function (arrayOfCommands) {
+                    console.log('\n\n\narray: ' + arrayOfCommands + '\n\n\n');
                     arrayOfCommands[2].should.equal('0');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('Invalid type', function() {
-                k.getImpedanceSetter(0, 'taco', false).then(function (arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getImpedanceSetter(1, 'taco', false).should.be.rejected.and.notify(done);
             });
         });
-        describe('N Input selection works', function() {
+        describe('N Input selection works', function(done) {
             it('Test Signal Applied', function() {
-                k.getImpedanceSetter(0, true, false).then(function (arrayOfCommands) {
+                k.getImpedanceSetter(1, true, false).then(function (arrayOfCommands) {
                     arrayOfCommands[3].should.equal('1');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('Test Signal Not Applied', function() {
-                k.getImpedanceSetter(0, false, false).then(function (arrayOfCommands) {
+            it('Test Signal Not Applied', function(done) {
+                k.getImpedanceSetter(1, false, false).then(function (arrayOfCommands) {
                     arrayOfCommands[3].should.equal('0');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('Invalid type', function() {
-                k.getImpedanceSetter(0, false, 'taco').then(function (arrayOfCommands) {
-                    done('Should have rejected promise');
-                }, function(err) {
-                    done(err);
-                });
+            it('Invalid type', function(done) {
+                k.getImpedanceSetter(1, false, 'taco').should.be.rejected.and.notify(done);
             });
         });
         describe('Prefix and postfix commands work', function() {
-            it('Set', function() {
-                k.getImpedanceSetter(0, true, true).then(function (arrayOfCommands) {
+            it('Set', function(done) {
+                k.getImpedanceSetter(1, true, true).then(function (arrayOfCommands) {
                     arrayOfCommands[0].should.equal('z');
                     done();
                 }, function(err) {
                     done(err);
                 });
             });
-            it('Latch', function() {
-                k.getImpedanceSetter(0, true, true).then(function (arrayOfCommands) {
+            it('Latch', function(done) {
+                k.getImpedanceSetter(1, true, true).then(function (arrayOfCommands) {
                     arrayOfCommands[4].should.equal('Z');
                     done();
                 }, function(err) {

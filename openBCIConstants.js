@@ -155,6 +155,11 @@ const kOBCINumberOfChannelsDaisy = 16;
 const kOBCINumberOfChannelsDefault = 8;
 const kOBCINumberOfChannelsGanglion = 4;
 
+/** Possible OpenBCI board types */
+const kOBCIBoardDaisy = 'daisy';
+const kOBCIBoardDefault = 'default';
+const kOBCIBoardGanglion = 'ganglion';
+
 /** Possible Sample Rates*/
 const kOBCISampleRate125 = 125;
 const kOBCISampleRate250 = 250;
@@ -179,7 +184,28 @@ const kOBCIMasterBufferSize = kOBCIPacketSize * 100;
 const kOBCILeadOffDriveInAmps = 0.000000006;
 
 /** Command send delay */
-const kOBCIWriteIntervalDelayMS = 10;
+const kOBCIWriteIntervalDelayMSLong = 50;
+const kOBCIWriteIntervalDelayMSNone = 0;
+const kOBCIWriteIntervalDelayMSShort = 10;
+
+/** Impedance */
+const kOBCIImpedanceTextBad = 'bad';
+const kOBCIImpedanceTextNone = 'none';
+const kOBCIImpedanceTextGood = 'good';
+const kOBCIImpedanceTextInit = 'init';
+const kOBCIImpedanceTextOk = 'ok';
+
+const kOBCIImpedanceThresholdGoodMin = 0;
+const kOBCIImpedanceThresholdGoodMax = 5000;
+const kOBCIImpedanceThresholdOkMin = 5001;
+const kOBCIImpedanceThresholdOkMax = 10000;
+const kOBCIImpedanceThresholdBadMin = 10001;
+const kOBCIImpedanceThresholdBadMax = 1000000;
+
+const kOBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resistor that must be subtracted
+
+/** Simulator */
+const kOBCISimulatorPortName = '/dev/tty.openBCISimulator';
 
 module.exports = {
     /** Turning channels off */
@@ -396,10 +422,10 @@ module.exports = {
     OBCIStringADCBiasDrp:kOBCIStringADCBiasDrp,
     OBCIStringADCBiasDrn:kOBCIStringADCBiasDrn,
     /**
-     * Purpose: To convert a string like 'normal' to the correct command (i.e. '1')
+     * @description To convert a string like 'normal' to the correct command (i.e. '1')
      * @param adcString
      * @returns {Promise}
-     * Author: AJ Keller (@pushtheworldllc)
+     * @author AJ Keller (@pushtheworldllc)
      */
     commandForADCString:commandForADCString,
     /** Default Channel Settings */
@@ -480,6 +506,20 @@ module.exports = {
     OBCINumberOfChannelsDaisy:kOBCINumberOfChannelsDaisy,
     OBCINumberOfChannelsDefault:kOBCINumberOfChannelsDefault,
     OBCINumberOfChannelsGanglion:kOBCINumberOfChannelsGanglion,
+    /** Possible OpenBCI board types */
+    OBCIBoardDaisy:kOBCIBoardDaisy,
+    OBCIBoardDefault:kOBCIBoardDefault,
+    OBCIBoardGanglion:kOBCIBoardGanglion,
+    numberOfChannelsForBoardType: boardType => {
+        switch (boardType) {
+            case kOBCIBoardDaisy:
+                return kOBCINumberOfChannelsDaisy;
+            case kOBCIBoardGanglion:
+                return kOBCINumberOfChannelsGanglion;
+            default:
+                return kOBCINumberOfChannelsDefault;
+        }
+    },
     /** Possible Sample Rates */
     OBCISampleRate125:kOBCISampleRate125,
     OBCISampleRate250:kOBCISampleRate250,
@@ -502,11 +542,34 @@ module.exports = {
     /** Impedance Setter Maker */
     getImpedanceSetter:impedanceSetter,
     /** Command send delay */
-    OBCIWriteIntervalDelayMS:kOBCIWriteIntervalDelayMS
+    OBCIWriteIntervalDelayMSLong:kOBCIWriteIntervalDelayMSLong,
+    OBCIWriteIntervalDelayMSNone:kOBCIWriteIntervalDelayMSNone,
+    OBCIWriteIntervalDelayMSShort:kOBCIWriteIntervalDelayMSShort,
+    /** Impedance */
+    OBCIImpedanceTextBad:kOBCIImpedanceTextBad,
+    OBCIImpedanceTextGood:kOBCIImpedanceTextGood,
+    OBCIImpedanceTextInit:kOBCIImpedanceTextInit,
+    OBCIImpedanceTextOk:kOBCIImpedanceTextOk,
+    OBCIImpedanceTextNone:kOBCIImpedanceTextNone,
+    OBCIImpedanceThresholdBadMax:kOBCIImpedanceThresholdBadMax,
+    OBCIImpedanceSeriesResistor:kOBCIImpedanceSeriesResistor,
+    getTextForRawImpedance: (value) => {
+        if (value > kOBCIImpedanceThresholdGoodMin && value < kOBCIImpedanceThresholdGoodMax) {
+            return kOBCIImpedanceTextGood;
+        } else if (value > kOBCIImpedanceThresholdOkMin && value < kOBCIImpedanceThresholdOkMax) {
+            return kOBCIImpedanceTextOk;
+        } else if (value > kOBCIImpedanceThresholdBadMin && value < kOBCIImpedanceThresholdBadMax) {
+            return kOBCIImpedanceTextBad;
+        } else {
+            return kOBCIImpedanceTextNone;
+        }
+    },
+    /** Simulator */
+    OBCISimulatorPortName:kOBCISimulatorPortName
 };
 
 /**
- * Purpose: To add a usability abstraction layer above channel setting commands. Due to the
+ * @description To add a usability abstraction layer above channel setting commands. Due to the
  *          extensive and highly specific nature of the channel setting command chain, this
  *          will take several different human readable inputs and merge to one array filled
  *          with the correct commands, prime for sending directly to the write command.
@@ -543,22 +606,25 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
         if (!isNumber(channelNumber)) reject('channelNumber must be of type \'number\' ');
         if (!isBoolean(powerDown)) reject('powerDown must be of type \'boolean\' ');
         if (!isNumber(gain)) reject('gain must be of type \'number\' ');
-        if (!isString(inputTdype)) reject('inputType must be of type \'string\' ');
+        if (!isString(inputType)) reject('inputType must be of type \'string\' ');
         if (!isBoolean(bias)) reject('bias must be of type \'boolean\' ');
         if (!isBoolean(srb2)) reject('srb1 must be of type \'boolean\' ');
         if (!isBoolean(srb1)) reject('srb2 must be of type \'boolean\' ');
 
         // Set Channel Number
-        var p1 = commandChannelForCmd(channelNumber);
+        var p1 = commandChannelForCmd(channelNumber)
+            .catch(err => reject(err));
 
         // Set POWER_DOWN
         cmdPowerDown = powerDown ? kOBCIChannelCmdPowerOff : kOBCIChannelCmdPowerOn;
 
         // Set Gain
-        var p2 = commandForGain(gain);
+        var p2 = commandForGain(gain)
+            .catch(err => reject(err));
 
         // Set ADC string
-        var p3 = commandForADCString(inputType);
+        var p3 = commandForADCString(inputType)
+            .catch(err => reject(err));
 
         // Set BIAS
         cmdBias = bias ? kOBCIChannelCmdBiasInclude : kOBCIChannelCmdBiasRemove;
@@ -588,7 +654,7 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
 }
 
 /**
- * Purpose: To build the array of commands to send to the board to measure impedance
+ * @description To build the array of commands to send to the board to measure impedance
  * @param channelNumber
  * @param pInputApplied - Bool (true -> Test Signal Applied, false -> Test Signal Not Applied (default))
  *          applies the test signal to the P input
@@ -622,7 +688,7 @@ function impedanceSetter(channelNumber,pInputApplied,nInputApplied) {
             ];
             //console.log(outputArray);
             resolve(outputArray);
-        });
+        }).catch(err => reject(err));;
     });
 }
 
