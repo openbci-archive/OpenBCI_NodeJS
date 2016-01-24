@@ -612,6 +612,25 @@ function OpenBCIFactory() {
         }
     };
 
+    /**
+     * Purpose: List available ports so the user can choose a device when not
+     *              automatically found.
+     *
+     * Note: This method is used for convenience essentially just wrapping up
+     *           serial port.
+     *
+     * Author: Andy Heusser (@andyh616)
+     * @returns {Promise}
+     */
+    OpenBCIBoard.prototype.listPorts = function() {
+        return new Promise((resolve, reject) => {
+            serialPort.list((err, ports) => {
+                if(err) reject(err);
+                else resolve(ports);
+            })
+        })
+    };
+
 
     /**
      * Purpose: Automatically find an OpenBCI board. Returns either the name
