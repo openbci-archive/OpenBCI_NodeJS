@@ -1,11 +1,12 @@
 {
   "name": "openbci-sdk",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "A fully NodeJS based API for the OpenBCI board connecting to the hardware directly over serial",
   "main": "openBCIBoard",
   "scripts": {
     "start": "node index",
-    "test": "mocha test"
+    "test": "mocha test",
+    "test-cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec && codecov"
   },
   "keywords": [
     "openbci",
@@ -15,6 +16,9 @@
   "license": "MIT",
   "dependencies": {
     "gaussian": "^1.0.0",
+    "istanbul": "^0.4.2",
+    "outliers": "0.0.3",
+    "scientific-statistics": "^0.2.7",
     "serialport": "^2.0.2"
   },
   "directories": {
@@ -23,9 +27,11 @@
   "devDependencies": {
     "chai": "^3.4.1",
     "chai-as-promised": "^5.2.0",
+    "codecov": "^1.0.1",
     "mocha": "^2.3.4",
     "sandboxed-module": "^2.0.3",
-    "sinon": "^1.17.2"
+    "sinon": "^1.17.2",
+    "sinon-chai": "^2.8.0"
   },
   "repository": {
     "type": "git",

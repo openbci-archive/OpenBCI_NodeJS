@@ -1,3 +1,7 @@
 language: node_js
 node_js:
   - "4.0"
+install:
+  - npm install --all
+script:
+  - npm run test-cov

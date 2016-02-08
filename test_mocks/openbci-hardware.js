@@ -12,8 +12,8 @@ var Hardware = function () {
     //    write: this.write.bind(this),
     //    softReset: this.softReset.bind(this),
     //    autoFindOpenBCIBoard: this.autoFindOpenBCIBoard.bind(this),
-    //    simulatorStart: this.simulatorStart.bind(this),
-    //    simulatorStop: this.simulatorStop.bind(this)
+    //    simulatorEnable: this.simulatorEnable.bind(this),
+    //    simulatorDisable: this.simulatorDisable.bind(this)
     //};
 };
 
@@ -75,7 +75,7 @@ Hardware.prototype.streamStop = function () {
     });
 };
 
-Hardware.prototype.simulatorStart = function () {
+Hardware.prototype.simulatorEnable = function () {
     return new Promise((resolve,reject) => {
         if(!this.bciBoard) reject('Board does not exist - call hardware.createBoard() first');
 
@@ -84,7 +84,7 @@ Hardware.prototype.simulatorStart = function () {
     });
 };
 
-Hardware.prototype.simulatorStop = function () {
+Hardware.prototype.simulatorDisable = function () {
     return new Promise((resolve,reject) => {
         if(!this.bciBoard) reject('Board does not exist - call hardware.createBoard() first');
 
