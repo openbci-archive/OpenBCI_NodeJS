@@ -674,7 +674,7 @@ describe('openbci-sdk',function() {
 
 });
 
-describe('#impedanceTesting', function() {
+xdescribe('#impedanceTesting', function() {
     var ourBoard;
     this.timeout(20000);
     before(function(done) {
@@ -1329,6 +1329,48 @@ describe('#impedanceTesting', function() {
         });
         it('reject with invalid data type nInput', function(done) {
             ourBoard._impedanceTestFinalizeChannel(1,false,'taco').should.be.rejected.and.notify(done);
+        });
+    });
+});
+
+describe.only('#sync', function() {
+    var ourBoard;
+    this.timeout(5000);
+    before(function (done) {
+        ourBoard = new openBCIBoard.OpenBCIBoard({
+            verbose: true
+        });
+
+        var useSim = () => {
+            ourBoard.simulatorEnable().then(() => {
+                return ourBoard.connect(k.OBCISimulatorPortName);
+            });
+        };
+        ourBoard.autoFindOpenBCIBoard()
+            .then(portName => {
+                return ourBoard.connect(portName);
+            })
+            .catch((err) => {
+                useSim();
+            })
+            .then(() => {
+                console.log('connected');
+            })
+            .catch(err => {
+                console.log('Error: ' + err);
+            });
+
+
+        ourBoard.once('ready', () => {
+            done();
+        });
+    });
+    after(function () {
+        ourBoard.disconnect();
+    });
+    describe('#syncClocksStart', function() {
+        it('can sync the clocks',function(done) {
+            ourBoard.syncClocksStart();
         });
     });
 });

@@ -6,6 +6,7 @@ var stream = require('stream');
 
 var openBCISample = require('./openBCISample');
 var k = openBCISample.k;
+var now = require('performance-now');
 
 
 function OpenBCISimulatorFactory() {
@@ -40,8 +41,23 @@ function OpenBCISimulatorFactory() {
         this.buffer = new Buffer(500);
         // Numbers
         this.sampleNumber = -1; // So the first sample is 0
+        // Objects
+        this.time = {
+            current: 0,
+            start: 0,
+            loop: null,
+            ntp0: 0,
+            ntp1: 0,
+            ntp2: 0,
+            ntp3: 0
+        };
+        console.log('Simulator started at time: ' + this.time.start);
+        console.log('Time board has been running: ' + (now() - this.time.start));
         // Strings
         this.portName = portName || k.OBCISimulatorPortName;
+
+        this.time.start = now();
+        this._currentTimeUp();
 
         // Call 'open'
         setTimeout(() => {
@@ -66,13 +82,28 @@ function OpenBCISimulatorFactory() {
     };
 
     OpenBCISimulator.prototype.write = function(data,callback) {
-        if (data[0] === k.OBCIStreamStart) {
-            if (!this.stream) this._startStream();
-        } else if (data[0] === k.OBCIStreamStop) {
-            if (this.stream) clearInterval(this.stream); // Stops the stream
-        } else if (data[0] === k.OBCIMiscSoftReset) {
-            if (this.stream) clearInterval(this.stream);
-            this.emit('data', new Buffer('OpenBCI Board Simulator\nPush The World V-0.2\n$$$'));
+        switch (data[0]) {
+            case k.OBCIStreamStart:
+                if (!this.stream) this._startStream();
+                break;
+            case k.OBCIStreamStop:
+                if (this.stream) clearInterval(this.stream); // Stops the stream
+                break;
+            case k.OBCIMiscSoftReset:
+                if (this.stream) clearInterval(this.stream);
+                this.emit('data', new Buffer('OpenBCI Board Simulator\nPush The World V-0.2\n$$$'));
+                break;
+            case k.OBCISyncClockStart:
+                setTimeout(() => {
+                    this._syncStart();
+                }, 10);
+                break;
+            case k.OBCISyncClockServerData:
+                this.time.ntp3 = this.time.current;
+                this._syncUp(data.slice(1));
+                break;
+            default:
+                break;
         }
 
         /** Handle Callback */
@@ -110,6 +141,41 @@ function OpenBCISimulatorFactory() {
             this.emit('data', getNewPacket(this.sampleNumber));
             this.sampleNumber++;
         }, intervalInMS);
+    };
+
+    OpenBCISimulator.prototype._syncStart = function() {
+        this.time.ntp0 = this.time.current;
+        var buffer = new Buffer('$a$' + this.time.ntp0);
+        this.emit('data',buffer);
+    };
+
+    OpenBCISimulator.prototype._syncUp = function(data) {
+        // get the first number
+        var halfwayPoint = (data.length / 2) - 1;
+        this.time.ntp1 = data.slice(0,halfwayPoint);
+        this.time.ntp2 = data.slice(halfwayPoint);
+
+        var timeSpentOnNetwork = this.time.ntp3 - this.time.ntp0 - (this.time.ntp2 - this.time.ntp1);
+
+        var transferTime = timeSpentOnNetwork / 2;
+
+        var trueTime = this.time.ntp2 + transferTime;
+
+        var delta = trueTime - this.time.ntp3;
+        console.log('Delta: ' + delta);
+
+        this.time.start += delta;
+
+        this.emit('data','Synced!' + '$$$');
+
+    };
+
+    OpenBCISimulator.prototype._currentTimeUp = function() {
+        if (this.time) {
+            this.time.current = now() - this.time.start;
+            if (!this.time.loop) this.time.loop = setInterval(this._currentTimeUp,0.1);
+        }
+
     };
 
     factory.OpenBCISimulator = OpenBCISimulator;

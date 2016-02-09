@@ -150,6 +150,10 @@ const kOBCIFilterEnable = 'f';
 /** Triggers */
 const kOBCITrigger = '`';
 
+/** Sync Clocks */
+const kOBCISyncClockStart = ',';
+const kOBCISyncClockServerData = '<';
+
 /** Possible number of channels */
 const kOBCINumberOfChannelsDaisy = 16;
 const kOBCINumberOfChannelsDefault = 8;
@@ -545,6 +549,9 @@ module.exports = {
     OBCIWriteIntervalDelayMSLong:kOBCIWriteIntervalDelayMSLong,
     OBCIWriteIntervalDelayMSNone:kOBCIWriteIntervalDelayMSNone,
     OBCIWriteIntervalDelayMSShort:kOBCIWriteIntervalDelayMSShort,
+    /** Sync Clocks */
+    OBCISyncClockStart:kOBCISyncClockStart,
+    OBCISyncClockServerData:kOBCISyncClockServerData,
     /** Impedance */
     OBCIImpedanceTextBad:kOBCIImpedanceTextBad,
     OBCIImpedanceTextGood:kOBCIImpedanceTextGood,

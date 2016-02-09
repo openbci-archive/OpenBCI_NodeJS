@@ -7,6 +7,7 @@ var serialPort = require('serialport');
 var openBCISample = require('./openBCISample');
 var k = openBCISample.k;
 var openBCISimulator = require('./openBCISimulator');
+var now = require('performance-now');
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -70,8 +71,11 @@ function OpenBCIFactory() {
         this.isLookingForKeyInBuffer = true;
         // Buffers
         this.masterBuffer = masterBufferMaker();
-        this.moneyBuf = new Buffer('$$$');
-        this.searchingBuf = this.moneyBuf;
+        this.searchBuffers = {
+            timeSyncStart: new Buffer('$a$'),
+            miscStop: new Buffer('$$$')
+        };
+        this.searchingBuf = this.searchBuffers.miscStop;
         // Objects
         this.writer = null;
         this.impedanceTest = {
@@ -80,6 +84,10 @@ function OpenBCIFactory() {
             isTestingNInput: false,
             onChannel: 0,
             sampleNumber: 0
+        };
+        this.sync = {
+            npt1: 0,
+            ntp2: 0
         };
         // Numbers
         this.badPackets = 0;
@@ -847,6 +855,20 @@ function OpenBCIFactory() {
     };
 
     /**
+     * @description Send the command to tell the board to start the syncing protocol.
+     */
+    OpenBCIBoard.prototype.syncClocksStart = function() {
+        return new Promise((resolve,reject) => {
+            if (!this.connected) reject('Must be connected to the device');
+            if (this.streaming) reject('Cannot be streaming to sync clocks');
+            this.searchingBuf = this.searchBuffers.timeSyncStart;
+            this.isLookingForKeyInBuffer = true;
+            this.write(k.OBCISyncClockStart);
+            resolve();
+        });
+    };
+
+    /**
      * @description Consider the '_processBytes' method to be the work horse of this
      *              entire framework. This method gets called any time there is new
      *              data coming in on the serial port. If you are familiar with the
@@ -862,17 +884,24 @@ function OpenBCIFactory() {
             var sizeOfSearchBuf = this.searchingBuf.byteLength; // then size in bytes of the buffer we are searching for
             for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
                 if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
-                    if (this.searchingBuf.equals(this.moneyBuf)) {
+                    if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
                         if(this.options.verbose) console.log('Money!');
                         this.isLookingForKeyInBuffer = false; // critical!!!
                         this.emit('ready'); // tell user they are ready to stream, etc...
+                    } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncStart)) {
+                        this.sync.ntp1 = now();
+                        if(this.options.verbose) console.log('Got time sync request: ' + this.sync.npt1.toFixed(4));
+                        this.sync.ntp2 = now();
+                        this._writeAndDrain('<' + this.sync.ntp1 + this.sync.ntp2);
+                        this.searchingBuf = this.searchBuffers.miscStop;
+
                     } else {
                         getChannelSettingsObj(data.slice(i)).then((channelSettingsObject) => {
                             this.emit('query',channelSettingsObject);
                         }, (err) => {
                             console.log('Error: ' + err);
                         });
-                        this.searchingBuf = this.moneyBuf;
+                        this.searchingBuf = this.searchBuffers.miscStop;
                         break;
                     }
                 }
@@ -1028,7 +1057,7 @@ function OpenBCIFactory() {
 
     OpenBCIBoard.prototype._reset = function() {
         this.masterBuffer = masterBufferMaker();
-        this.searchingBuf = this.moneyBuf;
+        this.searchingBuf = this.searchBuffers.miscStop;
         this.badPackets = 0;
     };
 
