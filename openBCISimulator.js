@@ -44,7 +44,7 @@ function OpenBCISimulatorFactory() {
         // Objects
         this.time = {
             current: 0,
-            start: 0,
+            start: now(),
             loop: null,
             ntp0: 0,
             ntp1: 0,
@@ -57,7 +57,6 @@ function OpenBCISimulatorFactory() {
         this.portName = portName || k.OBCISimulatorPortName;
 
         this.time.start = now();
-        this._currentTimeUp();
 
         // Call 'open'
         setTimeout(() => {
@@ -82,6 +81,7 @@ function OpenBCISimulatorFactory() {
     };
 
     OpenBCISimulator.prototype.write = function(data,callback) {
+
         switch (data[0]) {
             case k.OBCIStreamStart:
                 if (!this.stream) this._startStream();
@@ -95,6 +95,7 @@ function OpenBCISimulatorFactory() {
                 break;
             case k.OBCISyncClockStart:
                 setTimeout(() => {
+                    if (this.options.verbose) console.log('Recieved sync command');
                     this._syncStart();
                 }, 10);
                 break;
@@ -144,16 +145,19 @@ function OpenBCISimulatorFactory() {
     };
 
     OpenBCISimulator.prototype._syncStart = function() {
-        this.time.ntp0 = this.time.current;
+
+        this.time.ntp0 = now();
         var buffer = new Buffer('$a$' + this.time.ntp0);
         this.emit('data',buffer);
     };
 
     OpenBCISimulator.prototype._syncUp = function(data) {
         // get the first number
-        var halfwayPoint = (data.length / 2) - 1;
-        this.time.ntp1 = data.slice(0,halfwayPoint);
-        this.time.ntp2 = data.slice(halfwayPoint);
+        console.log(data.length);
+        var halfwayPoint = (data.length / 2);
+        this.time.ntp1 = parseFloat(data.slice(0,halfwayPoint-1));
+        this.time.ntp2 = parseFloat(data.slice(halfwayPoint));
+        console.log('ntp1: ' + this.time.ntp1 + ' ntp2: ' + this.time.ntp2);
 
         var timeSpentOnNetwork = this.time.ntp3 - this.time.ntp0 - (this.time.ntp2 - this.time.ntp1);
 
@@ -166,15 +170,9 @@ function OpenBCISimulatorFactory() {
 
         this.time.start += delta;
 
+
+
         this.emit('data','Synced!' + '$$$');
-
-    };
-
-    OpenBCISimulator.prototype._currentTimeUp = function() {
-        if (this.time) {
-            this.time.current = now() - this.time.start;
-            if (!this.time.loop) this.time.loop = setInterval(this._currentTimeUp,0.1);
-        }
 
     };
 

@@ -674,7 +674,7 @@ describe('openbci-sdk',function() {
 
 });
 
-xdescribe('#impedanceTesting', function() {
+describe('#impedanceTesting', function() {
     var ourBoard;
     this.timeout(20000);
     before(function(done) {
@@ -703,7 +703,9 @@ xdescribe('#impedanceTesting', function() {
 
 
         ourBoard.once('ready',() => {
-            ourBoard.streamStart();
+            ourBoard.streamStart().then(() => {
+                console.log('Started stream');
+            });
         });
 
         ourBoard.once('sample',() => {
@@ -1185,6 +1187,7 @@ xdescribe('#impedanceTesting', function() {
         var impedanceObject = {};
 
         before(function(done) {
+            ourBoard.softReset();
             ourBoard.impedanceTestChannel(1)
                 .then(impdObj => {
                     impedanceObject = impdObj;
@@ -1259,13 +1262,14 @@ xdescribe('#impedanceTesting', function() {
             });
         });
     });
-    describe('#impedanceTestChannelInputN', function () {
+    describe.only('#impedanceTestChannelInputN', function () {
         var impedanceObject = {};
 
         before(function(done) {
             ourBoard.impedanceTestChannelInputN(1)
                 .then(impdObj => {
                     impedanceObject = impdObj;
+                    console.log(JSON.stringify(impedanceObject));
                     done();
                 })
                 .catch(err => done(err));
@@ -1333,7 +1337,7 @@ xdescribe('#impedanceTesting', function() {
     });
 });
 
-describe.only('#sync', function() {
+xdescribe('#sync', function() {
     var ourBoard;
     this.timeout(5000);
     before(function (done) {
@@ -1342,9 +1346,15 @@ describe.only('#sync', function() {
         });
 
         var useSim = () => {
-            ourBoard.simulatorEnable().then(() => {
-                return ourBoard.connect(k.OBCISimulatorPortName);
-            });
+            ourBoard.simulatorEnable()
+                .then(() => {
+
+                    return ourBoard.connect(k.OBCISimulatorPortName);
+                })
+                .then(() => {
+                    return ourBoard.softReset();
+                })
+                .catch(err => console.log(err));
         };
         ourBoard.autoFindOpenBCIBoard()
             .then(portName => {
@@ -1362,6 +1372,7 @@ describe.only('#sync', function() {
 
 
         ourBoard.once('ready', () => {
+
             done();
         });
     });

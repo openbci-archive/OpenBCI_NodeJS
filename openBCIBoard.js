@@ -428,6 +428,8 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.softReset = function() {
+        this.isLookingForKeyInBuffer = true;
+        this.searchingBuf = this.searchBuffers.miscStop;
         return this.write(k.OBCIMiscSoftReset);
     };
 
@@ -788,7 +790,7 @@ function OpenBCIFactory() {
                     }
                 }
                 resolve(channelNumber);
-            }, 250);
+            }, 1000);
         });
     };
 
@@ -885,14 +887,15 @@ function OpenBCIFactory() {
             for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
                 if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
                     if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
-                        if(this.options.verbose) console.log('Money!');
+                        if (this.options.verbose) console.log('Money!');
+                        if (this.options.verbose) console.log(data.toString());
                         this.isLookingForKeyInBuffer = false; // critical!!!
                         this.emit('ready'); // tell user they are ready to stream, etc...
                     } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncStart)) {
                         this.sync.ntp1 = now();
                         if(this.options.verbose) console.log('Got time sync request: ' + this.sync.npt1.toFixed(4));
                         this.sync.ntp2 = now();
-                        this._writeAndDrain('<' + this.sync.ntp1 + this.sync.ntp2);
+                        this._writeAndDrain('<' + (this.sync.ntp1 * 1000) + (this.sync.ntp2 * 1000));
                         this.searchingBuf = this.searchBuffers.miscStop;
 
                     } else {
@@ -922,6 +925,7 @@ function OpenBCIFactory() {
                             // Get an average of the impedance
                             openBCISample.impedanceCalculationForChannel(newSample,this.impedanceTest.onChannel)
                                 .then(rawValue => {
+                                    console.log("Raw value: " + rawValue);
                                     impedanceTestApplyRaw.call(this,rawValue);
                                 }).catch(err => {
                                     console.log('Impedance calculation error: ' + err);
