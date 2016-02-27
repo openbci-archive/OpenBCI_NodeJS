@@ -83,7 +83,8 @@ function OpenBCIFactory() {
             isTestingPInput: false,
             isTestingNInput: false,
             onChannel: 0,
-            sampleNumber: 0
+            sampleNumber: 0,
+            continuousMode: false
         };
         this.sync = {
             npt1: 0,
@@ -158,7 +159,7 @@ function OpenBCIFactory() {
                     resolve();
                     if(this.options.verbose) console.log("Waiting for '$$$'");
 
-                },timeoutLength + 100);
+                },timeoutLength + 250);
             });
             boardSerial.on('close',() => {
                 if (this.options.verbose) console.log('Serial Port Closed');
@@ -214,9 +215,12 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.streamStart = function() {
-        this.streaming = true;
-        this._reset();
-        return this.write(k.OBCIStreamStart);
+        return new Promise((resolve, reject) => {
+            if(this.streaming) reject('Error [.streamStart()]: Already streaming');
+            this.streaming = true;
+            this._reset();
+            return this.write(k.OBCIStreamStart);
+        });
     };
 
     /**
@@ -228,8 +232,11 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.streamStop = function() {
-        this.streaming = false;
-        return this.write(k.OBCIStreamStop);
+        return new Promise((resolve,reject) => {
+            if(!this.streaming) reject('Error [.streamStop()]: No stream to stop');
+            this.streaming = false;
+            return this.write(k.OBCIStreamStop);
+        });
     };
 
     /**
@@ -342,7 +349,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._writeAndDrain = function(data) {
         return new Promise((resolve,reject) => {
-            //console.log('boardSerial in [writeAndDrain]: ' + JSON.stringify(boardSerial) + ' with command ' + data);
+            console.log('writing command ' + data);
             if(!this.serial) reject('Serial port not open');
             this.serial.write(data,(error,results) => {
                 if(results) {
@@ -517,6 +524,69 @@ function OpenBCIFactory() {
             });
         });
 
+    };
+
+    /**
+     * @description Apply the internal test signal to all channels
+     * @param signal - A string indicating which test signal to apply
+     *      - `dc`
+     *          - Connect to DC signal
+     *      - `ground`
+     *          - Connect to internal GND (VDD - VSS)
+     *      - `pulse1xFast`
+     *          - Connect to test signal 1x Amplitude, fast pulse
+     *      - `pulse1xSlow`
+     *          - Connect to test signal 1x Amplitude, slow pulse
+     *      - `pulse2xFast`
+     *          - Connect to test signal 2x Amplitude, fast pulse
+     *      - `pulse2xFast`
+     *          - Connect to test signal 2x Amplitude, slow pulse
+     *      - 'none'
+     *          - Reset to default
+     * @returns {Promise}
+     */
+    OpenBCIBoard.prototype.testSignal = function(signal) {
+        return new Promise((resolve, reject) => {
+            k.getTestSignalCommand(signal)
+                .then(command => {
+                    return this.write(command);
+                })
+                .then(() => resolve())
+                .catch(err => reject(err));
+        });
+    };
+
+    OpenBCIBoard.prototype.impedanceTestContinuousStart = function() {
+        return new Promise((resolve, reject) => {
+            if (this.impedanceTest.active) reject('Error: test already active');
+            if (this.impedanceTest.continuousMode) reject('Error: Already in continuous impedance test mode!');
+
+            this.impedanceTest.active = true;
+            this.impedanceTest.continuousMode = true;
+
+            for (var i = 0;i < this.numberOfChannels(); i++) {
+                k.getImpedanceSetter(i + 1,false,true).then((commandsArray) => {
+                    this.write(commandsArray);
+                });
+            }
+            resolve();
+        });
+    };
+
+    OpenBCIBoard.prototype.impedanceTestContinuousStop = function() {
+        return new Promise((resolve, reject) => {
+            if (!this.impedanceTest.continuousMode) reject('Error: Not in continuous impedance test mode!');
+
+            this.impedanceTest.active = false;
+            this.impedanceTest.continuousMode = true;
+
+            for (var i = 0;i < this.numberOfChannels(); i++) {
+                k.getImpedanceSetter(i + 1,false,false).then((commandsArray) => {
+                    this.write(commandsArray);
+                });
+            }
+            resolve();
+        });
     };
 
     /**
@@ -718,14 +788,15 @@ function OpenBCIFactory() {
 
             if (!pInput && !nInput) {
                 this.impedanceTest.active = false;
-                this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
+                //this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
             } else {
-                this.writeOutDelay = k.OBCIWriteIntervalDelayMSLong;
+                //this.writeOutDelay = k.OBCIWriteIntervalDelayMSLong;
             }
-
+            console.log('pInput: ' + pInput + ' nInput: ' + nInput);
             k.getImpedanceSetter(channelNumber,pInput,nInput).then((commandsArray) => {
+                console.log(commandsArray);
                 this.write(commandsArray);
-                delayInMS += commandsArray.length * k.OBCIWriteIntervalDelayMSLong;
+                //delayInMS += commandsArray.length * k.OBCIWriteIntervalDelayMSLong;
                 delayInMS += this.commandsToWrite * k.OBCIWriteIntervalDelayMSShort; // Account for commands waiting to be sent in the write buffer
                 setTimeout(() => {
                     /**
@@ -921,18 +992,26 @@ function OpenBCIFactory() {
                     this.emit('rawDataPacket', rawPacket);
                     newSample._count = this.sampleCount++;
                     if(this.impedanceTest.active) {
-                        if (this.impedanceTest.onChannel != 0) {
-                            // Get an average of the impedance
+                        if (this.impedanceTest.continuousMode) {
+                            //console.log('running in contiuous mode...');
+                            openBCISample.impedanceCalculationForAllChannels(newSample)
+                                .then(sample => {
+                                    this.emit('sample', sample);
+                                })
+                                .catch(err => console.log(err));
+                        } else if (this.impedanceTest.onChannel != 0) {
+                            // Only calculate impedance for one channel
                             openBCISample.impedanceCalculationForChannel(newSample,this.impedanceTest.onChannel)
                                 .then(rawValue => {
-                                    console.log("Raw value: " + rawValue);
+                                    //console.log("Raw value: " + rawValue);
                                     impedanceTestApplyRaw.call(this,rawValue);
                                 }).catch(err => {
                                     console.log('Impedance calculation error: ' + err);
                             });
                         }
+                    } else {
+                        this.emit('sample', newSample);
                     }
-                    this.emit('sample', newSample);
                 } else {
                     this.badPackets++;
                     this._bufAlign(); // fix the buffer to start reading at next start byte

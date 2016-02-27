@@ -15,7 +15,7 @@ var fs = require('fs');
 //var wstream = fs.createWriteStream('myOutput.txt');
 
 
-describe('openbci-sdk',function() {
+xdescribe('openbci-sdk',function() {
     this.timeout(2000);
     var ourBoard, masterPortName, realBoard, spy;
 
@@ -35,7 +35,7 @@ describe('openbci-sdk',function() {
                 done();
             })
     });
-    describe('#constructor', function () {
+    xdescribe('#constructor', function () {
         it('constructs with the correct default options', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard();
             (ourBoard.options.boardType).should.equal('default');
@@ -127,7 +127,7 @@ describe('openbci-sdk',function() {
             (ourBoard.impedanceArray.length).should.equal(4);
         });
     });
-    describe('#simulator', function() {
+    xdescribe('#simulator', function() {
         it('can enable simulator after contructor', function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true
@@ -183,7 +183,7 @@ describe('openbci-sdk',function() {
         });
     });
 
-    describe('#boardTests', function() {
+    xdescribe('#boardTests', function() {
         this.timeout(2000);
         before(function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -408,276 +408,100 @@ describe('openbci-sdk',function() {
     });
 
 
-    xdescribe('#testsWithBoard', function() {
-        this.timeout(10000);
-        xdescribe('#connect', function() {
-            var running = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard({
-                    verbose: true
+    xdescribe('#hardwareValidation', function() {
+        this.timeout(20000); // long timeout for pleanty of stream time :)
+        var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;
+        var wstream;
+        before(function(done) {
+            if (runHardwareValidation) {
+                ourBoard = new openBCIBoard.OpenBCIBoard({
+                    verbose:true
                 });
+                wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
 
-                ourBoard.autoFindOpenBCIBoard().then((value) => {
-                    if(Array.isArray(value)) {
-                        /**Unable to auto find OpenBCI board*/
-                        console.log('NO BOARD CONNECTED!, AUTO PASSING TEST!');
-                        running = true;
-                        done();
-                    } else {
-                        return ourBoard.connect(value).then(function() {
-                            console.log('board connected on path: ' + value);
-                            ourBoard.on('ready',function() {
-                                console.log('Ready to start streaming!');
-                                ourBoard.streamStart();
-                                ourBoard.on('sample',function(sample) {
-                                    //wstream.write('Master Count: ' + sample._count + ' Sample Count: ' + sample.sampleNumber + '\n');
-                                    //console.log('Master Count: ' + sample._count + ' Sample Count: ' + sample.sampleNumber);
-                                    OpenBCISample.debugPrettyPrint(sample);
-                                });
-                            });
-                        });
-                    }
-                }).catch(function(err) {
-                    console.log('Error [setup]: ' + err);
+                ourBoard.connect(masterPortName)
+                    .catch(err => done(err));
+
+                ourBoard.once('ready',() => {
                     done();
                 });
-                setTimeout(function() {
-                    ourBoard.disconnect().then(function(msg) {
-                        running = true;
-                        setTimeout(function(){
-                            done();
-                        },50);
-                    }, function(err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
+
+            } else {
+                done();
+            }
+
+        });
+        after(function() {
+            if (runHardwareValidation) {
+                ourBoard.disconnect();
+            }
+        });
+        it('test all output signals', function(done) {
+            if (runHardwareValidation) {
+                ourBoard.streamStart()
+                    .then(() => {
+                        console.log('Started stream');
+                        console.log('--------');
+
+                    })
+                    .catch(err => done(err));
+
+                setTimeout(() => {
+                    console.log('*-------');
+                    ourBoard.testSignal('pulse1xSlow');
+                },3000);
+                setTimeout(() => {
+                    console.log('**------');
+                    ourBoard.testSignal('pulse2xSlow');
+                },5000);
+                setTimeout(() => {
+                    console.log('***-----');
+                    ourBoard.testSignal('pulse1xFast');
+                },7000);
+                setTimeout(() => {
+                    console.log('****----');
+                    ourBoard.testSignal('pulse2xFast');
                 },9000);
-            });
-            it('should stop the simulator after 5 seconds', function() {
-                expect(running).equals(true);
-            });
-        });
-        xdescribe('#imdenceCheck', function() {
-            var running = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard({
-                    verbose: true
-                });
-
-                ourBoard.autoFindOpenBCIBoard().then((value) => {
-                    if(Array.isArray(value)) {
-                        /**Unable to auto find OpenBCI board*/
-                        console.log('NO BOARD CONNECTED!, AUTO PASSING TEST!');
-                        running = true;
-                        done();
-                    } else {
-                        return ourBoard.connect(value).then(function() {
-                            console.log('board connected on path: ' + value);
-                            ourBoard.on('ready',function() {
-                                console.log('Ready to start streaming!');
-
-                                /** 1: Start Streaming */
-                                setTimeout(() => {
-                                    ourBoard.streamStart();
-                                }, 50);
+                setTimeout(() => {
+                    console.log('*****---');
+                    ourBoard.testSignal('none');
+                },11000);
+                setTimeout(() => {
+                    console.log('******--');
+                    ourBoard.testSignal('pulse1xSlow');
+                },13000);
+                setTimeout(() => {
+                    console.log('*******-');
+                    ourBoard.testSignal('none');
+                },15000);
 
 
-                                /** 2: Install emiter where impedance object will be spat out */
-                                ourBoard.on('impedanceObject', (impedanceObject) => {
-                                    running = true;
-                                    ourBoard.streamStop();
-                                    wstream.write('Final Impedance\'s:\n');
-                                    console.log('\nFinal Impedance\'s: ');
-                                    for (i = 1; i <=8; i++) {
-                                        wstream.write('\tChannel ' + i + '\n');
-                                        console.log('\tChannel ' + i);
-                                        //console.log(JSON.stringify(impedanceObject[i]));
-                                        var sampleNumber = 0;
-                                        var sample;
-                                        var singleObject;
-                                        // do P
-                                        wstream.write('\t\tP input:\n');
-                                        //for (sample in impedanceObject[i].data) {
-                                        //    singleObject = impedanceObject[i].data[sample];
-                                        //    if (singleObject.P.raw > 0) {
-                                        //        //console.log('Running average of ' + (sum / count) + ' with sum: ' + sum + ' and count: ' + count);
-                                        //        console.log('\t\t' + sampleNumber + ': (' + singleObject.P.text + ') \traw value of: ' + singleObject.P.raw.toFixed(2));
-                                        //        wstream.write('\t\t' + sampleNumber + ': (' + singleObject.P.text + ') \traw value of: ' + singleObject.P.raw.toFixed(2) + '\n');
-                                        //    }
-                                        //    sampleNumber++;
-                                        //}
-                                        wstream.write('\t\tAverage raw: ' + impedanceObject[i].average.P.raw.toFixed(2) + ' is ' + impedanceObject[i].average.P.text + '\n');
-                                        console.log('\t\tAverage raw: ' + impedanceObject[i].average.P.raw.toFixed(2) + ' is ' + impedanceObject[i].average.P.text);
-
-                                        // do N
-                                        sampleNumber = 0;
-                                        wstream.write('\t\tN input:\n');
-                                        //for (sample in impedanceObject[i].data) {
-                                        //    singleObject = impedanceObject[i].data[sample];
-                                        //    if (singleObject.N.raw > 0) {
-                                        //        //console.log('Running average of ' + (sum / count).toFixed(2) + ' with sum: ' + sum + ' and count: ' + count);
-                                        //        console.log('\t\t' + sampleNumber + ': (' + singleObject.N.text + ') \traw value of: ' + singleObject.N.raw.toFixed(2));
-                                        //        wstream.write('\t\t' + sampleNumber + ': (' + singleObject.N.text + ') \traw value of: ' + singleObject.N.raw.toFixed(2) + '\n');
-                                        //    }
-                                        //    sampleNumber++;
-                                        //}
-                                        wstream.write('\t\tAverage raw: ' + impedanceObject[i].average.N.raw.toFixed(2) + ' is ' + impedanceObject[i].average.N.text + '\n');
-                                        console.log('\t\tAverage raw: ' + impedanceObject[i].average.N.raw.toFixed(2) + ' is ' + impedanceObject[i].average.N.text);
-                                    }
-                                    setTimeout(() => {
-                                        done();
-                                    }, 100);
-                                });
-
-                                /** 3: Start the impedance test! */
-                                setTimeout(() => {
-                                    ourBoard.impedanceTestAllChannels();
-                                    //ourBoard.impedanceTestChannel(2).then(obj => {
-                                    //    console.log(JSON.stringify(obj));
-                                    //});
-                                },200);
-
-
-                            });
+                ourBoard.on('sample', sample => {
+                    OpenBCISample.samplePrintLine(sample)
+                        .then(line => {
+                            wstream.write(line);
                         });
-                    }
-                }).catch(function(err) {
-                    console.log('Error [setup]: ' + err);
+                });
+                // This stops the test
+                setTimeout(() => {
+                    console.log('********');
                     done();
-                });
-
-                setTimeout(function() {
-                    ourBoard.disconnect().then(function(msg) {
-                        setTimeout(function(){
-                            done();
-                        },50);
-                    }, function(err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
-                }, 8000);
-            });
-            it('should stop the simulator after 5 seconds', function() {
-                expect(running).equals(true);
-            });
-        });
-        xdescribe('#confirm channel 1 off with query register settings', function() {
-            var channelIsOn = false;
-            var didTryToSendPrintCommand = false;
-            var didTryToTurnChannel1Off = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard();
-
-                ourBoard.autoFindOpenBCIBoard(function (portName, ports) {
-                    if (portName) {
-                        ourBoard.connect(portName).then(function (boardSerial) {
-                            //console.log('board connected');
-                            ourBoard.on('ready', function () {
-                                //console.log('Ready to print register settings!');
-                                if (!didTryToSendPrintCommand) {
-                                    didTryToSendPrintCommand = true;
-                                    ourBoard.getSettingsForChannel(1); //sets isChannelOn to true
-                                } else if (!didTryToTurnChannel1Off) {
-                                    didTryToTurnChannel1Off = true;
-                                    //console.log('Tried to turn channel 1 off');
-                                    ourBoard.channelOff(1);
-                                    setTimeout(function() {
-                                        //console.log('Re print register settings');
-                                        ourBoard.getSettingsForChannel(1);
-                                    },100);
-                                }
-                                ourBoard.on('query',function(channelSettingsObject) {
-                                    //ourBoard.debugPrintChannelSettings(channelSettingsObject);
-                                    channelIsOn = ourBoard.channelIsOnFromChannelSettingsObject(channelSettingsObject);
-                                });
-                            });
-                        }).catch(function (err) {
-                            console.log('Error [setup]: ' + err);
-                            done();
-                        });
-
-                    } else {
-                        /** Display list of ports*/
-                        console.log('Port not found... check ports for other ports');
-                        done();
-                    }
-                });
-                setTimeout(function () {
-                    ourBoard.streamStop().then(ourBoard.disconnect).then(function (msg) {
-                        done();
-                    }, function (err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
-                }, 6000);
-            });
-            it('should turn channel off', function() {
-                expect(channelIsOn).equals(false);
-            });
-        });
-        xdescribe('#confirm channel 2 off with query register settings', function() {
-            var channelIsOn = true;
-            var didTryToSendPrintCommand = false;
-            var didTryToTurnChannel1Off = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard();
-
-                ourBoard.autoFindOpenBCIBoard(function (portName, ports) {
-                    if (portName) {
-                        ourBoard.connect(portName).then(function (boardSerial) {
-                            //console.log('board connected');
-                            ourBoard.on('ready', function () {
-                                //console.log('Ready to print register settings!');
-                                if (!didTryToSendPrintCommand) {
-                                    didTryToSendPrintCommand = true;
-                                    ourBoard.getSettingsForChannel(2); //set isChannelOn to true
-                                } else if (!didTryToTurnChannel1Off) {
-                                    didTryToTurnChannel1Off = true;
-                                    //console.log('Tried to turn channel 1 off');
-                                    ourBoard.channelOff(2);
-                                    setTimeout(function() {
-                                        //console.log('Re print register settings');
-                                        ourBoard.getSettingsForChannel(2);
-                                    },100);
-                                }
-                                ourBoard.on('query',function(channelSettingsObject) {
-                                    //ourBoard.debugPrintChannelSettings(channelSettingsObject);
-                                    channelIsOn = ourBoard.channelIsOnFromChannelSettingsObject(channelSettingsObject);
-                                });
-                            });
-                        }).catch(function (err) {
-                            console.log('Error [setup]: ' + err);
-                            done();
-                        });
-
-                    } else {
-                        /** Display list of ports*/
-                        console.log('Port not found... check ports for other ports');
-                        done();
-                    }
-                });
-                setTimeout(function () {
-                    ourBoard.streamStop().then(ourBoard.disconnect).then(function (msg) {
-                        done();
-                    }, function (err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
-                }, 6000);
-            });
-            it('should turn channel off', function() {
-                expect(channelIsOn).equals(false);
-            });
+                },19000);
+            } else {
+                done();
+            }
         });
     });
-
 
 });
 
 describe('#impedanceTesting', function() {
     var ourBoard;
     this.timeout(20000);
+    console.log('1');
+
     before(function(done) {
+        console.log('3');
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose: true
         });
@@ -689,6 +513,7 @@ describe('#impedanceTesting', function() {
         };
         ourBoard.autoFindOpenBCIBoard()
             .then(portName => {
+                console.log('4');
                 return ourBoard.connect(portName);
             })
             .catch((err) => {
@@ -703,21 +528,22 @@ describe('#impedanceTesting', function() {
 
 
         ourBoard.once('ready',() => {
+            console.log('5');
             ourBoard.streamStart().then(() => {
-                console.log('Started stream');
+                setTimeout(() => {
+                    done();
+                    console.log('6');
+                }, 100); // give some time for the stream command to be sent
             });
         });
 
-        ourBoard.once('sample',() => {
-            console.log('done in impedance before');
-            done(); // good to start impedance testing..
-        });
+
     });
     after(function() {
         ourBoard.disconnect();
     });
 
-    describe('#impedanceTestAllChannels', function () {
+    xdescribe('#impedanceTestAllChannels', function () {
         var impedanceArray = [];
 
         before(function(done) {
@@ -945,7 +771,7 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    describe('#impedanceTestChannelsRejects', function() {
+    xdescribe('#impedanceTestChannelsRejects', function() {
         it('rejects when it does not get an array', function(done) {
             ourBoard.impedanceTestChannels('taco').should.be.rejected.and.notify(done);
         });
@@ -955,7 +781,7 @@ describe('#impedanceTesting', function() {
         });
 
     });
-    describe('#impedanceTestChannels', function () {
+    xdescribe('#impedanceTestChannels', function () {
         var impedanceArray = [];
 
         before(function(done) {
@@ -1183,11 +1009,10 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    describe('#impedanceTestChannel', function () {
+    xdescribe('#impedanceTestChannel', function () {
         var impedanceObject = {};
 
         before(function(done) {
-            ourBoard.softReset();
             ourBoard.impedanceTestChannel(1)
                 .then(impdObj => {
                     impedanceObject = impdObj;
@@ -1223,7 +1048,7 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    describe('#impedanceTestChannelInputP', function () {
+    xdescribe('#impedanceTestChannelInputP', function () {
         var impedanceObject = {};
 
         before(function(done) {
@@ -1262,15 +1087,29 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    describe.only('#impedanceTestChannelInputN', function () {
+    describe('#impedanceTestChannelInputN', function () {
+
         var impedanceObject = {};
+        //wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
+        console.log('2');
 
         before(function(done) {
+
+            console.log('7');
+
+            ourBoard.on('sample',sample => {
+                //console.log('8');
+                //OpenBCISample.debugPrettyPrint(sample);
+                // good to start impedance testing..
+            });
+
             ourBoard.impedanceTestChannelInputN(1)
                 .then(impdObj => {
                     impedanceObject = impdObj;
-                    console.log(JSON.stringify(impedanceObject));
-                    done();
+                    console.log('9');
+                    setTimeout(() => {
+                        done();
+                    }, 1000);
                 })
                 .catch(err => done(err));
         });
@@ -1302,12 +1141,12 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    describe('#_impedanceTestSetChannel', function () {
+    xdescribe('#_impedanceTestSetChannel', function () {
         it('reject with invalid channel', function(done) {
             ourBoard._impedanceTestSetChannel(0,false,false).should.be.rejected.and.notify(done);
         });
     });
-    describe('#_impedanceTestCalculateChannel', function () {
+    xdescribe('#_impedanceTestCalculateChannel', function () {
         it('reject with low invalid channel', function(done) {
             ourBoard._impedanceTestCalculateChannel(0,false,false).should.be.rejected.and.notify(done);
         });
@@ -1321,7 +1160,7 @@ describe('#impedanceTesting', function() {
             ourBoard._impedanceTestCalculateChannel(1,false,'taco').should.be.rejected.and.notify(done);
         });
     });
-    describe('#_impedanceTestFinalizeChannel', function () {
+    xdescribe('#_impedanceTestFinalizeChannel', function () {
         it('reject with low invalid channel', function(done) {
             ourBoard._impedanceTestFinalizeChannel(0,false,false).should.be.rejected.and.notify(done);
         });

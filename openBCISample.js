@@ -106,6 +106,31 @@ module.exports = {
             console.log('---- Stop Byte: ' + sample.stopByte);
         }
     },
+    samplePrintHeader: function() {
+        return (
+            'All voltages in Volts!' +
+            'sampleNumber, channel1, channel2, channel3, channel4, channel5, channel6, channel7, channel8, aux1, aux2, aux3\n');
+    },
+    samplePrintLine: function(sample) {
+        return new Promise((resolve, reject) => {
+            if (sample === null || sample === undefined) reject('undefined sample');
+
+            resolve(
+                sample.sampleNumber + ',' +
+                sample.channelData[0].toFixed(8) + ',' +
+                sample.channelData[1].toFixed(8) + ',' +
+                sample.channelData[2].toFixed(8) + ',' +
+                sample.channelData[3].toFixed(8) + ',' +
+                sample.channelData[4].toFixed(8) + ',' +
+                sample.channelData[5].toFixed(8) + ',' +
+                sample.channelData[6].toFixed(8) + ',' +
+                sample.channelData[7].toFixed(8) + ',' +
+                sample.auxData[0].toFixed(8) + ',' +
+                sample.auxData[1].toFixed(8) + ',' +
+                sample.auxData[2].toFixed(8) + '\n'
+            );
+        });
+    },
     /**
      * @description Convert float number into three byte buffer. This is the opposite of .interpret24bitAsInt32()
      * @param float - The number you want to convert
@@ -148,11 +173,11 @@ module.exports = {
         return intBuf;
     },
     /**
-     * Purpose: Calculate the impedance for one channel only.
+     * @description Calculate the impedance for one channel only.
      * @param sampleObject - Standard OpenBCI sample object
      * @param channelNumber - Number, the channel you want to calculate impedance for.
-     * @returns {Promise} - Fullfilled with impedance vaule for the specified channel.
-     * Author: AJ Keller
+     * @returns {Promise} - Fulfilled with impedance value for the specified channel.
+     * @author AJ Keller
      */
     impedanceCalculationForChannel: function(sampleObject,channelNumber) {
         const sqrt2 = Math.sqrt(2);
@@ -167,7 +192,37 @@ module.exports = {
                 sampleObject.channelData[index] *= -1;
             }
             var impedance = (sqrt2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
+            //if (index === 0) console.log("Voltage: " + (sqrt2*sampleObject.channelData[index]) + " leadoff amps: " + k.OBCILeadOffDriveInAmps + " impedance: " + impedance);
             resolve(impedance);
+        });
+    },
+    /**
+     * @description Calculate the impedance for all channels.
+     * @param sampleObject - Standard OpenBCI sample object
+     * @returns {Promise} - Fulfilled with impedances for the sample
+     * @author AJ Keller
+     */
+    impedanceCalculationForAllChannels: function(sampleObject) {
+        const sqrt2 = Math.sqrt(2);
+        return new Promise((resolve,reject) => {
+            if(sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
+            if(sampleObject.channelData === undefined || sampleObject.channelData === null) reject('Channel cannot be null or undefined');
+
+            var sampleImpedances = [];
+            var numChannels = sampleObject.channelData.length;
+            for (var index = 0;index < numChannels; index++) {
+                if (sampleObject.channelData[index] < 0) {
+                    sampleObject.channelData[index] *= -1;
+                }
+                var impedance = (sqrt2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
+                sampleImpedances.push(impedance);
+
+                //if (index === 0) console.log("Voltage: " + (sqrt2*sampleObject.channelData[index]) + " leadoff amps: " + k.OBCILeadOffDriveInAmps + " impedance: " + impedance);
+            }
+
+            sampleObject.impedances = sampleImpedances;
+
+            resolve(sampleObject);
         });
     },
     interpret16bitAsInt32: function(twoByteBuffer) {

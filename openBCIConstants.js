@@ -40,7 +40,10 @@ const kOBCIChannelOn_14 = 'Y';
 const kOBCIChannelOn_15 = 'U';
 const kOBCIChannelOn_16 = 'I';
 
-/** Test Signal Control Commands */
+/** Test Signal Control Commands
+ * 1x - Voltage will be 1 * (VREFP - VREFN) / 2.4 mV
+ * 2x - Voltage will be 2 * (VREFP - VREFN) / 2.4 mV
+ */
 const kOBCITestSignalConnectToDC            = 'p';
 const kOBCITestSignalConnectToGround        = '0';
 const kOBCITestSignalConnectToPulse1xFast   = '=';
@@ -373,6 +376,36 @@ module.exports = {
     OBCITestSignalConnectToPulse1xSlow:kOBCITestSignalConnectToPulse1xSlow,
     OBCITestSignalConnectToPulse2xFast:kOBCITestSignalConnectToPulse2xFast,
     OBCITestSignalConnectToPulse2xSlow:kOBCITestSignalConnectToPulse2xSlow,
+    getTestSignalCommand: (signal) => {
+        return new Promise((resolve,reject) => {
+            switch (signal) {
+                case 'dc':
+                    resolve(kOBCITestSignalConnectToDC);
+                    break;
+                case 'ground':
+                    resolve(kOBCITestSignalConnectToGround);
+                    break;
+                case 'pulse1xFast':
+                    resolve(kOBCITestSignalConnectToPulse1xFast);
+                    break;
+                case 'pulse1xSlow':
+                    resolve(kOBCITestSignalConnectToPulse1xSlow);
+                    break;
+                case 'pulse2xFast':
+                    resolve(kOBCITestSignalConnectToPulse2xFast);
+                    break;
+                case 'pulse2xSlow':
+                    resolve(kOBCITestSignalConnectToPulse2xSlow);
+                    break;
+                case 'none':
+                    resolve(kOBCIChannelDefaultAllSet);
+                    break;
+                default:
+                    reject('Invalid selection! Check your spelling.');
+                    break;
+            }
+        })
+    },
     /** Channel Setting Commands */
     OBCIChannelCmdADCNormal:kOBCIChannelCmdADCNormal,
     OBCIChannelCmdADCShorted:kOBCIChannelCmdADCShorted,
@@ -680,19 +713,19 @@ function impedanceSetter(channelNumber,pInputApplied,nInputApplied) {
         if (!isBoolean(pInputApplied)) reject('pInputApplied must be of type \'boolean\' ');
         if (!isBoolean(nInputApplied)) reject('nInputApplied must be of type \'boolean\' ');
 
-        // Set nInputApplied
-        cmdNInputApplied = nInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
-
         // Set pInputApplied
         cmdPInputApplied = pInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
+
+        // Set nInputApplied
+        cmdNInputApplied = nInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
 
         // Set Channel Number
         commandChannelForCmd(channelNumber).then(command => {
             var outputArray = [
                 kOBCIChannelImpedanceSet,
                 command,
-                cmdNInputApplied,
                 cmdPInputApplied,
+                cmdNInputApplied,
                 kOBCIChannelImpedanceLatch
             ];
             //console.log(outputArray);
