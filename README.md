@@ -35,26 +35,6 @@ var ourBoard = require('openbci-sdk').OpenBCIBoard({
 });
 ```
 
-Auto-finding boards
--------------------
-You must have the OpenBCI board connected to the PC before trying to automatically find it.
-
-If a port is not automatically found, then call `.listPorts()` to get a list of all serial ports this would be a good place to present a drop down picker list to the user, so they may manually select the serial port name.
-
-```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.autoFindOpenBCIBoard().then(portName => {
-    if(portName) {
-        /** 
-        * Connect to the board with portName
-        * i.e. ourBoard.connect(portName).....
-        */
-    } else {
-        /**Unable to auto find OpenBCI board*/
-    }
-});
-```
-
 'ready' event
 ------------
 
@@ -92,7 +72,7 @@ To get a 'sample' event, you need to:
 4. Install the 'sample' event emitter
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.connect(portName).then(function(boardSerial) {
+ourBoard.connect(portName).then(function() {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();
         ourBoard.on('sample',function(sample) {
@@ -107,6 +87,26 @@ Close the connection with `.streamStop()` and disconnect with `.disconnect()`
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.streamStop().then(ourBoard.disconnect());
+```
+
+Auto-finding boards
+-------------------
+You must have the OpenBCI board connected to the PC before trying to automatically find it.
+
+If a port is not automatically found, then call `.listPorts()` to get a list of all serial ports this would be a good place to present a drop down picker list to the user, so they may manually select the serial port name.
+
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.autoFindOpenBCIBoard().then(portName => {
+    if(portName) {
+        /** 
+        * Connect to the board with portName
+        * i.e. ourBoard.connect(portName).....
+        */
+    } else {
+        /**Unable to auto find OpenBCI board*/
+    }
+});
 ```
 
 Auto Test - (Using impedance to determine signal quality)
@@ -307,7 +307,7 @@ The essential precursor method to be called initially to establish a serial conn
 
 The system path of the OpenBCI board serial port to open. For example, `/dev/tty` on Mac/Linux or `COM1` on Windows.
 
-**_Returns_** a promise, fulfilled by a successful serial connection to the board The promise will be rejected at any time if the serial port has an 'error' or 'close' event emitted.
+**_Returns_** a promise, fulfilled by a successful serial connection to the board, the promise will be rejected at any time if the serial port has an 'error' or 'close' event emitted.
 
 ### .debugSession()
 

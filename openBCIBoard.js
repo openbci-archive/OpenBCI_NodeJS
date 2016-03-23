@@ -8,6 +8,7 @@ var openBCISample = require('./openBCISample');
 var k = openBCISample.k;
 var openBCISimulator = require('./openBCISimulator');
 var now = require('performance-now');
+var Sntp = require('sntp');
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -21,7 +22,8 @@ function OpenBCIFactory() {
         simulate: false,
         simulatorSampleRate: 250,
         baudrate: 115200,
-        verbose: false
+        verbose: false,
+        ntp: false
     };
 
     /**
@@ -44,6 +46,9 @@ function OpenBCIFactory() {
      *                      firmware on board has been previously configured.
      *
      *     - `verbose` - Print out useful debugging events
+     *     - `NTP` - Syncs the module up with an NTP time server. Syncs the board on startup
+     *                  with the NTP time. Adds a time stamp to the AUX channels. (NOT FULLY
+     *                  IMPLEMENTED) [DO NOT USE]
      * @constructor
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -61,6 +66,7 @@ function OpenBCIFactory() {
         opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
         opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
         opts.verbose = options.verbose || _options.verbose;
+        opts.ntp = options.NTP || options.ntp || _options.NTP;
         // Set to global options object
         this.options = opts;
 
@@ -90,12 +96,23 @@ function OpenBCIFactory() {
             npt1: 0,
             ntp2: 0
         };
+        var ntpOptions = {
+            host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
+            port: 123,                      // Defaults to 123 (NTP)
+            resolveReference: true,         // Default to false (not resolving)
+            timeout: 1000                   // Defaults to zero (no timeout)
+        };
         // Numbers
         this.badPackets = 0;
         this.commandsToWrite = 0;
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
         // Strings
+
+        // NTP
+        if (this.options.ntp) {
+
+        }
 
         //TODO: Add connect immediately functionality, suggest this to be the default...
     }
@@ -107,9 +124,7 @@ function OpenBCIFactory() {
      * @description The essential precursor method to be called initially to establish a
      *              serial connection to the OpenBCI board.
      * @param portName - a string that contains the port name of the OpenBCIBoard.
-     * @returns {Promise} if the board was able to connect. If at any time the serial port
-     *              closes or errors then this promise will be rejected, and this should be
-     *              observed and taken care of in the most front facing user methods.
+     * @returns {Promise} if the board was able to connect.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.connect = function(portName) {
@@ -951,6 +966,7 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
+        console.log(data);
         var sizeOfData = data.byteLength;
         this.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
         if(this.isLookingForKeyInBuffer) { //in a reset state
@@ -1142,6 +1158,63 @@ function OpenBCIFactory() {
         this.masterBuffer = masterBufferMaker();
         this.searchingBuf = this.searchBuffers.miscStop;
         this.badPackets = 0;
+    };
+
+    /**
+     * @description Stateful method for querying the current offset only when the last
+     *                  one is too old. (defaults to daily)
+     * @returns {Promise} A promise with the time offset
+     */
+    OpenBCIBoard.prototype.sntpGetOffset = function() {
+        return new Promise((resolve, reject) => {
+            Sntp.offset(function(err, offset) {
+                if(err) reject(err);
+                resolve(offset);
+            });
+        });
+    };
+
+    /**
+     * @description Get time from the NTP server. Must have internet connection!
+     * @returns {Promise} - Fulfilled with time object
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.sntpGetServerTime = function() {
+        return new Promise((resolve,reject) => {
+            Sntp.time(options, function (err, time) {
+
+                if (err) {
+                    console.log('Failed: ' + err.message);
+                    reject(err);
+                    //process.exit(1);
+                }
+
+                console.log('Local clock is off by: ' + time.t + ' milliseconds');
+                //process.exit(0);
+                resolve(time);
+            });
+        });
+    };
+
+    /**
+     * @description This starts the NTP server and gets it to remain in sync with the NTP server
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.sntpStart = function() {
+        var start = () => {
+            Sntp.start(() => {
+                Sntp.now();
+            });
+        };
+
+        start();
+    };
+
+    /**
+     * @description Stops the sntp from updating
+     */
+    OpenBCIBoard.prototype.sntpStop = function() {
+        Sntp.stop();
     };
 
     /**
