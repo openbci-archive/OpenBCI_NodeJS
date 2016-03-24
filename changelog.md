@@ -5,7 +5,8 @@ New Features
     * Continuous impedance testing, where each sample gets an `impedances` object that is an array of impedances for each
         channel.
     * OpenBCI Radio Test File
-    * Added Sntp npm module 
+    * Added Sntp npm module with helper functions
+    * Removed stopByte and startByte from sampleObjects
 
 Work In Progress
     * NTP Time Synchronization

@@ -7,60 +7,101 @@ var stats = require('scientific-statistics');
 // Reference voltage for ADC in ADS1299.
 //   Set by its hardware.
 const ADS1299_VREF = 4.5;
-// Assumed gain setting for ADS1299.
-//   Set by its Arduino code.
-const ADS1299_GAIN = 24.0;
 // Scale factor for aux data
 const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
-// Scale factor for channelData
-const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1);
-
+// X, Y, Z
+const ACCEL_NUMBER_AXIS = 3;
+// Default ADS1299 gains array
+const CHANNEL_SETTINGS_OBJECT = {gain:24};
+const CHANNEL_SETTINGS_ARRAY_DEFAULT =
+    [
+        CHANNEL_SETTINGS_OBJECT,
+        CHANNEL_SETTINGS_OBJECT,
+        CHANNEL_SETTINGS_OBJECT,
+        CHANNEL_SETTINGS_OBJECT,
+        CHANNEL_SETTINGS_OBJECT,
+        CHANNEL_SETTINGS_OBJECT,
+        CHANNEL_SETTINGS_OBJECT,
+        CHANNEL_SETTINGS_OBJECT
+    ];
 
 var k = require('./openBCIConstants');
 
 module.exports = {
 
-    convertPacketToSample: (dataBuf,channelSettingsArray) => {
+    parseRawPacket: (dataBuf,packetType,channelSettingsArray) => {
         return new Promise((resolve, reject) => {
-            if (dataBuf === undefined || dataBuf === null) reject('Error: [convertPacketToSample] dataBuf must be defined.')
+            if (dataBuf === undefined || dataBuf === null) reject('Error: [parseRawPacket] dataBuf must be defined.')
+            // Packet type optional, defaults to standard
+            packetType = packetType || k.OBCIPacketTypeStandard;
+            // channelSettingsArray is optional, defaults to CHANNEL_SETTINGS_ARRAY_DEFAULT
+            channelSettingsArray = channelSettingsArray || CHANNEL_SETTINGS_ARRAY_DEFAULT;
+
+            switch (packetType) {
+                case k.OBCIPacketTypeUserDefined:
+                    // Do something with the packet, maybe nothing
+                    break;
+                case k.OBCIPacketTypeTimeSynced:
+                    // Parse the time synced packet
+                    break;
+                default: //treat as normal packet
+                    return this.parsePacketStandard(dataBuf,channelSettingsArray);
+            }
 
         });
 
-        var numberOfBytes = dataBuf.byteLength;
-        var scaleData = true;
-
-        if (numberOfBytes != k.OBCIPacketSize) return;
-        if (dataBuf[0] != k.OBCIByteStart) return;
-        if (dataBuf[32] != k.OBCIByteStop) return;
-
-        var channelData = function () {
-            var out = [];
-            var count = 0;
-            for (var i = 2; i <= numberOfBytes - 10; i += 3) {
-                var number = self.interpret24bitAsInt32(dataBuf.slice(i, i + 3));
-                out.push(number * SCALE_FACTOR_CHANNEL);
-                count++;
-            }
-            return out;
-        };
-
-        var auxData = function () {
-            var out = [];
-            var count = 0;
-            for (var i = numberOfBytes - 7; i < numberOfBytes - 1; i += 2) {
-                out.push(scaleData ? self.interpret16bitAsInt32(dataBuf.slice(i, i + 2)) * SCALE_FACTOR_ACCEL : self.interpret16bitAsInt32(dataBuf.slice(i, i + 2)));
-                count++;
-            }
-            return out;
-        };
-
         return {
-            startByte: dataBuf[0], // byte
             sampleNumber: dataBuf[1], // byte
-            channelData: channelData(), // multiple of 3 bytes
-            auxData: auxData(), // multiple of 2 bytes
-            stopByte: dataBuf[numberOfBytes - 1] // byte
+            channelData: channelData(),
+            auxData: auxData(),
         }
+    },
+    parsePacketStandard: (dataBuf, channelSettingsArray) => {
+
+    },
+    /**
+     * @description Takes a buffer filled with 3 16 bit integers from an OpenBCI device and converts based on settings
+     *                  of the MPU, values are in ?
+     * @param dataBuf - Buffer that is 6 bytes long
+     * @returns {Promise} - Fulfilled with Array of floats 3 elements long
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    getAccelDataArray: (dataBuf) => {
+        return new Promise(resolve => {
+            var accelData = [];
+            for (var i = 0; i < ACCEL_NUMBER_AXIS; i++) {
+                var index = i * 2;
+                accelData.push(self.interpret16bitAsInt32(dataBuf.slice(index, index + 2)) * SCALE_FACTOR_ACCEL);
+            }
+            resolve(accelData);
+        });
+    },
+    /**
+     * @description Takes a buffer filled with 24 bit signed integers from an OpenBCI device with gain settings in
+     *                  channelSettingsArray[index].gain and converts based on settings of ADS1299... spits out an
+     *                  array of floats in VOLTS
+     * @param dataBuf - Buffer with 24 bit signed integers, number of elements is same as channelSettingsArray.length * 3
+     * @param channelSettingsArray - The channel settings array, see OpenBCIConstants.channelSettingsArrayInit() for specs
+     * @returns {Promise} - Fulfilled with Array filled with floats for each channel's voltage in VOLTS
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    getChannelDataArray: (dataBuf, channelSettingsArray) => {
+        return new Promise((resovle, reject) => {
+            if (!Array.isArray(channelSettingsArray)) reject('Error [getChannelDataArray]: Channel Settings must be an array!');
+            var channelData = [];
+            // Iterate through each object in the array
+            channelSettingsArray.forEach((channelSettingsObject, index) => {
+                if (!channelSettingsObject.hasOwnProperty('gain')) reject('Error [getChannelDataArray]: Invalid channel settings object at index ' + index);
+                if (!k.isNumber(channelSettingsObject.gain)) reject('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
+                // Get scale factor
+                var scaleFactor = ADS1299_VREF / channelSettingsObject.gain / (Math.pow(2,23) - 1);
+                // Each number is 3 bytes, need to traverse index * 3 in the buffer
+                index *= 3;
+                // Convert the three byte signed integer and convert it
+                channelData.push(scaleFactor * this.interpret24bitAsInt32(dataBuf.slice(index, index + 3)));
+            });
+            resovle(channelData);
+        });
     },
     convertSampleToPacket: function(sample) {
         var packetBuffer = new Buffer(k.OBCIPacketSize);

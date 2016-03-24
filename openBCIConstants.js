@@ -215,6 +215,13 @@ const kOBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resist
 /** Simulator */
 const kOBCISimulatorPortName = 'OpenBCISimulator';
 
+/** Raw data packet types
+ * Use one hot encoding
+ * */
+const kOBCIPacketTypeStandard       = 1; // 0001
+const kOBCIPacketTypeTimeSynced     = 2; // 0010
+const kOBCIPacketTypeUserDefined    = 4; // 0100
+
 module.exports = {
     /** Turning channels off */
     OBCIChannelOff_1:kOBCIChannelOff_1,
@@ -616,7 +623,15 @@ module.exports = {
         }
     },
     /** Simulator */
-    OBCISimulatorPortName:kOBCISimulatorPortName
+    OBCISimulatorPortName:kOBCISimulatorPortName,
+    /** Raw data packet types */
+    OBCIPacketTypeStandard:kOBCIPacketTypeStandard,
+    OBCIPacketTypeTimeSynced:kOBCIPacketTypeTimeSynced,
+    OBCIPacketTypeUserDefined:kOBCIPacketTypeUserDefined,
+    /** fun funcs */
+    isNumber:isNumber,
+    isBoolean:isBoolean,
+    isString:isString
 };
 
 /**
