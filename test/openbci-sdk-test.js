@@ -1218,9 +1218,9 @@ xdescribe('#sync', function() {
     after(function () {
         ourBoard.disconnect();
     });
-    describe('#syncClocksStart', function() {
-        it('can sync the clocks',function(done) {
-            ourBoard.syncClocksStart();
+    describe('#sntp', function() {
+        it('can get current ntp time', function(done) {
+
         });
     });
 });

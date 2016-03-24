@@ -1,4 +1,4 @@
-2.0.1
+0.2.1
 
 New Features
     * Test Signals with ADS1299 using `.testSignal()`
@@ -13,3 +13,6 @@ Work In Progress
 Bug fixes
     * Impedance calculations
     * Readme updates
+    
+Github Issues Addressed
+    * #25 "simulator sample rate optionally parameter doesn't work"

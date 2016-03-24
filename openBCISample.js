@@ -19,11 +19,13 @@ const SCALE_FACTOR_CHANNEL = ADS1299_VREF / ADS1299_GAIN / (Math.pow(2,23) - 1);
 var k = require('./openBCIConstants');
 
 module.exports = {
-    convertPacketToSample: function (dataBuf) {
-        var self = this;
-        if(dataBuf === undefined || dataBuf === null) {
-            return;
-        }
+
+    convertPacketToSample: (dataBuf,channelSettingsArray) => {
+        return new Promise((resolve, reject) => {
+            if (dataBuf === undefined || dataBuf === null) reject('Error: [convertPacketToSample] dataBuf must be defined.')
+
+        });
+
         var numberOfBytes = dataBuf.byteLength;
         var scaleData = true;
 

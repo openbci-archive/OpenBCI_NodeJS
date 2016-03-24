@@ -213,7 +213,7 @@ const kOBCIImpedanceThresholdBadMax = 1000000;
 const kOBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resistor that must be subtracted
 
 /** Simulator */
-const kOBCISimulatorPortName = '/dev/tty.openBCISimulator';
+const kOBCISimulatorPortName = 'OpenBCISimulator';
 
 module.exports = {
     /** Turning channels off */
@@ -450,6 +450,15 @@ module.exports = {
     OBCIChannelCmdSRB1Diconnect:kOBCIChannelCmdSRB1Diconnect,
     OBCIChannelCmdSRB2Connect:kOBCIChannelCmdSRB2Connect,
     OBCIChannelCmdSRB2Diconnect:kOBCIChannelCmdSRB2Diconnect,
+    /** Channel Settings Object */
+    channelSettingsObjectDefault: channelSettingsObjectDefault,
+    channelSettingsArrayInit: (numberOfChannels) => {
+        var newChannelSettingsArray = [];
+        for (var i = 0; i < numberOfChannels; i++) {
+            newChannelSettingsArray.push(channelSettingsObjectDefault);
+        }
+        return newChannelSettingsArray;
+    },
     /** Channel Setting Helper Strings */
     OBCIStringADCNormal:kOBCIStringADCNormal,
     OBCIStringADCShorted:kOBCIStringADCShorted,
@@ -865,4 +874,15 @@ function commandChannelForCmd(channelNumber) {
                 break;
         }
     });
+}
+function channelSettingsObjectDefault() {
+    return {
+        channelNumber:i,
+        powerDown: false,
+        gain: 24,
+        inputType: kOBCIStringADCNormal,
+        bias: true,
+        srb2: true,
+        srb1: false
+    };
 }

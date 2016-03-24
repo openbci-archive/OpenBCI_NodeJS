@@ -62,7 +62,7 @@ Sample properties:
 
 The power of this module is in using the sample emitter, to be provided with samples to do with as you wish.
 
-You can also start the simulator by sending `.connect(portName)` with `portName` equal to `'/dev/tty.openBCISimulator'`.
+You can also start the simulator by sending `.connect(portName)` with `portName` equal to `'OpenBCISimulator'`.
 
 To get a 'sample' event, you need to:
 -------------------------------------

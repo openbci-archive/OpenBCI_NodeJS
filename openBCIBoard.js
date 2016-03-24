@@ -73,6 +73,7 @@ function OpenBCIFactory() {
         /** Properties (keep alphabetical) */
         // Arrays
         this.writeOutArray = new Array(100);
+        this.channelSettingsArray = k.channelSettingsArrayInit(this.numberOfChannels());
         // Bools
         this.isLookingForKeyInBuffer = true;
         // Buffers
@@ -138,7 +139,8 @@ function OpenBCIFactory() {
                 this.options.simulate = true;
                 if (this.options.verbose) console.log('using faux board ' + portName);
                 boardSerial = new openBCISimulator.OpenBCISimulator(portName, {
-                    verbose: this.options.verbose
+                    verbose: this.options.verbose,
+                    sampleRate: this.options.simulatorSampleRate
                 });
             } else {
                 /* istanbul ignore if */
@@ -538,8 +540,16 @@ function OpenBCIFactory() {
                  reject(err);
             });
         });
-
     };
+
+    OpenBCIBoard.prototype.channelSetAllDefault = function() {
+
+        // Loop through each channel
+        for(var i = 0; i < this.numberOfChannels(); i++) {
+
+        }
+    };
+
 
     /**
      * @description Apply the internal test signal to all channels
