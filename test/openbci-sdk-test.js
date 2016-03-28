@@ -15,7 +15,7 @@ var fs = require('fs');
 //var wstream = fs.createWriteStream('myOutput.txt');
 
 
-xdescribe('openbci-sdk',function() {
+describe('openbci-sdk',function() {
     this.timeout(2000);
     var ourBoard, masterPortName, realBoard, spy;
 
@@ -35,7 +35,7 @@ xdescribe('openbci-sdk',function() {
                 done();
             })
     });
-    xdescribe('#constructor', function () {
+    describe('#constructor', function () {
         it('constructs with the correct default options', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard();
             (ourBoard.options.boardType).should.equal('default');
@@ -127,7 +127,7 @@ xdescribe('openbci-sdk',function() {
             (ourBoard.impedanceArray.length).should.equal(4);
         });
     });
-    xdescribe('#simulator', function() {
+    describe('#simulator', function() {
         it('can enable simulator after contructor', function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true
@@ -183,7 +183,7 @@ xdescribe('openbci-sdk',function() {
         });
     });
 
-    xdescribe('#boardTests', function() {
+    describe('#boardTests', function() {
         this.timeout(2000);
         before(function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -213,8 +213,10 @@ xdescribe('openbci-sdk',function() {
                 ourBoard.once('ready', function() {
                     ourBoard.streamStart().catch(err => done(err)); // start streaming
 
-                    ourBoard.once('sample',() => { // wait till we get a sample
+                    ourBoard.once('sample',(sample) => { // wait till we get a sample
+                        console.log('got a sample');
                         ourBoard.disconnect().then(() => { // call disconnect
+                            console.log('Device is streaming: ' + ourBoard.streaming ? 'true' : 'false')
                             setTimeout(() => {
                                 spy.should.have.been.calledWithMatch(k.OBCIStreamStop);
                                 var conditionalTimeout = realBoard ? 300 : 0;
@@ -230,14 +232,18 @@ xdescribe('openbci-sdk',function() {
                 ourBoard.connect(masterPortName).catch(err => done(err));
                 // for the ready signal test
                 ourBoard.once('ready', function() {
-                    ourBoard.streamStop()
-                        .then(ourBoard.disconnect())
+                    console.log('got here');
+                    ourBoard.disconnect()
                         .then(() => {
+                            console.log('disconnectefd');
                             var conditionalTimeout = realBoard ? 300 : 0;
                             setTimeout(() => {
                                 done();
                             }, conditionalTimeout);
-                        }).catch(err => done(err));
+                        }).catch(err => {
+                            console.log(err);
+                            done(err);
+                        });
                 });
             });
         });
@@ -529,12 +535,17 @@ describe('#impedanceTesting', function() {
 
         ourBoard.once('ready',() => {
             console.log('5');
-            ourBoard.streamStart().then(() => {
-                setTimeout(() => {
-                    done();
-                    console.log('6');
-                }, 100); // give some time for the stream command to be sent
-            });
+            ourBoard.streamStart()
+                .then(() => {
+                    setTimeout(() => {
+                        done();
+                        console.log('6');
+                    }, 100); // give some time for the stream command to be sent
+                })
+                .catch(err => {
+                    console.log(err);
+                    done(err);
+                })
         });
 
 
@@ -543,7 +554,7 @@ describe('#impedanceTesting', function() {
         ourBoard.disconnect();
     });
 
-    xdescribe('#impedanceTestAllChannels', function () {
+    describe('#impedanceTestAllChannels', function () {
         var impedanceArray = [];
 
         before(function(done) {
@@ -771,7 +782,7 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    xdescribe('#impedanceTestChannelsRejects', function() {
+    describe('#impedanceTestChannelsRejects', function() {
         it('rejects when it does not get an array', function(done) {
             ourBoard.impedanceTestChannels('taco').should.be.rejected.and.notify(done);
         });
@@ -781,7 +792,7 @@ describe('#impedanceTesting', function() {
         });
 
     });
-    xdescribe('#impedanceTestChannels', function () {
+    describe('#impedanceTestChannels', function () {
         var impedanceArray = [];
 
         before(function(done) {
@@ -1009,7 +1020,7 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    xdescribe('#impedanceTestChannel', function () {
+    describe('#impedanceTestChannel', function () {
         var impedanceObject = {};
 
         before(function(done) {
@@ -1048,7 +1059,7 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    xdescribe('#impedanceTestChannelInputP', function () {
+    describe('#impedanceTestChannelInputP', function () {
         var impedanceObject = {};
 
         before(function(done) {

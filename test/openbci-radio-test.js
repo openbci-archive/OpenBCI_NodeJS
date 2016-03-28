@@ -14,7 +14,7 @@ var sinonChai = require("sinon-chai");
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
 
-describe('#host',function() {
+xdescribe('#host',function() {
     this.timeout(5000);
     var ourBoard, devicePortName;
 

@@ -175,6 +175,18 @@ const kOBCISampleRate250 = 250;
 /** Packet Size */
 const kOBCIPacketSize = 33;
 
+/** OpenBCI V3 Standard Packet Positions */
+/**
+ * 0:[startByte] | 1:[sampleNumber] | 2:[Channel-1.1] | 3:[Channel-1.2] | 4:[Channel-1.3] | 5:[Channel-2.1] | 6:[Channel-2.2] | 7:[Channel-2.3] | 8:[Channel-3.1] | 9:[Channel-3.2] | 10:[Channel-3.3] | 11:[Channel-4.1] | 12:[Channel-4.2] | 13:[Channel-4.3] | 14:[Channel-5.1] | 15:[Channel-5.2] | 16:[Channel-5.3] | 17:[Channel-6.1] | 18:[Channel-6.2] | 19:[Channel-6.3] | 20:[Channel-7.1] | 21:[Channel-7.2] | 22:[Channel-7.3] | 23:[Channel-8.1] | 24:[Channel-8.2] | 25:[Channel-8.3] | 26:[Aux-1.1] | 27:[Aux-1.2] | 28:[Aux-2.1] | 29:[Aux-2.2] | 30:[Aux-3.1] | 31:[Aux-3.2] | 32:StopByte
+ */
+const kOBCIPacketPositionStartByte          = 0;   // first byte
+const kOBCIPacketPositionStopByte           = 32;  // [32]
+const kOBCIPacketPositionStartAux           = 26;  // [26:27]:Aux 1 | [28:29]:Aux 2 | [30:31]:Aux 3
+const kOBCIPacketPositionStopAux            = 31;  // - - - [30:31]:Aux 3 | 32: Stop byte
+const kOBCIPacketPositionChannelDataStart   = 2;   // 0:startByte | 1:sampleNumber | [2:4] | [5:7] | [8:10] | [11:13] | [14:16] | [17:19] | [21:23] | [24:26]
+const kOBCIPacketPositionChannelDataStop    = 25;  // 24 bytes for channel data
+const kOBCIPacketPositionSampleNumber       = 1;
+
 /** Notable Bytes */
 const kOBCIByteStart = 0xA0;
 const kOBCIByteStop = 0xC0;
@@ -215,12 +227,13 @@ const kOBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resist
 /** Simulator */
 const kOBCISimulatorPortName = 'OpenBCISimulator';
 
-/** Raw data packet types
- * Use one hot encoding
- * */
-const kOBCIPacketTypeStandard       = 1; // 0001
-const kOBCIPacketTypeTimeSynced     = 2; // 0010
-const kOBCIPacketTypeUserDefined    = 4; // 0100
+/**
+ * Raw data packet types/codes
+ */
+const kOBCIPacketTypeRawAux         = 3; // 0011
+const kOBCIPacketTypeStandard       = 0; // 0000
+const kOBCIPacketTypeTimeSynced     = 1; // 0001
+const kOBCIPacketTypeUserDefined    = 2; // 0010
 
 module.exports = {
     /** Turning channels off */
@@ -462,7 +475,7 @@ module.exports = {
     channelSettingsArrayInit: (numberOfChannels) => {
         var newChannelSettingsArray = [];
         for (var i = 0; i < numberOfChannels; i++) {
-            newChannelSettingsArray.push(channelSettingsObjectDefault);
+            newChannelSettingsArray.push(channelSettingsObjectDefault(i));
         }
         return newChannelSettingsArray;
     },
@@ -625,13 +638,22 @@ module.exports = {
     /** Simulator */
     OBCISimulatorPortName:kOBCISimulatorPortName,
     /** Raw data packet types */
+    OBCIPacketTypeRawAux:kOBCIPacketTypeRawAux,
     OBCIPacketTypeStandard:kOBCIPacketTypeStandard,
     OBCIPacketTypeTimeSynced:kOBCIPacketTypeTimeSynced,
     OBCIPacketTypeUserDefined:kOBCIPacketTypeUserDefined,
     /** fun funcs */
     isNumber:isNumber,
     isBoolean:isBoolean,
-    isString:isString
+    isString:isString,
+    /** OpenBCI V3 Standard Packet Positions */
+    OBCIPacketPositionStartByte:kOBCIPacketPositionStartByte,
+    OBCIPacketPositionStopByte:kOBCIPacketPositionStopByte,
+    OBCIPacketPositionStartAux:kOBCIPacketPositionStartAux,
+    OBCIPacketPositionStopAux:kOBCIPacketPositionStopAux,
+    OBCIPacketPositionChannelDataStart:kOBCIPacketPositionChannelDataStart,
+    OBCIPacketPositionChannelDataStop:kOBCIPacketPositionChannelDataStop,
+    OBCIPacketPositionSampleNumber:kOBCIPacketPositionSampleNumber
 };
 
 /**
@@ -890,9 +912,9 @@ function commandChannelForCmd(channelNumber) {
         }
     });
 }
-function channelSettingsObjectDefault() {
+function channelSettingsObjectDefault(channelNumber) {
     return {
-        channelNumber:i,
+        channelNumber:channelNumber,
         powerDown: false,
         gain: 24,
         inputType: kOBCIStringADCNormal,
