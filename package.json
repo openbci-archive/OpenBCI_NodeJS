@@ -20,7 +20,8 @@
     "outliers": "0.0.3",
     "performance-now": "^0.2.0",
     "scientific-statistics": "^0.2.7",
-    "serialport": "^2.0.2"
+    "serialport": "^2.0.2",
+    "sntp": "^2.0.0"
   },
   "directories": {
     "test": "test"
