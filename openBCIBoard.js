@@ -84,6 +84,7 @@ function OpenBCIFactory() {
         };
         this.searchingBuf = this.searchBuffers.miscStop;
         // Objects
+        this.goertzelObject = openBCISample.goertzelNewObject(this.numberOfChannels());
         this.writer = null;
         this.impedanceTest = {
             active: false,
@@ -1023,18 +1024,17 @@ function OpenBCIFactory() {
             // parse the master buffer
             while(this.masterBuffer.packetsRead < this.masterBuffer.packetsIn) {
                 var rawPacket = this._bufPacketStripper();
+                this.emit('rawDataPacket', rawPacket);
                 openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
                     .then(sampleObject => {
-                        this.emit('rawDataPacket', rawPacket);
                         sampleObject._count = this.sampleCount++;
                         if(this.impedanceTest.active) {
                             if (this.impedanceTest.continuousMode) {
                                 //console.log('running in contiuous mode...');
-                                openBCISample.impedanceCalculationForAllChannels(sampleObject)
-                                    .then(sample => {
-                                        this.emit('sample', sample);
+                                openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
+                                    .then((impedanceArray) => {
+                                        this.emit('impedanceArray',impedanceArray);
                                     })
-                                    .catch(err => console.log(err));
                             } else if (this.impedanceTest.onChannel != 0) {
                                 // Only calculate impedance for one channel
                                 openBCISample.impedanceCalculationForChannel(sampleObject,this.impedanceTest.onChannel)

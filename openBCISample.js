@@ -23,12 +23,6 @@ const GOERTZEL_K_250 = Math.floor(0.5 + ((GOERTZEL_BLOCK_SIZE * k.OBCILeadOffFre
 const GOERTZEL_W_250 = ((2 * Math.PI) / GOERTZEL_BLOCK_SIZE) * GOERTZEL_K_250;
 const GOERTZEL_COEFF_250 = 2 * Math.cos(GOERTZEL_W_250);
 
-// Object to help calculate the goertzel
-var goertzel = {
-    q1:[0,0,0,0,0,0,0,0],
-    q2:[0,0,0,0,0,0,0,0],
-    index:0
-};
 
 var sampleModule = {
 
@@ -350,13 +344,75 @@ var sampleModule = {
     },
     scaleFactorAux: SCALE_FACTOR_ACCEL,
     k:k,
-    // to reset the goertzel
-    goertzelReset: () => {
-        for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            goertzel.q1[i] = 0;
-            goertzel.q2[i] = 0;
+    /**
+     * @description Use the Goertzel algorithm to calculate impedances
+     * @param sample - a sample with channelData Array
+     * @param goertzelObj - An object that was created by a call to this.goertzelNewObject()
+     * @returns {Array} - Returns an array if finished computing
+     */
+    goertzelProcessSample: (sample,goertzelObj) => {
+        // calculate the goertzel values for all channels
+        for (var i = 0; i < goertzelObj.numberOfChannels; i++) {
+            var q0 = GOERTZEL_COEFF_250 * goertzelObj.q1[i] - goertzelObj.q2[i] + sample.channelData[i];
+            goertzelObj.q2[i] = goertzelObj.q1[i];
+            goertzelObj.q1[i] = q0;
+
+            console.log('Q1: ' + goertzelObj.q1[i] + ' Q2: ' + goertzelObj.q2[i]);
         }
-    }
+
+
+        // Increment the index counter
+        goertzelObj.index++;
+
+        // Have we iterated more times then block size?
+        if (goertzelObj.index > GOERTZEL_BLOCK_SIZE) {
+            var impedanceArray = [];
+            for (var j = 0; j < goertzelObj.numberOfChannels; j++) {
+                // Calculate the magnitude of the voltage
+                var q1SQRD = goertzelObj.q1[j] * goertzelObj.q1[j];
+                var q2SQRD = goertzelObj.q2[j] * goertzelObj.q2[j];
+                var lastPart = goertzelObj.q1[j] * goertzelObj.q2[j] * GOERTZEL_COEFF_250;
+
+                console.log('Chan ' + j + ', Q1^2: ' + q1SQRD + ', Q2^2: ' + q2SQRD + ', Last Part: ' + lastPart);
+
+                var voltage = Math.sqrt((goertzelObj.q1[j] * goertzelObj.q1[j]) + (goertzelObj.q2[j] * goertzelObj.q2[j]) - goertzelObj.q1[j] * goertzelObj.q2[j] * GOERTZEL_COEFF_250);
+
+                // Calculate the impedance r = v/i
+                var impedance = voltage / k.OBCILeadOffDriveInAmps;
+                // Push the impedance into the final array
+                impedanceArray.push(impedance);
+
+                // Reset the goertzel variables to get ready for the next iteration
+                goertzelObj.q1[j] = 0;
+                goertzelObj.q2[j] = 0;
+            }
+
+            // Reset the goertzel index counter
+            goertzelObj.index = 0;
+
+            // Pass out the impedance array
+            return impedanceArray;
+        } else {
+            // This reject is really just for debugging
+            return;
+        }
+    },
+    goertzelNewObject: (numberOfChannels) => {
+        // Object to help calculate the goertzel
+        var q1 = [];
+        var q2 = [];
+        for (var i = 0; i < numberOfChannels; i++) {
+            q1.push(0);
+            q2.push(0);
+        }
+        return {
+            q1: q1,
+            q2: q2,
+            index: 0,
+            numberOfChannels: numberOfChannels
+        }
+    },
+    GOERTZEL_BLOCK_SIZE:GOERTZEL_BLOCK_SIZE
 };
 
 module.exports = sampleModule;

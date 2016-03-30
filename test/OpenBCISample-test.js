@@ -341,3 +341,25 @@ describe('openBCISample',function() {
     });
 });
 
+describe.only('#goertzelProcessSample', function() {
+    var numberOfChannels = k.OBCINumberOfChannelsDefault;
+    var goertzelObj = openBCISample.goertzelNewObject(numberOfChannels);
+    var newRandomSample = openBCISample.randomSample(numberOfChannels,k.OBCISampleRate250);
+
+    it('produces an array of impedances', function(done) {
+        for (var i = 0; i < openBCISample.GOERTZEL_BLOCK_SIZE + 1; i++) {
+            console.log('Iteration ' + i);
+            var impedanceArray = openBCISample.goertzelProcessSample(newRandomSample(i),goertzelObj);
+            if (impedanceArray) {
+                console.log('Impedance Array: ');
+                for(var j = 0; j < numberOfChannels; j++) {
+                    console.log('Channel ' + (j+1) + ': ' + impedanceArray[j].toFixed(8))
+                }
+                done();
+            }
+        }
+        setTimeout(() => {
+            done('Failed to produce impedance array within block size + 1');
+        }, 100);
+    });
+});
