@@ -3,6 +3,8 @@ var gaussian = require('gaussian');
 var outliers = require('outliers');
 var stats = require('scientific-statistics');
 
+var k = require('./openBCIConstants');
+
 /** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
 //   Set by its hardware.
@@ -12,20 +14,21 @@ const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2,4);
 // X, Y, Z
 const ACCEL_NUMBER_AXIS = 3;
 // Default ADS1299 gains array
-const CHANNEL_SETTINGS_OBJECT = {gain:24};
-const CHANNEL_SETTINGS_ARRAY_DEFAULT =
-    [
-        CHANNEL_SETTINGS_OBJECT,
-        CHANNEL_SETTINGS_OBJECT,
-        CHANNEL_SETTINGS_OBJECT,
-        CHANNEL_SETTINGS_OBJECT,
-        CHANNEL_SETTINGS_OBJECT,
-        CHANNEL_SETTINGS_OBJECT,
-        CHANNEL_SETTINGS_OBJECT,
-        CHANNEL_SETTINGS_OBJECT
-    ];
 
-var k = require('./openBCIConstants');
+// For computing Goertzel Algorithm
+// See: http://www.embedded.com/design/configurable-systems/4024443/The-Goertzel-Algorithm
+// This is N
+const GOERTZEL_BLOCK_SIZE = 20;
+const GOERTZEL_K_250 = Math.floor(0.5 + ((GOERTZEL_BLOCK_SIZE * k.OBCILeadOffFrequencyHz) / k.OBCISampleRate250));
+const GOERTZEL_W_250 = ((2 * Math.PI) / GOERTZEL_BLOCK_SIZE) * GOERTZEL_K_250;
+const GOERTZEL_COEFF_250 = 2 * Math.cos(GOERTZEL_W_250);
+
+// Object to help calculate the goertzel
+var goertzel = {
+    q1:[0,0,0,0,0,0,0,0],
+    q2:[0,0,0,0,0,0,0,0],
+    index:0
+};
 
 var sampleModule = {
 
@@ -346,7 +349,14 @@ var sampleModule = {
         };
     },
     scaleFactorAux: SCALE_FACTOR_ACCEL,
-    k:k
+    k:k,
+    // to reset the goertzel
+    goertzelReset: () => {
+        for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+            goertzel.q1[i] = 0;
+            goertzel.q2[i] = 0;
+        }
+    }
 };
 
 module.exports = sampleModule;

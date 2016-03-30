@@ -539,23 +539,16 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.channelSet = function(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
         var arrayOfCommands = [];
         return new Promise((resolve,reject) => {
-            k.getChannelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1).then((arr) => {
-                arrayOfCommands = arr;
-                resolve(this.write(arrayOfCommands));
+            k.getChannelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1)
+                .then((arr,newChannelSettingObject) => {
+                    arrayOfCommands = arr;
+                    this.channelSettingsArray[channelNumber-1] = newChannelSettingObject;
+                    resolve(this.write(arrayOfCommands));
             }, function(err) {
                  reject(err);
             });
         });
     };
-
-    OpenBCIBoard.prototype.channelSetAllDefault = function() {
-
-        // Loop through each channel
-        for(var i = 0; i < this.numberOfChannels(); i++) {
-
-        }
-    };
-
 
     /**
      * @description Apply the internal test signal to all channels
@@ -587,6 +580,11 @@ function OpenBCIFactory() {
         });
     };
 
+    /**
+     * @description - Sends command to turn on impedances for all channels and continuously calculate their impedances
+     * @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.impedanceTestContinuousStart = function() {
         return new Promise((resolve, reject) => {
             if (this.impedanceTest.active) reject('Error: test already active');
@@ -604,6 +602,11 @@ function OpenBCIFactory() {
         });
     };
 
+    /**
+     * @description - Sends command to turn off impedances for all channels and stop continuously calculate their impedances
+     * @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype.impedanceTestContinuousStop = function() {
         return new Promise((resolve, reject) => {
             if (!this.impedanceTest.continuousMode) reject('Error: Not in continuous impedance test mode!');

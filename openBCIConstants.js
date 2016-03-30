@@ -202,6 +202,7 @@ const kOBCIMasterBufferSize = kOBCIPacketSize * 100;
 
 /** Impedance Calculation Variables */
 const kOBCILeadOffDriveInAmps = 0.000000006;
+const kOBCILeadOffFrequencyHz = 31.5;
 
 /** Command send delay */
 const kOBCIWriteIntervalDelayMSLong = 50;
@@ -604,6 +605,7 @@ module.exports = {
     OBCIMasterBufferSize:kOBCIMasterBufferSize,
     /** Impedance Calculation Variables */
     OBCILeadOffDriveInAmps:kOBCILeadOffDriveInAmps,
+    OBCILeadOffFrequencyHz:kOBCILeadOffFrequencyHz,
     /** Channel Setter Maker */
     getChannelSetter:channelSetter,
     /** Impedance Setter Maker */
@@ -723,6 +725,16 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
         // Set SRB1
         cmdSrb1 = srb1 ? kOBCIChannelCmdSRB1Connect : kOBCIChannelCmdSRB1Diconnect;
 
+        var newChannelSettingsObject = {
+            channelNumber:channelNumber,
+            powerDown: powerDown,
+            gain: gain,
+            inputType: inputType,
+            bias: bias,
+            srb2: srb2,
+            srb1: srb1
+        };
+
         Promise.all([p1,p2,p3]).then(function(values) {
             var outputArray = [
                 kOBCIChannelCmdSet,
@@ -736,7 +748,7 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
                 kOBCIChannelCmdLatch
             ];
             //console.log(outputArray);
-            resolve(outputArray);
+            resolve(outputArray,newChannelSettingsObject);
         });
     });
 }
