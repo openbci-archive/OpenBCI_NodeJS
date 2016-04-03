@@ -341,12 +341,14 @@ describe('openBCISample',function() {
     });
 });
 
-describe.only('#goertzelProcessSample', function() {
+describe('#goertzelProcessSample', function() {
     var numberOfChannels = k.OBCINumberOfChannelsDefault;
     var goertzelObj = openBCISample.goertzelNewObject(numberOfChannels);
     var newRandomSample = openBCISample.randomSample(numberOfChannels,k.OBCISampleRate250);
 
     it('produces an array of impedances', function(done) {
+
+        var passed = false;
         for (var i = 0; i < openBCISample.GOERTZEL_BLOCK_SIZE + 1; i++) {
             console.log('Iteration ' + i);
             var impedanceArray = openBCISample.goertzelProcessSample(newRandomSample(i),goertzelObj);
@@ -355,11 +357,16 @@ describe.only('#goertzelProcessSample', function() {
                 for(var j = 0; j < numberOfChannels; j++) {
                     console.log('Channel ' + (j+1) + ': ' + impedanceArray[j].toFixed(8))
                 }
-                done();
+                passed = true;
             }
         }
         setTimeout(() => {
-            done('Failed to produce impedance array within block size + 1');
-        }, 100);
+            if (passed) {
+                done();
+            } else {
+                done('Failed to produce impedance array within block size + 1');
+            }
+        })
+
     });
 });

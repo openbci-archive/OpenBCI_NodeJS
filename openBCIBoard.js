@@ -109,6 +109,7 @@ function OpenBCIFactory() {
         this.commandsToWrite = 0;
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
+        this.sampleCount = 0;
         // Strings
 
         // NTP
@@ -359,7 +360,6 @@ function OpenBCIFactory() {
                 if(this.writer === null || this.writer === undefined) { //there is no writer started
                     this.writer = setTimeout(writerFunction,this.writeOutDelay);
                 }
-                console.log('resolveing');
                 resolve();
             }
         });
@@ -373,7 +373,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._writeAndDrain = function(data) {
         return new Promise((resolve,reject) => {
-            console.log('writing command ' + data);
+            //console.log('writing command ' + data);
             if(!this.serial) reject('Serial port not open');
             this.serial.write(data,(error,results) => {
                 if(results) {
@@ -1017,42 +1017,80 @@ function OpenBCIFactory() {
                 }
             }
         } else { // steaming operation should lead here...
-            // send input data to master buffer
-            this._bufMerger(data);
-            //console.log('Packets in: ' + this.masterBuffer.packetsIn + ', Packets read: ' + this.masterBuffer.packetsRead);
 
-            // parse the master buffer
-            while(this.masterBuffer.packetsRead < this.masterBuffer.packetsIn) {
-                var rawPacket = this._bufPacketStripper();
-                this.emit('rawDataPacket', rawPacket);
-                openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
-                    .then(sampleObject => {
-                        sampleObject._count = this.sampleCount++;
-                        if(this.impedanceTest.active) {
-                            if (this.impedanceTest.continuousMode) {
-                                //console.log('running in contiuous mode...');
-                                openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
-                                    .then((impedanceArray) => {
-                                        this.emit('impedanceArray',impedanceArray);
-                                    })
-                            } else if (this.impedanceTest.onChannel != 0) {
-                                // Only calculate impedance for one channel
-                                openBCISample.impedanceCalculationForChannel(sampleObject,this.impedanceTest.onChannel)
-                                    .then(rawValue => {
-                                        //console.log("Raw value: " + rawValue);
-                                        impedanceTestApplyRaw.call(this,rawValue);
-                                    }).catch(err => {
-                                    console.log('Impedance calculation error: ' + err);
-                                });
-                            }
-                        } else {
-                            this.emit('sample', sampleObject);
-                        }
-                    }).catch(err => {
-                        console.log('Skipped with error: ' + err);
-                        this.badPackets++;
-                        this._bufAlign(); // fix the buffer to start reading at next start byte
-                    });
+            // cbuffer
+            var bytesToRead = sizeOfData;
+
+            // is there old data?
+            if (this.buffer) {
+                // Get size of old buffer
+                var oldBufferSize = this.buffer.byteLength;
+
+                // Make a new buffer
+                var newDataBuffer = new Buffer(bytesToRead + oldBufferSize);
+
+                // Put old buffer in the front of the new buffer
+                var oldBytesWritten = this.buffer.copy(newDataBuffer);
+
+                // Move the incoming data into the end of the new buffer
+                data.copy(newDataBuffer,oldBytesWritten);
+
+                // Over write data
+                data = newDataBuffer;
+
+                // Update the number of bytes to read
+                bytesToRead += oldBytesWritten;
+            }
+
+            var readingPosition = 0;
+
+            // 45 < (200 - 33) --> 45 < 167 (good) | 189 < 167 (bad) | 0 < (28 - 33) --> 0 < -5 (bad)
+            while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
+                if (data[readingPosition] === k.OBCIByteStart) {
+                    var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
+                    if (data[readingPosition + k.OBCIPacketSize - 1] === k.OBCIByteStop) {
+                        // standard packet!
+                        openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
+                            .then(sampleObject => {
+
+                                sampleObject._count = this.sampleCount++;
+                                if(this.impedanceTest.active) {
+                                    if (this.impedanceTest.continuousMode) {
+                                        //console.log('running in contiuous mode...');
+                                        //openBCISample.debugPrettyPrint(sampleObject);
+                                        var impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
+                                        if (impedanceArray) {
+                                            this.emit('impedanceArray',impedanceArray);
+                                        }
+                                    } else if (this.impedanceTest.onChannel != 0) {
+                                        // Only calculate impedance for one channel
+                                        openBCISample.impedanceCalculationForChannel(sampleObject,this.impedanceTest.onChannel)
+                                            .then(rawValue => {
+                                                //console.log("Raw value: " + rawValue);
+                                                impedanceTestApplyRaw.call(this,rawValue);
+                                            }).catch(err => {
+                                            console.log('Impedance calculation error: ' + err);
+                                        });
+                                    }
+                                } else {
+                                    this.emit('sample', sampleObject);
+                                }
+                            });
+                    }
+                }
+
+                // increment reading position
+                readingPosition++;
+            }
+
+            // Are there any bytes to move into the buffer?
+            if (readingPosition < bytesToRead) {
+                this.buffer = new Buffer(bytesToRead - readingPosition);
+
+                data.copy(this.buffer);
+
+            } else {
+                this.buffer = null;
             }
         }
     };

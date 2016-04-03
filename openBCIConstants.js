@@ -198,7 +198,7 @@ const kErrorInvalidByteStop = "Invalid Stop Byte";
 const kErrorUndefinedOrNullInput = "Undefined or Null Input";
 
 /** Max Master Buffer Size */
-const kOBCIMasterBufferSize = kOBCIPacketSize * 100;
+const kOBCIMasterBufferSize = 4096;
 
 /** Impedance Calculation Variables */
 const kOBCILeadOffDriveInAmps = 0.000000006;

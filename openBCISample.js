@@ -357,12 +357,13 @@ var sampleModule = {
             goertzelObj.q2[i] = goertzelObj.q1[i];
             goertzelObj.q1[i] = q0;
 
-            console.log('Q1: ' + goertzelObj.q1[i] + ' Q2: ' + goertzelObj.q2[i]);
+            //console.log('Q1: ' + goertzelObj.q1[i] + ' Q2: ' + goertzelObj.q2[i]);
         }
 
 
         // Increment the index counter
         goertzelObj.index++;
+
 
         // Have we iterated more times then block size?
         if (goertzelObj.index > GOERTZEL_BLOCK_SIZE) {
@@ -373,7 +374,7 @@ var sampleModule = {
                 var q2SQRD = goertzelObj.q2[j] * goertzelObj.q2[j];
                 var lastPart = goertzelObj.q1[j] * goertzelObj.q2[j] * GOERTZEL_COEFF_250;
 
-                console.log('Chan ' + j + ', Q1^2: ' + q1SQRD + ', Q2^2: ' + q2SQRD + ', Last Part: ' + lastPart);
+                //console.log('Chan ' + j + ', Q1^2: ' + q1SQRD + ', Q2^2: ' + q2SQRD + ', Last Part: ' + lastPart);
 
                 var voltage = Math.sqrt((goertzelObj.q1[j] * goertzelObj.q1[j]) + (goertzelObj.q2[j] * goertzelObj.q2[j]) - goertzelObj.q1[j] * goertzelObj.q2[j] * GOERTZEL_COEFF_250);
 
@@ -462,6 +463,10 @@ function parsePacketStandard(dataBuf, channelSettingsArray) {
                 sampleObject.channelData = channelSettingArray;
                 // Get the sample number
                 sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+                // Get the start byte
+                sampleObject.startByte = dataBuf[0];
+                // Get the stop byte
+                sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
                 resolve(sampleObject);
             })
             .catch(err => {

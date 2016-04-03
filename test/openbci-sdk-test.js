@@ -235,7 +235,7 @@ describe('openbci-sdk',function() {
                     console.log('got here');
                     ourBoard.disconnect()
                         .then(() => {
-                            console.log('disconnectefd');
+                            console.log('disconnected');
                             var conditionalTimeout = realBoard ? 300 : 0;
                             setTimeout(() => {
                                 done();
@@ -504,10 +504,8 @@ describe('openbci-sdk',function() {
 describe('#impedanceTesting', function() {
     var ourBoard;
     this.timeout(20000);
-    console.log('1');
 
     before(function(done) {
-        console.log('3');
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose: true
         });
@@ -519,7 +517,6 @@ describe('#impedanceTesting', function() {
         };
         ourBoard.autoFindOpenBCIBoard()
             .then(portName => {
-                console.log('4');
                 return ourBoard.connect(portName);
             })
             .catch((err) => {
@@ -1102,7 +1099,6 @@ describe('#impedanceTesting', function() {
 
         var impedanceObject = {};
         //wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
-        console.log('2');
 
         before(function(done) {
 
@@ -1152,12 +1148,46 @@ describe('#impedanceTesting', function() {
             });
         });
     });
-    xdescribe('#_impedanceTestSetChannel', function () {
+    describe('#impedanceTestContinuousStXX', function () {
+
+        var impedanceArray = [];
+
+        before(function(done) {
+            ourBoard.impedanceTestContinuousStart()
+                .then(done).catch(err => done(err));
+
+        });
+
+        after(function(done) {
+            ourBoard.impedanceTestContinuousStop()
+                .then(done);
+        });
+
+        it('prints 10 impedance arrays', function(done) {
+            var count = 1;
+
+            var listener = impedanceArray => {
+                //console.log('\nImpedance Array: ' + count);
+                //console.log(impedanceArray);
+                count++;
+                if (count > 10) {
+                    ourBoard.removeListener('impedanceArray', listener);
+                    done();
+                }
+            };
+            ourBoard.on('impedanceArray', listener);
+
+
+
+
+        });
+    });
+    describe('#_impedanceTestSetChannel', function () {
         it('reject with invalid channel', function(done) {
             ourBoard._impedanceTestSetChannel(0,false,false).should.be.rejected.and.notify(done);
         });
     });
-    xdescribe('#_impedanceTestCalculateChannel', function () {
+    describe('#_impedanceTestCalculateChannel', function () {
         it('reject with low invalid channel', function(done) {
             ourBoard._impedanceTestCalculateChannel(0,false,false).should.be.rejected.and.notify(done);
         });
@@ -1171,7 +1201,7 @@ describe('#impedanceTesting', function() {
             ourBoard._impedanceTestCalculateChannel(1,false,'taco').should.be.rejected.and.notify(done);
         });
     });
-    xdescribe('#_impedanceTestFinalizeChannel', function () {
+    describe('#_impedanceTestFinalizeChannel', function () {
         it('reject with low invalid channel', function(done) {
             ourBoard._impedanceTestFinalizeChannel(0,false,false).should.be.rejected.and.notify(done);
         });
