@@ -1,4 +1,4 @@
-0.2.1
+0.3.0
 
 New Features
     * Test Signals with ADS1299 using `.testSignal()`

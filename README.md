@@ -228,6 +228,7 @@ Board optional configurations.
 * `verbose` To output more messages to the command line.
 * `simulate` Full functionality, just synthetic data.
 * `simulatorSampleRate` - The sample rate to use for the simulator (Default is `250`)
+* - `NTP` - Syncs the module up with an NTP time server. Syncs the board on startup with the NTP time. Adds a time stamp to the AUX channels. NOTE: (NOT FULLY IMPLEMENTED) [DO NOT USE]
 
 **Note, we have added support for either all lowercase OR camelcase of the options, use whichever style you prefer.**
 
@@ -533,7 +534,7 @@ Get the current sample rate.
 
 **_Returns_** a number, the current sample rate.
 
-### .simulatorStart()
+### .simulatorEnable()
 
 To enter simulate mode. Must call `.connect()` after.
 
@@ -541,7 +542,7 @@ To enter simulate mode. Must call `.connect()` after.
 
 **_Returns_** a promise, fulfilled if able to enter simulate mode, reject if not.
 
-### .simulatorStop()
+### .simulatorDisable()
 
 To leave simulate mode. 
 
@@ -560,10 +561,6 @@ Stateful method for querying the current offset only when the last one is too ol
 Get time from the NTP server. Must have internet connection!
 
 **_Returns_** a promise fulfilled with time object
-
-### .sntpGetServerTime()
-
-This starts the NTP server and gets it to remain in sync with the NTP server;
 
 ### .sntpStart()
 

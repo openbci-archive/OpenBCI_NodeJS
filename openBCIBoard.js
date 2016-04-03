@@ -99,7 +99,7 @@ function OpenBCIFactory() {
             npt1: 0,
             ntp2: 0
         };
-        var ntpOptions = {
+        this.ntpOptions = {
             host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
             port: 123,                      // Defaults to 123 (NTP)
             resolveReference: true,         // Default to false (not resolving)
@@ -115,7 +115,13 @@ function OpenBCIFactory() {
 
         // NTP
         if (this.options.ntp) {
-
+            this.sntpGetServerTime()
+                .then((timeObj) => {
+                    if (this.options.verbose) {
+                        console.log('NTP synced successfully, time object:');
+                        console.log(timeObj);
+                    }
+                });
         }
 
         //TODO: Add connect immediately functionality, suggest this to be the default...
@@ -201,10 +207,9 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.disconnect = function() {
         var timeout = 0;
         if (this.streaming) {
+            this.streamStop();
             if(this.options.verbose) console.log('stop streaming');
-            this.streaming = false;
-            this.write(k.OBCIStreamStop);
-            timeout = 10;
+            timeout = 60;
         }
 
         return new Promise((resolve, reject) => {
@@ -1125,7 +1130,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.sntpGetServerTime = function() {
         return new Promise((resolve,reject) => {
-            Sntp.time(options, function (err, time) {
+            Sntp.time(this.ntpOptions, function (err, time) {
 
                 if (err) {
                     console.log('Failed: ' + err.message);
