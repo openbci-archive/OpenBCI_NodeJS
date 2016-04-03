@@ -262,14 +262,10 @@ var sampleModule = {
     },
     impedanceObject: newImpedanceObject,
     impedanceSummarize: (singleInputObject) => {
-        var median = stats.median(singleInputObject.data);
-        if (median > k.OBCIImpedanceThresholdBadMax) { // The case for no load (super high impedance)
-            singleInputObject.average = median;
+        if (singleInputObject.raw > k.OBCIImpedanceThresholdBadMax) { // The case for no load (super high impedance)
             singleInputObject.text = k.OBCIImpedanceTextNone;
         } else {
-            var cleanedData = singleInputObject.data.filter(outliers()); // Remove outliers
-            singleInputObject.average =  stats.mean(cleanedData); // Get average numerical impedance
-            singleInputObject.text = k.getTextForRawImpedance(singleInputObject.average); // Get textual impedance
+            singleInputObject.text = k.getTextForRawImpedance(singleInputObject.raw); // Get textual impedance
         }
     },
     newSample: function() {
@@ -422,13 +418,11 @@ function newImpedanceObject(channelNumber) {
     return {
         channel: channelNumber,
         P: {
-            data: [],
-            average: -1,
+            raw: -1,
             text: k.OBCIImpedanceTextInit
         },
         N: {
-            data: [],
-            average: -1,
+            raw: -1,
             text: k.OBCIImpedanceTextInit
         }
     }

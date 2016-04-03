@@ -92,7 +92,8 @@ function OpenBCIFactory() {
             isTestingNInput: false,
             onChannel: 0,
             sampleNumber: 0,
-            continuousMode: false
+            continuousMode: false,
+            impedanceForChannel: 0
         };
         this.sync = {
             npt1: 0,
@@ -895,6 +896,8 @@ function OpenBCIFactory() {
                         console.log('\tNot calculating impedance for either P and N input.');
                     }
                 }
+                if(pInput) this.impedanceArray[channelNumber - 1].P.raw = this.impedanceTest.impedanceForChannel;
+                if(nInput) this.impedanceArray[channelNumber - 1].N.raw = this.impedanceTest.impedanceForChannel;
                 resolve(channelNumber);
             }, 1000);
         });
@@ -1055,22 +1058,27 @@ function OpenBCIFactory() {
 
                                 sampleObject._count = this.sampleCount++;
                                 if(this.impedanceTest.active) {
+                                    var impedanceArray;
                                     if (this.impedanceTest.continuousMode) {
                                         //console.log('running in contiuous mode...');
                                         //openBCISample.debugPrettyPrint(sampleObject);
-                                        var impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
+                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
                                         if (impedanceArray) {
                                             this.emit('impedanceArray',impedanceArray);
                                         }
                                     } else if (this.impedanceTest.onChannel != 0) {
                                         // Only calculate impedance for one channel
-                                        openBCISample.impedanceCalculationForChannel(sampleObject,this.impedanceTest.onChannel)
-                                            .then(rawValue => {
-                                                //console.log("Raw value: " + rawValue);
-                                                impedanceTestApplyRaw.call(this,rawValue);
-                                            }).catch(err => {
-                                            console.log('Impedance calculation error: ' + err);
-                                        });
+                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
+                                        if (impedanceArray) {
+                                            this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
+                                        }
+                                        //openBCISample.impedanceCalculationForChannel(sampleObject,this.impedanceTest.onChannel)
+                                        //    .then(rawValue => {
+                                        //        //console.log("Raw value: " + rawValue);
+                                        //        impedanceTestApplyRaw.call(this,rawValue);
+                                        //    }).catch(err => {
+                                        //    console.log('Impedance calculation error: ' + err);
+                                        //});
                                     }
                                 } else {
                                     this.emit('sample', sampleObject);

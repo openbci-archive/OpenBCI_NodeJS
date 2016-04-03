@@ -262,81 +262,32 @@ describe('openBCISample',function() {
             impedanceArray = openBCISample.impedanceArray(numberOfChannels);
         });
         it('should find impedance good', function() {
-            impedanceArray[0].data = [5201.84, 7583.14, 2067.17, 0, 4132.37, 3189.33, 0, 3010.21, 7720.12, 4095.69, 0, 2730.19];
+            impedanceArray[0].N.raw = 2201.84;
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextGood); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextGood); // Check the text
         });
         it('should find impedance ok', function() {
-            impedanceArray[0].data = [5201.84, 7583.14, 6067.17, 4305.43, 4132.37, 9189.33, 6925.34, 5010.21, 7720.12, 6095.69, 8730.19];
+            impedanceArray[0].N.raw = 5201.84;
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextOk); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextOk); // Check the text
         });
         it('should find impedance bad', function() {
-            impedanceArray[0].data = [10201.84, 12583.14, 16067.17, 14305.43, 14132.37, 13189.33, 16925.34, 15010.21, 17720.12, 16095.69, 18730.19];
+            impedanceArray[0].N.raw = 10201.84;
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextBad); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextBad); // Check the text
         });
         it('should find impedance none', function() {
-            impedanceArray[0].data = [44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09];
+            impedanceArray[0].N.data = 44194179.09;
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextNone); // Check the text
-        });
-        it('should remove outliers from data and find good impedance', function() {
-            impedanceArray[0].data = [5201.84, 7583.14, 1112067.17, 0, 4132.37, 3189.33, 0, 1113010.21, 7720.12, 4095.69, 0, 2730.19];
-
-            openBCISample.impedanceSummarize(impedanceArray[0]);
-
-            var cleanedData = [5201.84, 7583.14, 0, 4132.37, 3189.33, 0, 7720.12, 4095.69, 0, 2730.19];
-
-            var sum = 0;
-            var arrLen = cleanedData.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += cleanedData[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextGood); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextNone); // Check the text
         });
     });
 });

@@ -567,22 +567,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[0].channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[0].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[0].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -594,22 +588,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[1].channel.should.be.equal(2);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[1].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[1].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -621,22 +609,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[2].channel.should.be.equal(3);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[2].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[2].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -648,22 +630,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[3].channel.should.be.equal(4);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[3].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[3].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -675,22 +651,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[4].channel.should.be.equal(5);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[4].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[4].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -702,22 +672,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[5].channel.should.be.equal(6);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[5].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[5].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -729,22 +693,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[6].channel.should.be.equal(7);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[6].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[6].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -756,22 +714,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[7].channel.should.be.equal(8);
             });
             describe('#inputP', function () {
-                it('data array present', function () {
-                    impedanceArray[7].P.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].P.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function () {
-                it('data array present', function () {
-                    impedanceArray[7].N.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].N.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -805,22 +757,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[0].channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[0].P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[0].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -832,22 +778,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[1].channel.should.be.equal(2);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[1].P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[1].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -859,22 +799,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[2].channel.should.be.equal(3);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[2].P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[2].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -886,22 +820,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[3].channel.should.be.equal(4);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[3].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[3].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -913,22 +841,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[4].channel.should.be.equal(5);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[4].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[4].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -940,22 +862,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[5].channel.should.be.equal(6);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[5].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[5].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -967,22 +883,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[6].channel.should.be.equal(7);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[6].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[6].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -994,22 +904,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[7].channel.should.be.equal(8);
             });
             describe('#inputP', function () {
-                it('data array present', function () {
-                    impedanceArray[7].P.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].P.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function () {
-                it('data array present', function () {
-                    impedanceArray[7].N.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].N.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -1033,22 +937,16 @@ describe('#impedanceTesting', function() {
                 impedanceObject.channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceObject.P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceObject.N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -1072,22 +970,16 @@ describe('#impedanceTesting', function() {
                 impedanceObject.channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceObject.P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceObject.N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -1113,7 +1005,6 @@ describe('#impedanceTesting', function() {
             ourBoard.impedanceTestChannelInputN(1)
                 .then(impdObj => {
                     impedanceObject = impdObj;
-                    console.log('9');
                     setTimeout(() => {
                         done();
                     }, 1000);
@@ -1125,22 +1016,16 @@ describe('#impedanceTesting', function() {
                 impedanceObject.channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceObject.P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceObject.N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
