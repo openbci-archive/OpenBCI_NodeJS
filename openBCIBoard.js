@@ -537,6 +537,7 @@ function OpenBCIFactory() {
      *          Select to connect (true) all channels' N inputs to SRB1. This effects all pins,
      *              and disconnects all N inputs from the ADC.
      * @returns {Promise} resolves if sent, rejects on bad input or no board
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.channelSet = function(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
         var arrayOfCommands = [];
@@ -567,9 +568,10 @@ function OpenBCIFactory() {
      *          - Connect to test signal 2x Amplitude, fast pulse
      *      - `pulse2xFast`
      *          - Connect to test signal 2x Amplitude, slow pulse
-     *      - 'none'
+     *      - `none`
      *          - Reset to default
      * @returns {Promise}
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.testSignal = function(signal) {
         return new Promise((resolve, reject) => {
@@ -1072,13 +1074,6 @@ function OpenBCIFactory() {
                                         if (impedanceArray) {
                                             this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
                                         }
-                                        //openBCISample.impedanceCalculationForChannel(sampleObject,this.impedanceTest.onChannel)
-                                        //    .then(rawValue => {
-                                        //        //console.log("Raw value: " + rawValue);
-                                        //        impedanceTestApplyRaw.call(this,rawValue);
-                                        //    }).catch(err => {
-                                        //    console.log('Impedance calculation error: ' + err);
-                                        //});
                                     }
                                 } else {
                                     this.emit('sample', sampleObject);
@@ -1101,124 +1096,6 @@ function OpenBCIFactory() {
                 this.buffer = null;
             }
         }
-    };
-
-    /**
-     * @description Merge an input buffer with the master buffer. Takes into account
-     *              wrapping around the master buffer if we run out of space in
-     *              the master buffer. Note that if you are not reading bytes from
-     *              master buffer, you will lose them if you continue to call this
-     *              method due to the overwrite nature of buffers
-     * @param inputBuffer
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype._bufMerger = function(inputBuffer) {
-        // we do a try, catch, paradigm to prevent fatal crashes while trying to read from the buffer
-        try {
-            var inputBufferSize = inputBuffer.byteLength;
-            if (inputBufferSize > k.OBCIMasterBufferSize) { /** Critical error condition */
-                console.log("input buffer too large...");
-            } else if (inputBufferSize < (k.OBCIMasterBufferSize - this.masterBuffer.positionWrite)) { /**Normal*/
-                // debug prints
-                //     console.log('Storing input buffer of size: ' + inputBufferSize + ' to the master buffer at position: ' + this.masterBufferPositionWrite);
-                //there is room in the buffer, so fill it
-                inputBuffer.copy(this.masterBuffer.buffer,this.masterBuffer.positionWrite,0);
-                // update the write position
-                this.masterBuffer.positionWrite += inputBufferSize;
-                //store the number of packets read in
-                this.masterBuffer.packetsIn += Math.floor((inputBufferSize + this.masterBuffer.looseBytes) / k.OBCIPacketSize);
-                //console.log('Total packets to read: '+ this.masterBuffer.packetsIn);
-                // loose bytes results when there is not an even multiple of packets in the inputBuffer
-                //    example: The first time this is ran there are only 68 bytes in the first call to this function
-                //        therefore there are only two packets (66 bytes), these extra two bytes need to be saved for the next
-                //        call and be considered in the next iteration so we can keep track of how many bytes we need to read.
-                this.masterBuffer.looseBytes = (inputBufferSize + this.masterBuffer.looseBytes) % k.OBCIPacketSize;
-            } else { /** Wrap around condition*/
-                //console.log('We reached the end of the master buffer');
-                //the new buffer cannot fit all the way into the master buffer, going to need to break it up...
-                var bytesSpaceLeftInMasterBuffer = k.OBCIMasterBufferSize - this.masterBuffer.positionWrite;
-                // fill the rest of the buffer
-                inputBuffer.copy(this.masterBuffer.buffer,this.masterBuffer.positionWrite,0,bytesSpaceLeftInMasterBuffer);
-                // overwrite the beginning of master buffer
-                var remainingBytesToWriteToMasterBuffer = inputBufferSize - bytesSpaceLeftInMasterBuffer;
-                inputBuffer.copy(this.masterBuffer.buffer,0,bytesSpaceLeftInMasterBuffer);
-                //this.masterBuffer.write(inputBuffer.slice(bytesSpaceLeftInMasterBuffer,inputBufferSize),0,remainingBytesToWriteToMasterBuffer);
-                //move the masterBufferPositionWrite
-                this.masterBuffer.positionWrite = remainingBytesToWriteToMasterBuffer;
-                // store the number of packets read
-                this.masterBuffer.packetsIn += Math.floor((inputBufferSize + this.masterBuffer.looseBytes) / k.OBCIPacketSize);
-                //console.log('Total packets to read: '+ this.masterBuffer.packetsIn);
-                // see if statement above for explanation of loose bytes
-                this.masterBuffer.looseBytes = (inputBufferSize + this.masterBuffer.looseBytes) % k.OBCIPacketSize;
-            }
-        }
-        catch (error) {
-            console.log('Error: ' + error);
-        }
-    };
-
-    /**
-     * @description Strip packets from the master buffer
-     * @returns {Buffer} A buffer containing a packet of 33 bytes long, ready to be read.
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype._bufPacketStripper = function() {
-        try {
-            // not at end of master buffer
-            var rawPacket;
-            if(k.OBCIPacketSize < k.OBCIMasterBufferSize - this.masterBuffer.positionRead) {
-                // extract packet
-                rawPacket = this.masterBuffer.buffer.slice(this.masterBuffer.positionRead, this.masterBuffer.positionRead + k.OBCIPacketSize);
-                // move the read position pointer
-                this.masterBuffer.positionRead += k.OBCIPacketSize;
-                // increment packets read
-                this.masterBuffer.packetsRead++;
-                //console.log(rawPacket);
-                // return this raw packet
-                return rawPacket;
-            } else { //special case because we are at the end of the master buffer (must wrap)
-                // calculate the space left to read from for the partial packet
-                var part1Size = k.OBCIMasterBufferSize - this.masterBuffer.positionRead;
-                // make the first part of the packet
-                var part1 = this.masterBuffer.buffer.slice(this.masterBuffer.positionRead, this.masterBuffer.positionRead + part1Size);
-                // reset the read position to 0
-                this.masterBuffer.positionRead = 0;
-                // get part 2 size
-                var part2Size = k.OBCIPacketSize - part1Size;
-                // get the second part
-                var part2 = this.masterBuffer.buffer.slice(0, part2Size);
-                // merge the two parts
-                rawPacket = Buffer.concat([part1,part2], k.OBCIPacketSize);
-                // move the read position pointer
-                this.masterBuffer.positionRead += part2Size;
-                // increment packets read
-                this.masterBuffer.packetsRead++;
-                // return this raw packet
-                return rawPacket;
-            }
-        }
-        catch (error) {
-            console.log('Error: ' + error);
-        }
-    };
-
-    OpenBCIBoard.prototype._bufAlign = function() {
-        var startingReadPosition = this.masterBuffer.positionRead;
-        console.log('Starting read position: '+ startingReadPosition);
-        var aligned = false;
-
-        while (this.masterBuffer.buffer[this.masterBuffer.positionRead] !== k.OBCIByteStart) {
-            //console.log(this.masterBuffer.buffer[this.masterBuffer.positionRead]);
-            if(this.masterBuffer.positionRead === startingReadPosition) {
-                console.log('Wrapped around and hit the starting point again');
-                aligned = true; // give up and try again at some later point in time when new stuff has been loaded in.
-            } else if (this.masterBuffer.positionRead >= k.OBCIMasterBufferSize) { // Wrap around condition
-                this.masterBuffer.positionRead = 0;
-                console.log('Wrapped around');
-            }
-            this.masterBuffer.positionRead++;
-        }
-        console.log('aligned... new read position: ' + this.masterBuffer.positionRead + ' because start byte is ' + this.masterBuffer.buffer[this.masterBuffer.positionRead])
     };
 
     OpenBCIBoard.prototype._reset = function() {
@@ -1381,29 +1258,6 @@ util.inherits(OpenBCIFactory, EventEmitter);
 
 module.exports = new OpenBCIFactory();
 
-
-/**
- * @description To apply the calculated raw value to the function
- * @param rawValue - A raw value of impedance
- * @author AJ Keller (@pushtheworldllc)
- */
-function impedanceTestApplyRaw(rawValue) {
-    var indexOfChannel = this.impedanceTest.onChannel - 1;
-
-    // Subtract the 2.2k Ohm series resistor
-    rawValue -= k.OBCIImpedanceSeriesResistor;
-
-    // Don't allow negative rawValues
-    if (rawValue > 0) {
-        if (this.impedanceTest.isTestingNInput) {
-            this.impedanceArray[indexOfChannel].N.data.push(rawValue);
-        }
-        if (this.impedanceTest.isTestingPInput) {
-            this.impedanceArray[indexOfChannel].P.data.push(rawValue);
-        }
-    }
-
-}
 
 /**
  * @description To parse a given channel given output from a print registers query

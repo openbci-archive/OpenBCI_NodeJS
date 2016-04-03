@@ -389,13 +389,11 @@ Where an impedance for this method call would look like:
 {
     channel: 1,
     P: {
-        data: [3456.324,2204.5,...], 
-        average: 2394.45, 
+        raw: 2394.45, 
         text: 'good'
     },
     N: {
-        data: [5436.324,9404.5,...], 
-        average: 7694.45, 
+        raw: 7694.45, 
         text: 'ok'
     }
 }
@@ -432,13 +430,11 @@ Where an impedance for this method call would look like:
 {
     channel: 1,
     P: {
-        data: [3456.324,2204.5,...], 
-        average: 2394.45, 
+        raw: 2394.45, 
         text: 'good'
     },
     N: {
-        data: [], 
-        average: -1, 
+        raw: -1, 
         text: 'init'
     }
 }
@@ -475,17 +471,27 @@ Where an impedance for this method call would look like:
 {
     channel: 1,
     P: {
-        data: [], 
-        average: -1, 
+        raw: -1, 
         text: 'init'
     },
-    N: {
-        data: [5436.324,9404.5,...], 
-        average: 7694.45, 
+    N: { 
+        raw: 7694.45, 
         text: 'ok'
     }
 }
 ```
+
+### .impedanceTestContinuousStart()
+
+Sends command to turn on impedances for all channels and continuously calculate their impedances.
+
+**_Returns_** a promise, that fulfills when all the commands are sent to the internal write buffer
+
+### .impedanceTestContinuousStop()
+
+Sends command to turn off impedances for all channels and stop continuously calculate their impedances.
+
+**_Returns_** a promise, that fulfills when all the commands are sent to the internal write buffer
 
 ### .listPorts()
 
@@ -543,6 +549,30 @@ To leave simulate mode.
 
 **_Returns_** a promise, fulfilled if able to stop simulate mode, reject if not.
 
+### .sntpGetOffset()
+
+Stateful method for querying the current offset only when the last one is too old. (defaults to daily)
+
+**_Returns_** a promise with the time offset
+
+### .sntpGetServerTime()
+
+Get time from the NTP server. Must have internet connection!
+
+**_Returns_** a promise fulfilled with time object
+
+### .sntpGetServerTime()
+
+This starts the NTP server and gets it to remain in sync with the NTP server;
+
+### .sntpStart()
+
+This starts the NTP server and gets it to remain in sync with the NTP server;
+
+### .sntpStop()
+
+Stops the SNTP from updating
+
 ### .softReset()
 
 Sends a soft reset command to the board.
@@ -566,6 +596,24 @@ Sends a stop streaming command to the board.
 **Note, You must have called and fulfilled `.connect()` AND observed a `'ready'` emitter before calling this method.**
 
 **_Returns_** a promise, fulfilled if the command was sent to the write queue, rejected if unable.
+
+### .testSignal()
+
+Apply the internal test signal to all channels.
+
+**_signal_**
+
+A String indicating which test signal to apply
+
+ * `dc` - Connect to DC signal
+ * `ground` - Connect to internal GND (VDD - VSS)
+ * `pulse1xFast` - Connect to test signal 1x Amplitude, fast pulse
+ * `pulse1xSlow` - Connect to test signal 1x Amplitude, slow pulse
+ * `pulse2xFast` - Connect to test signal 2x Amplitude, fast pulse
+ * `pulse2xFast` - Connect to test signal 2x Amplitude, slow pulse
+ * `none` - Reset to default
+
+**_Returns_** a promise, if the commands were sent to write buffer.
 
 ### .write(data)
 
