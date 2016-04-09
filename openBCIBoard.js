@@ -246,7 +246,11 @@ function OpenBCIFactory() {
             this.streaming = true;
             this._reset();
             this.write(k.OBCIStreamStart)
-                .then(resolve)
+                .then(() => {
+                    setTimeout(() => {
+                        resolve();
+                    }, 50); // allow time for command to get sent
+                })
                 .catch(err => reject(err));
         });
     };
@@ -264,7 +268,11 @@ function OpenBCIFactory() {
             if(!this.streaming) reject('Error [.streamStop()]: No stream to stop');
             this.streaming = false;
             this.write(k.OBCIStreamStop)
-                .then(resolve)
+                .then(() => {
+                    setTimeout(() => {
+                        resolve();
+                    }, 50); // allow time for command to get sent
+                })
                 .catch(err => reject(err));
         });
     };
@@ -407,25 +415,31 @@ function OpenBCIFactory() {
         var macSerialPrefix = 'usbserial-D';
         return new Promise((resolve, reject) => {
             /* istanbul ignore else  */
-            serialPort.list((err, ports) => {
-                if(err) {
-                    if (this.options.verbose) console.log('serial port err');
-                    reject(err);
-                }
-                if(ports.some(port => {
-                        if(port.comName.includes(macSerialPrefix)) {
-                            this.portName = port.comName;
-                            return true;
-                        }
-                    })) {
-                    if (this.options.verbose) console.log('auto found board');
-                    resolve(this.portName);
-                }
-                else {
-                    if (this.options.verbose) console.log('could not find board');
-                    reject('Could not auto find board');
-                }
-            });
+            if (this.options.simulate) {
+                this.portName = k.OBCISimulatorPortName;
+                if (this.options.verbose) console.log('auto found sim board');
+                resolve(k.OBCISimulatorPortName);
+            } else {
+                serialPort.list((err, ports) => {
+                    if(err) {
+                        if (this.options.verbose) console.log('serial port err');
+                        reject(err);
+                    }
+                    if(ports.some(port => {
+                            if(port.comName.includes(macSerialPrefix)) {
+                                this.portName = port.comName;
+                                return true;
+                            }
+                        })) {
+                        if (this.options.verbose) console.log('auto found board');
+                        resolve(this.portName);
+                    }
+                    else {
+                        if (this.options.verbose) console.log('could not find board');
+                        reject('Could not auto find board');
+                    }
+                });
+            }
         })
     };
 
@@ -939,7 +953,10 @@ function OpenBCIFactory() {
             if (pInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].P);
             if (nInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].N);
 
-            resolve(channelNumber);
+            setTimeout(() => {
+                resolve(channelNumber);
+            },50); // Introduce a delay to allow for extra time in case of back to back tests
+
         });
     };
 
