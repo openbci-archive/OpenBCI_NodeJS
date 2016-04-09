@@ -271,7 +271,7 @@ function OpenBCIFactory() {
                 .then(() => {
                     setTimeout(() => {
                         resolve();
-                    }, 50); // allow time for command to get sent
+                    }, 10); // allow time for command to get sent
                 })
                 .catch(err => reject(err));
         });
@@ -632,10 +632,11 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.impedanceTestContinuousStop = function() {
         return new Promise((resolve, reject) => {
+            if (!this.impedanceTest.active) reject('Error: no test active');
             if (!this.impedanceTest.continuousMode) reject('Error: Not in continuous impedance test mode!');
 
             this.impedanceTest.active = false;
-            this.impedanceTest.continuousMode = true;
+            this.impedanceTest.continuousMode = false;
 
             for (var i = 0;i < this.numberOfChannels(); i++) {
                 k.getImpedanceSetter(i + 1,false,false).then((commandsArray) => {
@@ -920,7 +921,7 @@ function OpenBCIFactory() {
                 if(pInput) this.impedanceArray[channelNumber - 1].P.raw = this.impedanceTest.impedanceForChannel;
                 if(nInput) this.impedanceArray[channelNumber - 1].N.raw = this.impedanceTest.impedanceForChannel;
                 resolve(channelNumber);
-            }, 1000);
+            }, 400);
         });
     };
 
@@ -1008,7 +1009,9 @@ function OpenBCIFactory() {
      *              entire framework. This method gets called any time there is new
      *              data coming in on the serial port. If you are familiar with the
      *              'serialport' package, then every time data is emitted, this function
-     *              gets sent the input data.
+     *              gets sent the input data. The data comes in very fragmented, sometimes
+     *              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
+     *              we will need to store what we don't read for next time.
      * @param data - a buffer of unknown size
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -1045,7 +1048,6 @@ function OpenBCIFactory() {
             }
         } else { // steaming operation should lead here...
 
-            // cbuffer
             var bytesToRead = sizeOfData;
 
             // is there old data?
@@ -1110,8 +1112,11 @@ function OpenBCIFactory() {
 
             // Are there any bytes to move into the buffer?
             if (readingPosition < bytesToRead) {
+                //we are creating a new Buffer the size of how many bytes are left in the data buffer
+                // so we can move and store that into this.buffer for the next time this function is ran.
                 this.buffer = new Buffer(bytesToRead - readingPosition);
 
+                // copy data from data into this.buffer.
                 data.copy(this.buffer);
 
             } else {
@@ -1147,7 +1152,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.sntpGetServerTime = function() {
         return new Promise((resolve,reject) => {
-            Sntp.time(this.ntpOptions, function (err, time) {
+            Sntp.time(this.ntpOptions, (err, time) => {
 
                 if (err) {
                     console.log('Failed: ' + err.message);

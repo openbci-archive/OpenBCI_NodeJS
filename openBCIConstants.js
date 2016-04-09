@@ -181,8 +181,8 @@ const kOBCIPacketSize = 33;
  */
 const kOBCIPacketPositionStartByte          = 0;   // first byte
 const kOBCIPacketPositionStopByte           = 32;  // [32]
-const kOBCIPacketPositionStartAux           = 26;  // [26:27]:Aux 1 | [28:29]:Aux 2 | [30:31]:Aux 3
-const kOBCIPacketPositionStopAux            = 31;  // - - - [30:31]:Aux 3 | 32: Stop byte
+const kOBCIPacketPositionStartAux           = 26;  // [26,27]:Aux 1 | [28,29]:Aux 2 | [30,31]:Aux 3
+const kOBCIPacketPositionStopAux            = 31;  // - - - [30,31]:Aux 3 | 32: Stop byte
 const kOBCIPacketPositionChannelDataStart   = 2;   // 0:startByte | 1:sampleNumber | [2:4] | [5:7] | [8:10] | [11:13] | [14:16] | [17:19] | [21:23] | [24:26]
 const kOBCIPacketPositionChannelDataStop    = 25;  // 24 bytes for channel data
 const kOBCIPacketPositionSampleNumber       = 1;

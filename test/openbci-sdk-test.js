@@ -531,12 +531,10 @@ describe('#impedanceTesting', function() {
 
 
         ourBoard.once('ready',() => {
-            console.log('5');
             ourBoard.streamStart()
                 .then(() => {
                     setTimeout(() => {
                         done();
-                        console.log('6');
                     }, 100); // give some time for the stream command to be sent
                 })
                 .catch(err => {

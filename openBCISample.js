@@ -17,11 +17,12 @@ const ACCEL_NUMBER_AXIS = 3;
 
 // For computing Goertzel Algorithm
 // See: http://www.embedded.com/design/configurable-systems/4024443/The-Goertzel-Algorithm
-// This is N
-const GOERTZEL_BLOCK_SIZE = 100;
+// In the tutorial cited above, GOERTZEL_BLOCK_SIZE is referred to as N
+const GOERTZEL_BLOCK_SIZE = 62;
 const GOERTZEL_K_250 = Math.floor(0.5 + ((GOERTZEL_BLOCK_SIZE * k.OBCILeadOffFrequencyHz) / k.OBCISampleRate250));
 const GOERTZEL_W_250 = ((2 * Math.PI) / GOERTZEL_BLOCK_SIZE) * GOERTZEL_K_250;
 const GOERTZEL_COEFF_250 = 2 * Math.cos(GOERTZEL_W_250);
+// TODO: Add support for 16 channel Daisy board
 
 
 var sampleModule = {
