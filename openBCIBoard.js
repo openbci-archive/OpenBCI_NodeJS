@@ -205,11 +205,13 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.disconnect = function() {
+        // if we are streaming then we need to give extra time for that stop streaming command to propagate through the
+        //  system before closing the serial port.
         var timeout = 0;
         if (this.streaming) {
             this.streamStop();
             if(this.options.verbose) console.log('stop streaming');
-            timeout = 60;
+            timeout = 20;
         }
 
         return new Promise((resolve, reject) => {
@@ -845,12 +847,13 @@ function OpenBCIFactory() {
             }
 
             if (!pInput && !nInput) {
-                this.impedanceTest.active = false;
+                this.impedanceTest.active = false; // Critical to changing the flow of `._processBytes()`
                 //this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
             } else {
                 //this.writeOutDelay = k.OBCIWriteIntervalDelayMSLong;
             }
-            console.log('pInput: ' + pInput + ' nInput: ' + nInput);
+            if (this.options.verbose) console.log('pInput: ' + pInput + ' nInput: ' + nInput);
+            // Get impedance settings to send the board
             k.getImpedanceSetter(channelNumber,pInput,nInput).then((commandsArray) => {
                 console.log(commandsArray);
                 this.write(commandsArray);
@@ -859,7 +862,7 @@ function OpenBCIFactory() {
                 setTimeout(() => {
                     /**
                      * If either pInput or nInput are true then we should start calculating impedance. Setting
-                     *  this.isCalculatingImpedance to true here allows us to route every sample for an impedance
+                     *  this.impedanceTest.active to true here allows us to route every sample for an impedance
                      *  calculation instead of the normal sample output.
                      */
                     if (pInput || nInput) this.impedanceTest.active = true;

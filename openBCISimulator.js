@@ -56,8 +56,6 @@ function OpenBCISimulatorFactory() {
         // Strings
         this.portName = portName || k.OBCISimulatorPortName;
 
-        this.time.start = now();
-
         // Call 'open'
         setTimeout(() => {
             console.log('Port name: ' + portName);

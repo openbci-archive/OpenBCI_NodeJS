@@ -788,7 +788,7 @@ function impedanceSetter(channelNumber,pInputApplied,nInputApplied) {
             ];
             //console.log(outputArray);
             resolve(outputArray);
-        }).catch(err => reject(err));;
+        }).catch(err => reject(err));
     });
 }
 

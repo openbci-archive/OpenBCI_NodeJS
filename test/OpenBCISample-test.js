@@ -39,8 +39,11 @@ describe('openBCISample',function() {
             return openBCISample.parseRawPacket(sampleBuf).should.eventually.have.property('sampleNumber').equal(0x45);
         });
         it('all the channels should have the same number value as their (index + 1) * scaleFactor', function(done) {
-            openBCISample.parseRawPacket(sampleBuf)
+            openBCISample.parseRawPacket(sampleBuf) // sampleBuf has its channel number for each 3 byte integer. See line 20...
                 .then(sampleObject => {
+                    // So parse the sample we created and each value resulting from the channelData array should
+                    //  be its index + 1 (i.e. channel number) multiplied by the channel scale factor set by the
+                    //  ADS1299 for a gain of 24 (default)
                     sampleObject.channelData.forEach((channelValue, index) => {
                         assert.equal(channelValue,channelScaleFactor * (index + 1),'Channel ' + index + ' does not compute correctly');
                     });
@@ -283,7 +286,7 @@ describe('openBCISample',function() {
             impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextBad); // Check the text
         });
         it('should find impedance none', function() {
-            impedanceArray[0].N.data = 44194179.09;
+            impedanceArray[0].N.data = 44194179.09; // A huge number that would be seen if there was no electrode connected
 
             openBCISample.impedanceSummarize(impedanceArray[0].N);
 

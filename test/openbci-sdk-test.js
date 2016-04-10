@@ -423,6 +423,7 @@ describe('openbci-sdk',function() {
                 ourBoard = new openBCIBoard.OpenBCIBoard({
                     verbose:true
                 });
+                // Use the line below to output the
                 wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
 
                 ourBoard.connect(masterPortName)

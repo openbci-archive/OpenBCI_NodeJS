@@ -64,7 +64,7 @@ var sampleModule = {
     },
 
     /**
-     * @description Mainly used by the sumilator to convert a randomly generated sample into a std OpenBCI V3 Packet
+     * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
      * @param sample - A sample object
      * @returns {Buffer}
      */

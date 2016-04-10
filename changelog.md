@@ -15,12 +15,14 @@ Breaking Changes
 
 Work In Progress
     * NTP Time Synchronization
+    * Goertzel algorithm to get voltage for impedance calculation
     
 Bug fixes
     * Impedance calculations
     * Readme updates
     * Serial buffer had the chance to become permanently unaligned, optimized and completely transformed and refactored the way bytes are processed.
     * Changes to gain of channels not working correctly.
+    * Node 5 compatibility 
     
 Github Issues Addressed
-    * #25 "simulator sample rate optionally parameter doesn't work"
+    * #25, #26, #27, #29, #30, #31, #33, #34
