@@ -5,9 +5,52 @@
 
 # openbci-sdk
 
-An NPM module for OpenBCI ~ written with love by [Push The World!](www.pushtheworldllc.com)
+A Node.js module for OpenBCI ~ written with love by [Push The World!](http://www.pushtheworldllc.com)
 
-## Working with the Module
+We are proud to support all functionality of the OpenBCI 8 Channel board (16 channel coming soon) and are actively developing and maintaining this module. 
+
+The purpose of this module is to **get connected** and **start streaming** as fast as possible. 
+
+## TL;DR
+
+Install via npm:
+
+`npm install openbci-sdk`
+
+#### Get connected and start streaming
+
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.connect(portName)
+    .then(function() {
+        ourBoard.on('ready',function() {
+            ourBoard.streamStart();
+            ourBoard.on('sample',function(sample) {
+                /** Work with sample */
+                for (var i = 0; i < ourBoard.numberOfChannels(); i++) {
+                    console.log("Channel " + (i + 1) + ": " + sample.channelData[i].toFixed(8) + " Volts."); 
+                    // prints to the console
+                    //  "Channel 1: 0.00001987 Volts."
+                    //  "Channel 2: 0.00002255 Volts."
+                    //  ...
+                    //  "Channel 8: -0.00001875 Volts."
+                }
+            });
+        });
+})
+```
+
+Want to know if the module really works? Check out some projects and organizations using it:
+
+* [_OpenEXP_](https://github.com/openexp/OpenEXP) is an open-source desktop app for running experiments and collecting behavioral and physiological data.
+* [_Thinker_](http://www.pushtheworldllc.com/#!thinker/uc1fn) is a project building the world's first brainwave-word database.
+* [_NeuroJS_](https://github.com/NeuroJS) is a community dedicated to Neuroscience research using JavaScript, they have several great examples.
+
+Still not satisfied it works?? Check out this [detailed report](http://s132342840.onlinehome.us/pushtheworld/files/voltageVerificationTestPlanAndResults.pdf) that scientifically validates the output voltages of this module.
+
+How are you still doubting and not using this already? Fine, go look at some of the [400 **_automatic_** tests](https://codecov.io/github/OpenBCI/openbci-js-sdk?branch=master) written for it!
+
+## General Overview
 
 Initialization
 --------------
@@ -35,25 +78,21 @@ var ourBoard = require('openbci-sdk').OpenBCIBoard({
 });
 ```
 
-Auto-finding boards
--------------------
-You must have the OpenBCI board connected to the PC before trying to automatically find it.
-
-If a port is not automatically found, then call `.listPorts()` to get a list of all serial ports this would be a good place to present a drop down picker list to the user, so they may manually select the serial port name.
-
+Another useful way to start the simulator:
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.autoFindOpenBCIBoard().then(portName => {
-    if(portName) {
-        /** 
-        * Connect to the board with portName
-        * i.e. ourBoard.connect(portName).....
-        */
-    } else {
-        /**Unable to auto find OpenBCI board*/
-    }
-});
+var openBCIBoard = require('openbci-sdk');
+var k = openBCIBoard.OpenBCIConstants;
+var ourBoard = openBCIBoard.OpenBCIBoard();
+ourBoard.connect(k.OBCISimulatorPortName) // This will set `simulate` to true
+    .then(function(boardSerial) {
+        ourBoard.on('ready',function() {
+            /** Start streaming, reading registers, what ever your heart desires  */
+        });
+    }).catch(function(err) {
+        /** Handle connection errors */
+    });
 ```
+
 
 'ready' event
 ------------
@@ -82,7 +121,7 @@ Sample properties:
 
 The power of this module is in using the sample emitter, to be provided with samples to do with as you wish.
 
-You can also start the simulator by sending `.connect(portName)` with `portName` equal to `'/dev/tty.openBCISimulator'`.
+You can also start the simulator by sending `.connect(portName)` with `portName` equal to `'OpenBCISimulator'`.
 
 To get a 'sample' event, you need to:
 -------------------------------------
@@ -92,7 +131,7 @@ To get a 'sample' event, you need to:
 4. Install the 'sample' event emitter
 ```js
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
-ourBoard.connect(portName).then(function(boardSerial) {
+ourBoard.connect(portName).then(function() {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();
         ourBoard.on('sample',function(sample) {
@@ -108,6 +147,28 @@ Close the connection with `.streamStop()` and disconnect with `.disconnect()`
 var ourBoard = new require('openbci-sdk').OpenBCIBoard();
 ourBoard.streamStop().then(ourBoard.disconnect());
 ```
+
+Auto-finding boards
+-------------------
+You must have the OpenBCI board connected to the PC before trying to automatically find it.
+
+If a port is not automatically found, then call `.listPorts()` to get a list of all serial ports this would be a good place to present a drop down picker list to the user, so they may manually select the serial port name.
+
+```js
+var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+ourBoard.autoFindOpenBCIBoard().then(portName => {
+    if(portName) {
+        /** 
+        * Connect to the board with portName
+        * i.e. ourBoard.connect(portName).....
+        */
+    } else {
+        /**Unable to auto find OpenBCI board*/
+    }
+});
+```
+
+Note: `.autoFindOpenBCIBoard()` will return the name of the Simulator if you instantiate with option `simulate: true`.
 
 Auto Test - (Using impedance to determine signal quality)
 ---------------------------------------------------------
@@ -154,13 +215,11 @@ But wait! What is this `impedanceArray`? An Array of Objects, for each object:
 [{
     channel: 1,
     P: {
-        data: [], 
-        average: -1, 
+        raw: -1, 
         text: 'init'
     },
     N: {
-        data: [], 
-        average: -1, 
+        raw: -1, 
         text: 'init'
     }
 },
@@ -173,8 +232,7 @@ Where:
 
 * *channel* is the channel number (`impedanceArray[0]` is channel 1, `impedanceArray[6]` is channel 7)
 * *P* is the P input data (Note: P is capitalized)
-  * *data* is an array of raw impedances values that were recorded over 250ms
-  * *average* is an average impedance value taken from `data` array. To get this value we remove outliers from the `data` array and average the cleaned data.
+  * *raw* is an impedance value resulting from the Goertzel algorithm.
   * *text* is a text interpretation of the `average`
     * **Good** impedance is < 5k Ohms
     * **Ok** impedance is 5 to 10k Ohms
@@ -182,7 +240,7 @@ Where:
     * **None** impedance is > 1M Ohms
 * *N* is the N input data (Note: N is capitalized) (see above for what N object consists of)
 
-To run an impedance test on all imputs:
+To run an impedance test on all inputs, one channel at a time:
 
 1. Connect to board
 2. Start streaming
@@ -228,6 +286,7 @@ Board optional configurations.
 * `verbose` To output more messages to the command line.
 * `simulate` Full functionality, just synthetic data.
 * `simulatorSampleRate` - The sample rate to use for the simulator (Default is `250`)
+* `NTP` - Syncs the module up with an NTP time server. Syncs the board on startup with the NTP time. Adds a time stamp to the AUX channels. NOTE: (NOT FULLY IMPLEMENTED) [DO NOT USE]
 
 **Note, we have added support for either all lowercase OR camelcase of the options, use whichever style you prefer.**
 
@@ -237,7 +296,7 @@ Automatically find an OpenBCI board.
 
 **Note: This will always return an Array of `COM` ports on Windows**
 
-**_Returns_** a promise, fulfilled with a `portName` such as `/dev/tty.*` on Mac/Linux.
+**_Returns_** a promise, fulfilled with a `portName` such as `/dev/tty.*` on Mac/Linux or `OpenBCISimulator` if `this.options.simulate === true`.
 
 ### .channelOff(channelNumber)
 
@@ -307,7 +366,7 @@ The essential precursor method to be called initially to establish a serial conn
 
 The system path of the OpenBCI board serial port to open. For example, `/dev/tty` on Mac/Linux or `COM1` on Windows.
 
-**_Returns_** a promise, fulfilled by a successful serial connection to the board The promise will be rejected at any time if the serial port has an 'error' or 'close' event emitted.
+**_Returns_** a promise, fulfilled by a successful serial connection to the board, the promise will be rejected at any time if the serial port has an 'error' or 'close' event emitted.
 
 ### .debugSession()
 
@@ -389,13 +448,11 @@ Where an impedance for this method call would look like:
 {
     channel: 1,
     P: {
-        data: [3456.324,2204.5,...], 
-        average: 2394.45, 
+        raw: 2394.45, 
         text: 'good'
     },
     N: {
-        data: [5436.324,9404.5,...], 
-        average: 7694.45, 
+        raw: 7694.45, 
         text: 'ok'
     }
 }
@@ -432,13 +489,11 @@ Where an impedance for this method call would look like:
 {
     channel: 1,
     P: {
-        data: [3456.324,2204.5,...], 
-        average: 2394.45, 
+        raw: 2394.45, 
         text: 'good'
     },
     N: {
-        data: [], 
-        average: -1, 
+        raw: -1, 
         text: 'init'
     }
 }
@@ -475,17 +530,27 @@ Where an impedance for this method call would look like:
 {
     channel: 1,
     P: {
-        data: [], 
-        average: -1, 
+        raw: -1, 
         text: 'init'
     },
-    N: {
-        data: [5436.324,9404.5,...], 
-        average: 7694.45, 
+    N: { 
+        raw: 7694.45, 
         text: 'ok'
     }
 }
 ```
+
+### .impedanceTestContinuousStart()
+
+Sends command to turn on impedances for all channels and continuously calculate their impedances.
+
+**_Returns_** a promise, that fulfills when all the commands are sent to the internal write buffer
+
+### .impedanceTestContinuousStop()
+
+Sends command to turn off impedances for all channels and stop continuously calculate their impedances.
+
+**_Returns_** a promise, that fulfills when all the commands are sent to the internal write buffer
 
 ### .listPorts()
 
@@ -527,7 +592,7 @@ Get the current sample rate.
 
 **_Returns_** a number, the current sample rate.
 
-### .simulatorStart()
+### .simulatorEnable()
 
 To enter simulate mode. Must call `.connect()` after.
 
@@ -535,13 +600,33 @@ To enter simulate mode. Must call `.connect()` after.
 
 **_Returns_** a promise, fulfilled if able to enter simulate mode, reject if not.
 
-### .simulatorStop()
+### .simulatorDisable()
 
 To leave simulate mode. 
 
 **Note, must be called after the constructor.**
 
 **_Returns_** a promise, fulfilled if able to stop simulate mode, reject if not.
+
+### .sntpGetOffset()
+
+Stateful method for querying the current offset only when the last one is too old. (defaults to daily)
+
+**_Returns_** a promise with the time offset
+
+### .sntpGetServerTime()
+
+Get time from the NTP server. Must have internet connection!
+
+**_Returns_** a promise fulfilled with time object
+
+### .sntpStart()
+
+This starts the NTP server and gets it to remain in sync with the NTP server;
+
+### .sntpStop()
+
+Stops the SNTP from updating
 
 ### .softReset()
 
@@ -567,7 +652,25 @@ Sends a stop streaming command to the board.
 
 **_Returns_** a promise, fulfilled if the command was sent to the write queue, rejected if unable.
 
-### .write(data)
+### .testSignal(signal)
+
+Apply the internal test signal to all channels.
+
+**_signal_**
+
+A String indicating which test signal to apply
+
+ * `dc` - Connect to DC signal
+ * `ground` - Connect to internal GND (VDD - VSS)
+ * `pulse1xFast` - Connect to test signal 1x Amplitude, fast pulse
+ * `pulse1xSlow` - Connect to test signal 1x Amplitude, slow pulse
+ * `pulse2xFast` - Connect to test signal 2x Amplitude, fast pulse
+ * `pulse2xFast` - Connect to test signal 2x Amplitude, slow pulse
+ * `none` - Reset to default
+
+**_Returns_** a promise, if the commands were sent to write buffer.
+
+### .write(dataToWrite)
 
 Send commands to the board. Due to the OpenBCI board firmware, a 10ms spacing **must** be observed between every command sent to the board. This method handles the timing and spacing between characters by adding characters to a global write queue and pulling from it every 10ms.
 
@@ -638,6 +741,20 @@ A bool, true if connected to an OpenBCI board, false if not.
 ### streaming
 
 A bool, true if streaming data from an OpenBCI board, false if not.
+
+## Useful Constants
+
+To use the constants file simply:
+```js
+var openBCIBoard = require('openbci-sdk');
+var k = openBCIBoard.OpenBCIConstants;
+
+console.log(k.OBCISimulatorPortName); // prints OpenBCISimulator to the console.
+```
+
+### .OBCISimulatorPortName
+
+The name of the simulator port.
 
 ## Dev Notes
 Running

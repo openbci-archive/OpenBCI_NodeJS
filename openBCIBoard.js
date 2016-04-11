@@ -7,6 +7,8 @@ var serialPort = require('serialport');
 var openBCISample = require('./openBCISample');
 var k = openBCISample.k;
 var openBCISimulator = require('./openBCISimulator');
+var now = require('performance-now');
+var Sntp = require('sntp');
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -20,7 +22,8 @@ function OpenBCIFactory() {
         simulate: false,
         simulatorSampleRate: 250,
         baudrate: 115200,
-        verbose: false
+        verbose: false,
+        ntp: false
     };
 
     /**
@@ -43,6 +46,9 @@ function OpenBCIFactory() {
      *                      firmware on board has been previously configured.
      *
      *     - `verbose` - Print out useful debugging events
+     *     - `NTP` - Syncs the module up with an NTP time server. Syncs the board on startup
+     *                  with the NTP time. Adds a time stamp to the AUX channels. (NOT FULLY
+     *                  IMPLEMENTED) [DO NOT USE]
      * @constructor
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -60,33 +66,63 @@ function OpenBCIFactory() {
         opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
         opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
         opts.verbose = options.verbose || _options.verbose;
+        opts.ntp = options.NTP || options.ntp || _options.NTP;
         // Set to global options object
         this.options = opts;
 
         /** Properties (keep alphabetical) */
         // Arrays
         this.writeOutArray = new Array(100);
+        this.channelSettingsArray = k.channelSettingsArrayInit(this.numberOfChannels());
         // Bools
         this.isLookingForKeyInBuffer = true;
         // Buffers
         this.masterBuffer = masterBufferMaker();
-        this.moneyBuf = new Buffer('$$$');
-        this.searchingBuf = this.moneyBuf;
+        this.searchBuffers = {
+            timeSyncStart: new Buffer('$a$'),
+            miscStop: new Buffer('$$$')
+        };
+        this.searchingBuf = this.searchBuffers.miscStop;
         // Objects
+        this.goertzelObject = openBCISample.goertzelNewObject(this.numberOfChannels());
         this.writer = null;
         this.impedanceTest = {
             active: false,
             isTestingPInput: false,
             isTestingNInput: false,
             onChannel: 0,
-            sampleNumber: 0
+            sampleNumber: 0,
+            continuousMode: false,
+            impedanceForChannel: 0
+        };
+        this.sync = {
+            npt1: 0,
+            ntp2: 0
+        };
+        this.ntpOptions = {
+            host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
+            port: 123,                      // Defaults to 123 (NTP)
+            resolveReference: true,         // Default to false (not resolving)
+            timeout: 1000                   // Defaults to zero (no timeout)
         };
         // Numbers
         this.badPackets = 0;
         this.commandsToWrite = 0;
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
+        this.sampleCount = 0;
         // Strings
+
+        // NTP
+        if (this.options.ntp) {
+            this.sntpGetServerTime()
+                .then((timeObj) => {
+                    if (this.options.verbose) {
+                        console.log('NTP synced successfully, time object:');
+                        console.log(timeObj);
+                    }
+                });
+        }
 
         //TODO: Add connect immediately functionality, suggest this to be the default...
     }
@@ -98,9 +134,7 @@ function OpenBCIFactory() {
      * @description The essential precursor method to be called initially to establish a
      *              serial connection to the OpenBCI board.
      * @param portName - a string that contains the port name of the OpenBCIBoard.
-     * @returns {Promise} if the board was able to connect. If at any time the serial port
-     *              closes or errors then this promise will be rejected, and this should be
-     *              observed and taken care of in the most front facing user methods.
+     * @returns {Promise} if the board was able to connect.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.connect = function(portName) {
@@ -114,7 +148,8 @@ function OpenBCIFactory() {
                 this.options.simulate = true;
                 if (this.options.verbose) console.log('using faux board ' + portName);
                 boardSerial = new openBCISimulator.OpenBCISimulator(portName, {
-                    verbose: this.options.verbose
+                    verbose: this.options.verbose,
+                    sampleRate: this.options.simulatorSampleRate
                 });
             } else {
                 /* istanbul ignore if */
@@ -150,7 +185,7 @@ function OpenBCIFactory() {
                     resolve();
                     if(this.options.verbose) console.log("Waiting for '$$$'");
 
-                },timeoutLength + 100);
+                },timeoutLength + 250);
             });
             boardSerial.on('close',() => {
                 if (this.options.verbose) console.log('Serial Port Closed');
@@ -170,12 +205,13 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.disconnect = function() {
+        // if we are streaming then we need to give extra time for that stop streaming command to propagate through the
+        //  system before closing the serial port.
         var timeout = 0;
         if (this.streaming) {
+            this.streamStop();
             if(this.options.verbose) console.log('stop streaming');
-            this.streaming = false;
-            this.write(k.OBCIStreamStop);
-            timeout = 10;
+            timeout = 20;
         }
 
         return new Promise((resolve, reject) => {
@@ -206,9 +242,19 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.streamStart = function() {
-        this.streaming = true;
-        this._reset();
-        return this.write(k.OBCIStreamStart);
+        return new Promise((resolve, reject) => {
+            console.log('got here');
+            if(this.streaming) reject('Error [.streamStart()]: Already streaming');
+            this.streaming = true;
+            this._reset();
+            this.write(k.OBCIStreamStart)
+                .then(() => {
+                    setTimeout(() => {
+                        resolve();
+                    }, 50); // allow time for command to get sent
+                })
+                .catch(err => reject(err));
+        });
     };
 
     /**
@@ -220,8 +266,17 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.streamStop = function() {
-        this.streaming = false;
-        return this.write(k.OBCIStreamStop);
+        return new Promise((resolve,reject) => {
+            if(!this.streaming) reject('Error [.streamStop()]: No stream to stop');
+            this.streaming = false;
+            this.write(k.OBCIStreamStop)
+                .then(() => {
+                    setTimeout(() => {
+                        resolve();
+                    }, 10); // allow time for command to get sent
+                })
+                .catch(err => reject(err));
+        });
     };
 
     /**
@@ -334,7 +389,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._writeAndDrain = function(data) {
         return new Promise((resolve,reject) => {
-            //console.log('boardSerial in [writeAndDrain]: ' + JSON.stringify(boardSerial) + ' with command ' + data);
+            //console.log('writing command ' + data);
             if(!this.serial) reject('Serial port not open');
             this.serial.write(data,(error,results) => {
                 if(results) {
@@ -362,25 +417,31 @@ function OpenBCIFactory() {
         var macSerialPrefix = 'usbserial-D';
         return new Promise((resolve, reject) => {
             /* istanbul ignore else  */
-            serialPort.list((err, ports) => {
-                if(err) {
-                    if (this.options.verbose) console.log('serial port err');
-                    reject(err);
-                }
-                if(ports.some(port => {
-                        if(port.comName.includes(macSerialPrefix)) {
-                            this.portName = port.comName;
-                            return true;
-                        }
-                    })) {
-                    if (this.options.verbose) console.log('auto found board');
-                    resolve(this.portName);
-                }
-                else {
-                    if (this.options.verbose) console.log('could not find board');
-                    reject('Could not auto find board');
-                }
-            });
+            if (this.options.simulate) {
+                this.portName = k.OBCISimulatorPortName;
+                if (this.options.verbose) console.log('auto found sim board');
+                resolve(k.OBCISimulatorPortName);
+            } else {
+                serialPort.list((err, ports) => {
+                    if(err) {
+                        if (this.options.verbose) console.log('serial port err');
+                        reject(err);
+                    }
+                    if(ports.some(port => {
+                            if(port.comName.includes(macSerialPrefix)) {
+                                this.portName = port.comName;
+                                return true;
+                            }
+                        })) {
+                        if (this.options.verbose) console.log('auto found board');
+                        resolve(this.portName);
+                    }
+                    else {
+                        if (this.options.verbose) console.log('could not find board');
+                        reject('Could not auto find board');
+                    }
+                });
+            }
         })
     };
 
@@ -420,6 +481,8 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.softReset = function() {
+        this.isLookingForKeyInBuffer = true;
+        this.searchingBuf = this.searchBuffers.miscStop;
         return this.write(k.OBCIMiscSoftReset);
     };
 
@@ -495,18 +558,95 @@ function OpenBCIFactory() {
      *          Select to connect (true) all channels' N inputs to SRB1. This effects all pins,
      *              and disconnects all N inputs from the ADC.
      * @returns {Promise} resolves if sent, rejects on bad input or no board
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.channelSet = function(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
         var arrayOfCommands = [];
         return new Promise((resolve,reject) => {
-            k.getChannelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1).then((arr) => {
-                arrayOfCommands = arr;
-                resolve(this.write(arrayOfCommands));
+            k.getChannelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1)
+                .then((arr,newChannelSettingObject) => {
+                    arrayOfCommands = arr;
+                    this.channelSettingsArray[channelNumber-1] = newChannelSettingObject;
+                    resolve(this.write(arrayOfCommands));
             }, function(err) {
                  reject(err);
             });
         });
+    };
 
+    /**
+     * @description Apply the internal test signal to all channels
+     * @param signal - A string indicating which test signal to apply
+     *      - `dc`
+     *          - Connect to DC signal
+     *      - `ground`
+     *          - Connect to internal GND (VDD - VSS)
+     *      - `pulse1xFast`
+     *          - Connect to test signal 1x Amplitude, fast pulse
+     *      - `pulse1xSlow`
+     *          - Connect to test signal 1x Amplitude, slow pulse
+     *      - `pulse2xFast`
+     *          - Connect to test signal 2x Amplitude, fast pulse
+     *      - `pulse2xFast`
+     *          - Connect to test signal 2x Amplitude, slow pulse
+     *      - `none`
+     *          - Reset to default
+     * @returns {Promise}
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.testSignal = function(signal) {
+        return new Promise((resolve, reject) => {
+            k.getTestSignalCommand(signal)
+                .then(command => {
+                    return this.write(command);
+                })
+                .then(() => resolve())
+                .catch(err => reject(err));
+        });
+    };
+
+    /**
+     * @description - Sends command to turn on impedances for all channels and continuously calculate their impedances
+     * @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.impedanceTestContinuousStart = function() {
+        return new Promise((resolve, reject) => {
+            if (this.impedanceTest.active) reject('Error: test already active');
+            if (this.impedanceTest.continuousMode) reject('Error: Already in continuous impedance test mode!');
+
+            this.impedanceTest.active = true;
+            this.impedanceTest.continuousMode = true;
+
+            for (var i = 0;i < this.numberOfChannels(); i++) {
+                k.getImpedanceSetter(i + 1,false,true).then((commandsArray) => {
+                    this.write(commandsArray);
+                });
+            }
+            resolve();
+        });
+    };
+
+    /**
+     * @description - Sends command to turn off impedances for all channels and stop continuously calculate their impedances
+     * @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.impedanceTestContinuousStop = function() {
+        return new Promise((resolve, reject) => {
+            if (!this.impedanceTest.active) reject('Error: no test active');
+            if (!this.impedanceTest.continuousMode) reject('Error: Not in continuous impedance test mode!');
+
+            this.impedanceTest.active = false;
+            this.impedanceTest.continuousMode = false;
+
+            for (var i = 0;i < this.numberOfChannels(); i++) {
+                k.getImpedanceSetter(i + 1,false,false).then((commandsArray) => {
+                    this.write(commandsArray);
+                });
+            }
+            resolve();
+        });
     };
 
     /**
@@ -707,20 +847,22 @@ function OpenBCIFactory() {
             }
 
             if (!pInput && !nInput) {
-                this.impedanceTest.active = false;
-                this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
+                this.impedanceTest.active = false; // Critical to changing the flow of `._processBytes()`
+                //this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
             } else {
-                this.writeOutDelay = k.OBCIWriteIntervalDelayMSLong;
+                //this.writeOutDelay = k.OBCIWriteIntervalDelayMSLong;
             }
-
+            if (this.options.verbose) console.log('pInput: ' + pInput + ' nInput: ' + nInput);
+            // Get impedance settings to send the board
             k.getImpedanceSetter(channelNumber,pInput,nInput).then((commandsArray) => {
+                console.log(commandsArray);
                 this.write(commandsArray);
-                delayInMS += commandsArray.length * k.OBCIWriteIntervalDelayMSLong;
+                //delayInMS += commandsArray.length * k.OBCIWriteIntervalDelayMSLong;
                 delayInMS += this.commandsToWrite * k.OBCIWriteIntervalDelayMSShort; // Account for commands waiting to be sent in the write buffer
                 setTimeout(() => {
                     /**
                      * If either pInput or nInput are true then we should start calculating impedance. Setting
-                     *  this.isCalculatingImpedance to true here allows us to route every sample for an impedance
+                     *  this.impedanceTest.active to true here allows us to route every sample for an impedance
                      *  calculation instead of the normal sample output.
                      */
                     if (pInput || nInput) this.impedanceTest.active = true;
@@ -779,8 +921,10 @@ function OpenBCIFactory() {
                         console.log('\tNot calculating impedance for either P and N input.');
                     }
                 }
+                if(pInput) this.impedanceArray[channelNumber - 1].P.raw = this.impedanceTest.impedanceForChannel;
+                if(nInput) this.impedanceArray[channelNumber - 1].N.raw = this.impedanceTest.impedanceForChannel;
                 resolve(channelNumber);
-            }, 250);
+            }, 400);
         });
     };
 
@@ -813,7 +957,10 @@ function OpenBCIFactory() {
             if (pInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].P);
             if (nInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].N);
 
-            resolve(channelNumber);
+            setTimeout(() => {
+                resolve(channelNumber);
+            },50); // Introduce a delay to allow for extra time in case of back to back tests
+
         });
     };
 
@@ -847,189 +994,201 @@ function OpenBCIFactory() {
     };
 
     /**
+     * @description Send the command to tell the board to start the syncing protocol.
+     */
+    OpenBCIBoard.prototype.syncClocksStart = function() {
+        return new Promise((resolve,reject) => {
+            if (!this.connected) reject('Must be connected to the device');
+            if (this.streaming) reject('Cannot be streaming to sync clocks');
+            this.searchingBuf = this.searchBuffers.timeSyncStart;
+            this.isLookingForKeyInBuffer = true;
+            this.write(k.OBCISyncClockStart);
+            resolve();
+        });
+    };
+
+    /**
      * @description Consider the '_processBytes' method to be the work horse of this
      *              entire framework. This method gets called any time there is new
      *              data coming in on the serial port. If you are familiar with the
      *              'serialport' package, then every time data is emitted, this function
-     *              gets sent the input data.
+     *              gets sent the input data. The data comes in very fragmented, sometimes
+     *              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
+     *              we will need to store what we don't read for next time.
      * @param data - a buffer of unknown size
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
+        //console.log(data);
         var sizeOfData = data.byteLength;
         this.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
         if(this.isLookingForKeyInBuffer) { //in a reset state
             var sizeOfSearchBuf = this.searchingBuf.byteLength; // then size in bytes of the buffer we are searching for
             for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
                 if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
-                    if (this.searchingBuf.equals(this.moneyBuf)) {
-                        if(this.options.verbose) console.log('Money!');
+                    if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
+                        if (this.options.verbose) console.log('Money!');
+                        if (this.options.verbose) console.log(data.toString());
                         this.isLookingForKeyInBuffer = false; // critical!!!
                         this.emit('ready'); // tell user they are ready to stream, etc...
+                    } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncStart)) {
+                        this.sync.ntp1 = now();
+                        if(this.options.verbose) console.log('Got time sync request: ' + this.sync.npt1.toFixed(4));
+                        this.sync.ntp2 = now();
+                        this._writeAndDrain('<' + (this.sync.ntp1 * 1000) + (this.sync.ntp2 * 1000));
+                        this.searchingBuf = this.searchBuffers.miscStop;
+
                     } else {
                         getChannelSettingsObj(data.slice(i)).then((channelSettingsObject) => {
                             this.emit('query',channelSettingsObject);
                         }, (err) => {
                             console.log('Error: ' + err);
                         });
-                        this.searchingBuf = this.moneyBuf;
+                        this.searchingBuf = this.searchBuffers.miscStop;
                         break;
                     }
                 }
             }
         } else { // steaming operation should lead here...
-            // send input data to master buffer
-            this._bufMerger(data);
 
-            // parse the master buffer
-            while(this.masterBuffer.packetsRead < this.masterBuffer.packetsIn) {
-                var rawPacket = this._bufPacketStripper();
-                var newSample = openBCISample.convertPacketToSample(rawPacket);
-                if(newSample) {
-                    this.emit('rawDataPacket', rawPacket);
-                    newSample._count = this.sampleCount++;
-                    if(this.impedanceTest.active) {
-                        if (this.impedanceTest.onChannel != 0) {
-                            // Get an average of the impedance
-                            openBCISample.impedanceCalculationForChannel(newSample,this.impedanceTest.onChannel)
-                                .then(rawValue => {
-                                    impedanceTestApplyRaw.call(this,rawValue);
-                                }).catch(err => {
-                                    console.log('Impedance calculation error: ' + err);
+            var bytesToRead = sizeOfData;
+
+            // is there old data?
+            if (this.buffer) {
+                // Get size of old buffer
+                var oldBufferSize = this.buffer.byteLength;
+
+                // Make a new buffer
+                var newDataBuffer = new Buffer(bytesToRead + oldBufferSize);
+
+                // Put old buffer in the front of the new buffer
+                var oldBytesWritten = this.buffer.copy(newDataBuffer);
+
+                // Move the incoming data into the end of the new buffer
+                data.copy(newDataBuffer,oldBytesWritten);
+
+                // Over write data
+                data = newDataBuffer;
+
+                // Update the number of bytes to read
+                bytesToRead += oldBytesWritten;
+            }
+
+            var readingPosition = 0;
+
+            // 45 < (200 - 33) --> 45 < 167 (good) | 189 < 167 (bad) | 0 < (28 - 33) --> 0 < -5 (bad)
+            while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
+                if (data[readingPosition] === k.OBCIByteStart) {
+                    var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
+                    if (data[readingPosition + k.OBCIPacketSize - 1] === k.OBCIByteStop) {
+                        // standard packet!
+                        openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
+                            .then(sampleObject => {
+
+                                sampleObject._count = this.sampleCount++;
+                                if(this.impedanceTest.active) {
+                                    var impedanceArray;
+                                    if (this.impedanceTest.continuousMode) {
+                                        //console.log('running in contiuous mode...');
+                                        //openBCISample.debugPrettyPrint(sampleObject);
+                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
+                                        if (impedanceArray) {
+                                            this.emit('impedanceArray',impedanceArray);
+                                        }
+                                    } else if (this.impedanceTest.onChannel != 0) {
+                                        // Only calculate impedance for one channel
+                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
+                                        if (impedanceArray) {
+                                            this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
+                                        }
+                                    }
+                                } else {
+                                    this.emit('sample', sampleObject);
+                                }
                             });
-                        }
                     }
-                    this.emit('sample', newSample);
-                } else {
-                    this.badPackets++;
-                    this._bufAlign(); // fix the buffer to start reading at next start byte
                 }
+
+                // increment reading position
+                readingPosition++;
+            }
+
+            // Are there any bytes to move into the buffer?
+            if (readingPosition < bytesToRead) {
+                //we are creating a new Buffer the size of how many bytes are left in the data buffer
+                // so we can move and store that into this.buffer for the next time this function is ran.
+                this.buffer = new Buffer(bytesToRead - readingPosition);
+
+                // copy data from data into this.buffer.
+                data.copy(this.buffer);
+
+            } else {
+                this.buffer = null;
             }
         }
-    };
-
-    /**
-     * @description Merge an input buffer with the master buffer. Takes into account
-     *              wrapping around the master buffer if we run out of space in
-     *              the master buffer. Note that if you are not reading bytes from
-     *              master buffer, you will lose them if you continue to call this
-     *              method due to the overwrite nature of buffers
-     * @param inputBuffer
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype._bufMerger = function(inputBuffer) {
-        // we do a try, catch, paradigm to prevent fatal crashes while trying to read from the buffer
-        try {
-            var inputBufferSize = inputBuffer.byteLength;
-            if (inputBufferSize > k.OBCIMasterBufferSize) { /** Critical error condition */
-                console.log("input buffer too large...");
-            } else if (inputBufferSize < (k.OBCIMasterBufferSize - this.masterBuffer.positionWrite)) { /**Normal*/
-                // debug prints
-                //     console.log('Storing input buffer of size: ' + inputBufferSize + ' to the master buffer at position: ' + this.masterBufferPositionWrite);
-                //there is room in the buffer, so fill it
-                inputBuffer.copy(this.masterBuffer.buffer,this.masterBuffer.positionWrite,0);
-                // update the write position
-                this.masterBuffer.positionWrite += inputBufferSize;
-                //store the number of packets read in
-                this.masterBuffer.packetsIn += Math.floor((inputBufferSize + this.masterBuffer.looseBytes) / k.OBCIPacketSize);
-                //console.log('Total packets to read: '+ this.masterBuffer.packetsIn);
-                // loose bytes results when there is not an even multiple of packets in the inputBuffer
-                //    example: The first time this is ran there are only 68 bytes in the first call to this function
-                //        therefore there are only two packets (66 bytes), these extra two bytes need to be saved for the next
-                //        call and be considered in the next iteration so we can keep track of how many bytes we need to read.
-                this.masterBuffer.looseBytes = (inputBufferSize + this.masterBuffer.looseBytes) % k.OBCIPacketSize;
-            } else { /** Wrap around condition*/
-                //console.log('We reached the end of the master buffer');
-                //the new buffer cannot fit all the way into the master buffer, going to need to break it up...
-                var bytesSpaceLeftInMasterBuffer = k.OBCIMasterBufferSize - this.masterBuffer.positionWrite;
-                // fill the rest of the buffer
-                inputBuffer.copy(this.masterBuffer.buffer,this.masterBuffer.positionWrite,0,bytesSpaceLeftInMasterBuffer);
-                // overwrite the beginning of master buffer
-                var remainingBytesToWriteToMasterBuffer = inputBufferSize - bytesSpaceLeftInMasterBuffer;
-                inputBuffer.copy(this.masterBuffer.buffer,0,bytesSpaceLeftInMasterBuffer);
-                //this.masterBuffer.write(inputBuffer.slice(bytesSpaceLeftInMasterBuffer,inputBufferSize),0,remainingBytesToWriteToMasterBuffer);
-                //move the masterBufferPositionWrite
-                this.masterBuffer.positionWrite = remainingBytesToWriteToMasterBuffer;
-                // store the number of packets read
-                this.masterBuffer.packetsIn += Math.floor((inputBufferSize + this.masterBuffer.looseBytes) / k.OBCIPacketSize);
-                //console.log('Total packets to read: '+ this.masterBuffer.packetsIn);
-                // see if statement above for explanation of loose bytes
-                this.masterBuffer.looseBytes = (inputBufferSize + this.masterBuffer.looseBytes) % k.OBCIPacketSize;
-            }
-        }
-        catch (error) {
-            console.log('Error: ' + error);
-        }
-    };
-
-    /**
-     * @description Strip packets from the master buffer
-     * @returns {Buffer} A buffer containing a packet of 33 bytes long, ready to be read.
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype._bufPacketStripper = function() {
-        try {
-            // not at end of master buffer
-            var rawPacket;
-            if(k.OBCIPacketSize < k.OBCIMasterBufferSize - this.masterBuffer.positionRead) {
-                // extract packet
-                rawPacket = this.masterBuffer.buffer.slice(this.masterBuffer.positionRead, this.masterBuffer.positionRead + k.OBCIPacketSize);
-                // move the read position pointer
-                this.masterBuffer.positionRead += k.OBCIPacketSize;
-                // increment packets read
-                this.masterBuffer.packetsRead++;
-                //console.log(rawPacket);
-                // return this raw packet
-                return rawPacket;
-            } else { //special case because we are at the end of the master buffer (must wrap)
-                // calculate the space left to read from for the partial packet
-                var part1Size = k.OBCIMasterBufferSize - this.masterBuffer.positionRead;
-                // make the first part of the packet
-                var part1 = this.masterBuffer.buffer.slice(this.masterBuffer.positionRead, this.masterBuffer.positionRead + part1Size);
-                // reset the read position to 0
-                this.masterBuffer.positionRead = 0;
-                // get part 2 size
-                var part2Size = k.OBCIPacketSize - part1Size;
-                // get the second part
-                var part2 = this.masterBuffer.buffer.slice(0, part2Size);
-                // merge the two parts
-                rawPacket = Buffer.concat([part1,part2], k.OBCIPacketSize);
-                // move the read position pointer
-                this.masterBuffer.positionRead += part2Size;
-                // increment packets read
-                this.masterBuffer.packetsRead++;
-                // return this raw packet
-                return rawPacket;
-            }
-        }
-        catch (error) {
-            console.log('Error: ' + error);
-        }
-    };
-
-    OpenBCIBoard.prototype._bufAlign = function() {
-        var startingReadPosition = this.masterBuffer.positionRead;
-        console.log('Starting read position: '+ startingReadPosition);
-        var aligned = false;
-
-        while (this.masterBuffer.buffer[this.masterBuffer.positionRead] !== k.OBCIByteStart) {
-            //console.log(this.masterBuffer.buffer[this.masterBuffer.positionRead]);
-            if(this.masterBuffer.positionRead === startingReadPosition) {
-                console.log('Wrapped around and hit the starting point again');
-                aligned = true; // give up and try again at some later point in time when new stuff has been loaded in.
-            } else if (this.masterBuffer.positionRead >= k.OBCIMasterBufferSize) { // Wrap around condition
-                this.masterBuffer.positionRead = 0;
-                console.log('Wrapped around');
-            }
-            this.masterBuffer.positionRead++;
-        }
-        console.log('aligned... new read position: ' + this.masterBuffer.positionRead + ' because start byte is ' + this.masterBuffer.buffer[this.masterBuffer.positionRead])
     };
 
     OpenBCIBoard.prototype._reset = function() {
         this.masterBuffer = masterBufferMaker();
-        this.searchingBuf = this.moneyBuf;
+        this.searchingBuf = this.searchBuffers.miscStop;
         this.badPackets = 0;
+    };
+
+    /**
+     * @description Stateful method for querying the current offset only when the last
+     *                  one is too old. (defaults to daily)
+     * @returns {Promise} A promise with the time offset
+     */
+    OpenBCIBoard.prototype.sntpGetOffset = function() {
+        return new Promise((resolve, reject) => {
+            Sntp.offset(function(err, offset) {
+                if(err) reject(err);
+                resolve(offset);
+            });
+        });
+    };
+
+    /**
+     * @description Get time from the NTP server. Must have internet connection!
+     * @returns {Promise} - Fulfilled with time object
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.sntpGetServerTime = function() {
+        return new Promise((resolve,reject) => {
+            Sntp.time(this.ntpOptions, (err, time) => {
+
+                if (err) {
+                    console.log('Failed: ' + err.message);
+                    reject(err);
+                    //process.exit(1);
+                }
+
+                console.log('Local clock is off by: ' + time.t + ' milliseconds');
+                //process.exit(0);
+                resolve(time);
+            });
+        });
+    };
+
+    /**
+     * @description This starts the NTP server and gets it to remain in sync with the NTP server
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.sntpStart = function() {
+        var start = () => {
+            Sntp.start(() => {
+                Sntp.now();
+            });
+        };
+
+        start();
+    };
+
+    /**
+     * @description Stops the sntp from updating
+     */
+    OpenBCIBoard.prototype.sntpStop = function() {
+        Sntp.stop();
     };
 
     /**
@@ -1129,29 +1288,6 @@ util.inherits(OpenBCIFactory, EventEmitter);
 
 module.exports = new OpenBCIFactory();
 
-
-/**
- * @description To apply the calculated raw value to the function
- * @param rawValue - A raw value of impedance
- * @author AJ Keller (@pushtheworldllc)
- */
-function impedanceTestApplyRaw(rawValue) {
-    var indexOfChannel = this.impedanceTest.onChannel - 1;
-
-    // Subtract the 2.2k Ohm series resistor
-    rawValue -= k.OBCIImpedanceSeriesResistor;
-
-    // Don't allow negative rawValues
-    if (rawValue > 0) {
-        if (this.impedanceTest.isTestingNInput) {
-            this.impedanceArray[indexOfChannel].N.data.push(rawValue);
-        }
-        if (this.impedanceTest.isTestingPInput) {
-            this.impedanceArray[indexOfChannel].P.data.push(rawValue);
-        }
-    }
-
-}
 
 /**
  * @description To parse a given channel given output from a print registers query

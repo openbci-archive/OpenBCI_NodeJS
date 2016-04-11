@@ -30,76 +30,82 @@ var sampleBuf = samplePacket();
 
 
 describe('openBCISample',function() {
-    describe('#convertPacketToSample', function() {
-        it('should have the correct start byte', function() {
-            var sample = openBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(k.OBCIByteStart,sample.startByte);
-        });
-        it('should have the correct stop byte', function() {
-            var sample = openBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(k.OBCIByteStop,sample.stopByte);
+    var channelScaleFactor = 4.5 / 24 / (Math.pow(2,23) - 1);
+    describe('#parseRawPacket', function() {
+        it('should fulfill promise', function() {
+            return openBCISample.parseRawPacket(sampleBuf).should.be.fulfilled;
         });
         it('should have the correct sample number', function() {
-            var sample = openBCISample.convertPacketToSample(sampleBuf);
-            assert.equal(0x45,sample.sampleNumber);
+            return openBCISample.parseRawPacket(sampleBuf).should.eventually.have.property('sampleNumber').equal(0x45);
         });
-        it('all the channels should have the same number value as their (index + 1) * scaleFactor', function() {
-            var sample = openBCISample.convertPacketToSample(sampleBuf);
-            for(var i = 0;i < k.OBCINumberOfChannelsDefault;i++) {
-                //console.log(openBCISample.scaleFactorChannel * i);
-                assert.equal(sample.channelData[i],openBCISample.scaleFactorChannel * (i+1));
-            }
+        it('all the channels should have the same number value as their (index + 1) * scaleFactor', function(done) {
+            openBCISample.parseRawPacket(sampleBuf) // sampleBuf has its channel number for each 3 byte integer. See line 20...
+                .then(sampleObject => {
+                    // So parse the sample we created and each value resulting from the channelData array should
+                    //  be its index + 1 (i.e. channel number) multiplied by the channel scale factor set by the
+                    //  ADS1299 for a gain of 24 (default)
+                    sampleObject.channelData.forEach((channelValue, index) => {
+                        assert.equal(channelValue,channelScaleFactor * (index + 1),'Channel ' + index + ' does not compute correctly');
+                    });
+                    done();
+                })
+                .catch(err => done(err));
         });
-        it('all the auxs should have the same number value as their index * scaleFactor', function() {
-            var sample = openBCISample.convertPacketToSample(sampleBuf);
-            for(var i = 0;i < 3;i++) {
-                assert.equal(sample.auxData[i],openBCISample.scaleFactorAux * i);
-            }
+        it('all the auxs should have the same number value as their index * scaleFactor', function(done) {
+            openBCISample.parseRawPacket(sampleBuf)
+                .then(sampleObject => {
+                    sampleObject.auxData.forEach((auxValue, index) => {
+                        assert.equal(auxValue,openBCISample.scaleFactorAux * index,'Aux ' + index + ' does not compute correctly');
+                    });
+                    done();
+                })
+                .catch(err => done(err));
         });
-        it('check to see if negative numbers work on channel data',function() {
+        it('check to see if negative numbers work on channel data',function(done) {
             var temp = samplePacket();
             //console.log(temp);
             var taco = new Buffer([0x81]);
             taco.copy(temp,2);
-            var sample = openBCISample.convertPacketToSample(temp);
-            sample.channelData[0].should.be.approximately(-8323071 * openBCISample.scaleFactorChannel, 0.001);
-
+            openBCISample.parseRawPacket(temp)
+                .then(sampleObject => {
+                    assert.equal(sampleObject.channelData[0],channelScaleFactor * -8323071,'Negative numbers not working correctly');
+                    done();
+                })
+                .catch(err => done(err));
         });
         it('check to see if negative numbers work on aux data',function() {
             var temp = samplePacket();
-            //console.log(temp);
             var taco = new Buffer([0x81]);
             taco.copy(temp,26);
-            //console.log(temp);
-            var sample = openBCISample.convertPacketToSample(temp);
-            //openBCISample.debugPrettyPrint(sample);
-            sample.auxData[0].should.be.approximately(-32512 * openBCISample.scaleFactorAux,1);
-
+            openBCISample.parseRawPacket(temp)
+                .then(sampleObject => {
+                    sampleObject.auxData[0].should.be.approximately(-32512 * openBCISample.scaleFactorAux,1);
+                    done();
+                })
+                .catch(err => done(err));
         });
         describe('#errorConditions', function() {
-            it('send non data buffer', function() {
-                var sample = openBCISample.convertPacketToSample(1);
-                assert.equal(undefined,sample);
+            it('send non data buffer', function(done) {
+                openBCISample.parseRawPacket(1).should.be.rejected.and.notify(done)
+                //var sample = openBCISample.convertPacketToSample(1);
+                //assert.equal(undefined,sample);
             });
-            it('bad start byte', function() {
+            it('bad start byte', function(done) {
                 var temp = samplePacket();
                 temp[0] = 69;
-                var sample = openBCISample.convertPacketToSample(temp);
-                assert.equal(undefined,sample);
+                openBCISample.parseRawPacket(temp).should.be.rejected.and.notify(done);
+                //var sample = openBCISample.convertPacketToSample(temp);
+                //assert.equal(undefined,sample);
             });
-            it('bad stop byte', function() {
-                var temp = samplePacket();
-                temp[32] = 69;
-                var sample = openBCISample.convertPacketToSample(temp);
-                assert.equal(undefined,sample);
+            it('wrong number of bytes', function(done) {
+                openBCISample.parseRawPacket(new Buffer(5)).should.be.rejected.and.notify(done);
+                //var sample = openBCISample.convertPacketToSample(new Buffer(5));
+                //assert.equal(undefined,sample);
             });
-            it('wrong number of bytes', function() {
-                var sample = openBCISample.convertPacketToSample(new Buffer(5));
-                assert.equal(undefined,sample);
-            });
-            it('undefined', function() {
-                var sample = openBCISample.convertPacketToSample();
-                assert.equal(undefined,sample);
+            it('undefined', function(done) {
+                openBCISample.parseRawPacket().should.be.rejected.and.notify(done);
+                //var sample = openBCISample.convertPacketToSample();
+                //assert.equal(undefined,sample);
             });
         });
     });
@@ -121,17 +127,29 @@ describe('openBCISample',function() {
         it('should have correct sample number', function() {
             packetBuffer[1].should.equal(1,'confirming sample number is 1 more than 0');
         });
-        it('should convert channel data to binary', function() {
-            var sample = openBCISample.convertPacketToSample(packetBuffer);
-            for(var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-                sample.channelData[i].should.be.approximately(newSample.channelData[i],0.001);
-            }
+        it('should convert channel data to binary', function(done) {
+            openBCISample.parseRawPacket(packetBuffer)
+                .then(sample => {
+                    for(var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+                        sample.channelData[i].should.be.approximately(newSample.channelData[i],0.001);
+                    }
+                    done();
+                })
+                .catch(err => done(err));
+            //var sample = openBCISample.convertPacketToSample(packetBuffer);
+
         });
-        it('should convert aux data to binary', function() {
-            var sample = openBCISample.convertPacketToSample(packetBuffer);
-            for(var i = 0; i < 3; i++) {
-                sample.auxData[i].should.be.approximately(newSample.auxData[i],0.001);
-            }
+        it('should convert aux data to binary', function(done) {
+            openBCISample.parseRawPacket(packetBuffer)
+                .then(sample => {
+                    for(var i = 0; i < 3; i++) {
+                        sample.auxData[i].should.be.approximately(newSample.auxData[i],0.001);
+                    }
+                    done();
+                })
+                .catch(err => done(err));
+            //var sample = openBCISample.convertPacketToSample(packetBuffer);
+
         });
     });
     describe('#interpret24bitAsInt32', function() {
@@ -188,7 +206,7 @@ describe('openBCISample',function() {
 
                 var num = openBCISample.interpret24bitAsInt32(buff);
 
-                num = num * openBCISample.scaleFactorChannel;
+                num = num * channelScaleFactor;
 
                 num.should.be.approximately(newSample.channelData[i],0.00002);
             }
@@ -247,82 +265,62 @@ describe('openBCISample',function() {
             impedanceArray = openBCISample.impedanceArray(numberOfChannels);
         });
         it('should find impedance good', function() {
-            impedanceArray[0].data = [5201.84, 7583.14, 2067.17, 0, 4132.37, 3189.33, 0, 3010.21, 7720.12, 4095.69, 0, 2730.19];
+            impedanceArray[0].N.raw = 2201.84;
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextGood); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextGood); // Check the text
         });
         it('should find impedance ok', function() {
-            impedanceArray[0].data = [5201.84, 7583.14, 6067.17, 4305.43, 4132.37, 9189.33, 6925.34, 5010.21, 7720.12, 6095.69, 8730.19];
+            impedanceArray[0].N.raw = 5201.84;
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextOk); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextOk); // Check the text
         });
         it('should find impedance bad', function() {
-            impedanceArray[0].data = [10201.84, 12583.14, 16067.17, 14305.43, 14132.37, 13189.33, 16925.34, 15010.21, 17720.12, 16095.69, 18730.19];
+            impedanceArray[0].N.raw = 10201.84;
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextBad); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextBad); // Check the text
         });
         it('should find impedance none', function() {
-            impedanceArray[0].data = [44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09, 44194179.09];
+            impedanceArray[0].N.data = 44194179.09; // A huge number that would be seen if there was no electrode connected
 
-            openBCISample.impedanceSummarize(impedanceArray[0]);
+            openBCISample.impedanceSummarize(impedanceArray[0].N);
 
-            var sum = 0;
-            var arrLen = impedanceArray[0].data.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += impedanceArray[0].data[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextNone); // Check the text
-        });
-        it('should remove outliers from data and find good impedance', function() {
-            impedanceArray[0].data = [5201.84, 7583.14, 1112067.17, 0, 4132.37, 3189.33, 0, 1113010.21, 7720.12, 4095.69, 0, 2730.19];
-
-            openBCISample.impedanceSummarize(impedanceArray[0]);
-
-            var cleanedData = [5201.84, 7583.14, 0, 4132.37, 3189.33, 0, 7720.12, 4095.69, 0, 2730.19];
-
-            var sum = 0;
-            var arrLen = cleanedData.length;
-            for (var i = 0; i < arrLen; i++) {
-                sum += cleanedData[i];
-            }
-            var avg = sum / arrLen;
-
-            impedanceArray[0].average.should.be.approximately(avg,10); // Check the average
-            impedanceArray[0].text.should.equal(k.OBCIImpedanceTextGood); // Check the text
+            impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextNone); // Check the text
         });
     });
 });
 
+describe('#goertzelProcessSample', function() {
+    var numberOfChannels = k.OBCINumberOfChannelsDefault;
+    var goertzelObj = openBCISample.goertzelNewObject(numberOfChannels);
+    var newRandomSample = openBCISample.randomSample(numberOfChannels,k.OBCISampleRate250);
+
+    it('produces an array of impedances', function(done) {
+
+        var passed = false;
+        for (var i = 0; i < openBCISample.GOERTZEL_BLOCK_SIZE + 1; i++) {
+            console.log('Iteration ' + i);
+            var impedanceArray = openBCISample.goertzelProcessSample(newRandomSample(i),goertzelObj);
+            if (impedanceArray) {
+                console.log('Impedance Array: ');
+                for(var j = 0; j < numberOfChannels; j++) {
+                    console.log('Channel ' + (j+1) + ': ' + impedanceArray[j].toFixed(8))
+                }
+                passed = true;
+            }
+        }
+        setTimeout(() => {
+            if (passed) {
+                done();
+            } else {
+                done('Failed to produce impedance array within block size + 1');
+            }
+        })
+
+    });
+});

@@ -896,6 +896,43 @@ describe('OpenBCIConstants', function() {
             });
         });
     });
+    describe('#getTestSignalCommand', function() {
+        it('ground', function() {
+            var expectation = '0';
+            var result = k.getTestSignalCommand('ground');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('dc', function() {
+            var expectation = 'p';
+            var result = k.getTestSignalCommand('dc');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('Pulse 1x Fast', function() {
+            var expectation = '=';
+            var result = k.getTestSignalCommand('pulse1xFast');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('Pulse 1x Slow', function() {
+            var expectation = '-';
+            var result = k.getTestSignalCommand('pulse1xSlow');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('Pulse 2x Fast', function() {
+            var expectation = ']';
+            var result = k.getTestSignalCommand('pulse2xFast');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('Pulse 2x Slow', function() {
+            var expectation = '[';
+            var result = k.getTestSignalCommand('pulse2xSlow');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('none', function() {
+            var expectation = 'd';
+            var result = k.getTestSignalCommand('none');
+            return expect(result).to.eventually.equal(expectation);
+        });
+    });
     describe('#getImpedanceSetter', function() {
         describe('channel input selection works', function () {
             it('channel 2', function (done) {

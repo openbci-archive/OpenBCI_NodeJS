@@ -213,8 +213,10 @@ describe('openbci-sdk',function() {
                 ourBoard.once('ready', function() {
                     ourBoard.streamStart().catch(err => done(err)); // start streaming
 
-                    ourBoard.once('sample',() => { // wait till we get a sample
+                    ourBoard.once('sample',(sample) => { // wait till we get a sample
+                        console.log('got a sample');
                         ourBoard.disconnect().then(() => { // call disconnect
+                            console.log('Device is streaming: ' + ourBoard.streaming ? 'true' : 'false')
                             setTimeout(() => {
                                 spy.should.have.been.calledWithMatch(k.OBCIStreamStop);
                                 var conditionalTimeout = realBoard ? 300 : 0;
@@ -230,14 +232,18 @@ describe('openbci-sdk',function() {
                 ourBoard.connect(masterPortName).catch(err => done(err));
                 // for the ready signal test
                 ourBoard.once('ready', function() {
-                    ourBoard.streamStop()
-                        .then(ourBoard.disconnect())
+                    console.log('got here');
+                    ourBoard.disconnect()
                         .then(() => {
+                            console.log('disconnected');
                             var conditionalTimeout = realBoard ? 300 : 0;
                             setTimeout(() => {
                                 done();
                             }, conditionalTimeout);
-                        }).catch(err => done(err));
+                        }).catch(err => {
+                            console.log(err);
+                            done(err);
+                        });
                 });
             });
         });
@@ -408,275 +414,98 @@ describe('openbci-sdk',function() {
     });
 
 
-    xdescribe('#testsWithBoard', function() {
-        this.timeout(10000);
-        xdescribe('#connect', function() {
-            var running = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard({
-                    verbose: true
+    xdescribe('#hardwareValidation', function() {
+        this.timeout(20000); // long timeout for pleanty of stream time :)
+        var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;
+        var wstream;
+        before(function(done) {
+            if (runHardwareValidation) {
+                ourBoard = new openBCIBoard.OpenBCIBoard({
+                    verbose:true
                 });
+                // Use the line below to output the
+                wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
 
-                ourBoard.autoFindOpenBCIBoard().then((value) => {
-                    if(Array.isArray(value)) {
-                        /**Unable to auto find OpenBCI board*/
-                        console.log('NO BOARD CONNECTED!, AUTO PASSING TEST!');
-                        running = true;
-                        done();
-                    } else {
-                        return ourBoard.connect(value).then(function() {
-                            console.log('board connected on path: ' + value);
-                            ourBoard.on('ready',function() {
-                                console.log('Ready to start streaming!');
-                                ourBoard.streamStart();
-                                ourBoard.on('sample',function(sample) {
-                                    //wstream.write('Master Count: ' + sample._count + ' Sample Count: ' + sample.sampleNumber + '\n');
-                                    //console.log('Master Count: ' + sample._count + ' Sample Count: ' + sample.sampleNumber);
-                                    OpenBCISample.debugPrettyPrint(sample);
-                                });
-                            });
-                        });
-                    }
-                }).catch(function(err) {
-                    console.log('Error [setup]: ' + err);
+                ourBoard.connect(masterPortName)
+                    .catch(err => done(err));
+
+                ourBoard.once('ready',() => {
                     done();
                 });
-                setTimeout(function() {
-                    ourBoard.disconnect().then(function(msg) {
-                        running = true;
-                        setTimeout(function(){
-                            done();
-                        },50);
-                    }, function(err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
+
+            } else {
+                done();
+            }
+
+        });
+        after(function() {
+            if (runHardwareValidation) {
+                ourBoard.disconnect();
+            }
+        });
+        it('test all output signals', function(done) {
+            if (runHardwareValidation) {
+                ourBoard.streamStart()
+                    .then(() => {
+                        console.log('Started stream');
+                        console.log('--------');
+
+                    })
+                    .catch(err => done(err));
+
+                setTimeout(() => {
+                    console.log('*-------');
+                    ourBoard.testSignal('pulse1xSlow');
+                },3000);
+                setTimeout(() => {
+                    console.log('**------');
+                    ourBoard.testSignal('pulse2xSlow');
+                },5000);
+                setTimeout(() => {
+                    console.log('***-----');
+                    ourBoard.testSignal('pulse1xFast');
+                },7000);
+                setTimeout(() => {
+                    console.log('****----');
+                    ourBoard.testSignal('pulse2xFast');
                 },9000);
-            });
-            it('should stop the simulator after 5 seconds', function() {
-                expect(running).equals(true);
-            });
-        });
-        xdescribe('#imdenceCheck', function() {
-            var running = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard({
-                    verbose: true
-                });
-
-                ourBoard.autoFindOpenBCIBoard().then((value) => {
-                    if(Array.isArray(value)) {
-                        /**Unable to auto find OpenBCI board*/
-                        console.log('NO BOARD CONNECTED!, AUTO PASSING TEST!');
-                        running = true;
-                        done();
-                    } else {
-                        return ourBoard.connect(value).then(function() {
-                            console.log('board connected on path: ' + value);
-                            ourBoard.on('ready',function() {
-                                console.log('Ready to start streaming!');
-
-                                /** 1: Start Streaming */
-                                setTimeout(() => {
-                                    ourBoard.streamStart();
-                                }, 50);
+                setTimeout(() => {
+                    console.log('*****---');
+                    ourBoard.testSignal('none');
+                },11000);
+                setTimeout(() => {
+                    console.log('******--');
+                    ourBoard.testSignal('pulse1xSlow');
+                },13000);
+                setTimeout(() => {
+                    console.log('*******-');
+                    ourBoard.testSignal('none');
+                },15000);
 
 
-                                /** 2: Install emiter where impedance object will be spat out */
-                                ourBoard.on('impedanceObject', (impedanceObject) => {
-                                    running = true;
-                                    ourBoard.streamStop();
-                                    wstream.write('Final Impedance\'s:\n');
-                                    console.log('\nFinal Impedance\'s: ');
-                                    for (i = 1; i <=8; i++) {
-                                        wstream.write('\tChannel ' + i + '\n');
-                                        console.log('\tChannel ' + i);
-                                        //console.log(JSON.stringify(impedanceObject[i]));
-                                        var sampleNumber = 0;
-                                        var sample;
-                                        var singleObject;
-                                        // do P
-                                        wstream.write('\t\tP input:\n');
-                                        //for (sample in impedanceObject[i].data) {
-                                        //    singleObject = impedanceObject[i].data[sample];
-                                        //    if (singleObject.P.raw > 0) {
-                                        //        //console.log('Running average of ' + (sum / count) + ' with sum: ' + sum + ' and count: ' + count);
-                                        //        console.log('\t\t' + sampleNumber + ': (' + singleObject.P.text + ') \traw value of: ' + singleObject.P.raw.toFixed(2));
-                                        //        wstream.write('\t\t' + sampleNumber + ': (' + singleObject.P.text + ') \traw value of: ' + singleObject.P.raw.toFixed(2) + '\n');
-                                        //    }
-                                        //    sampleNumber++;
-                                        //}
-                                        wstream.write('\t\tAverage raw: ' + impedanceObject[i].average.P.raw.toFixed(2) + ' is ' + impedanceObject[i].average.P.text + '\n');
-                                        console.log('\t\tAverage raw: ' + impedanceObject[i].average.P.raw.toFixed(2) + ' is ' + impedanceObject[i].average.P.text);
-
-                                        // do N
-                                        sampleNumber = 0;
-                                        wstream.write('\t\tN input:\n');
-                                        //for (sample in impedanceObject[i].data) {
-                                        //    singleObject = impedanceObject[i].data[sample];
-                                        //    if (singleObject.N.raw > 0) {
-                                        //        //console.log('Running average of ' + (sum / count).toFixed(2) + ' with sum: ' + sum + ' and count: ' + count);
-                                        //        console.log('\t\t' + sampleNumber + ': (' + singleObject.N.text + ') \traw value of: ' + singleObject.N.raw.toFixed(2));
-                                        //        wstream.write('\t\t' + sampleNumber + ': (' + singleObject.N.text + ') \traw value of: ' + singleObject.N.raw.toFixed(2) + '\n');
-                                        //    }
-                                        //    sampleNumber++;
-                                        //}
-                                        wstream.write('\t\tAverage raw: ' + impedanceObject[i].average.N.raw.toFixed(2) + ' is ' + impedanceObject[i].average.N.text + '\n');
-                                        console.log('\t\tAverage raw: ' + impedanceObject[i].average.N.raw.toFixed(2) + ' is ' + impedanceObject[i].average.N.text);
-                                    }
-                                    setTimeout(() => {
-                                        done();
-                                    }, 100);
-                                });
-
-                                /** 3: Start the impedance test! */
-                                setTimeout(() => {
-                                    ourBoard.impedanceTestAllChannels();
-                                    //ourBoard.impedanceTestChannel(2).then(obj => {
-                                    //    console.log(JSON.stringify(obj));
-                                    //});
-                                },200);
-
-
-                            });
+                ourBoard.on('sample', sample => {
+                    OpenBCISample.samplePrintLine(sample)
+                        .then(line => {
+                            wstream.write(line);
                         });
-                    }
-                }).catch(function(err) {
-                    console.log('Error [setup]: ' + err);
+                });
+                // This stops the test
+                setTimeout(() => {
+                    console.log('********');
                     done();
-                });
-
-                setTimeout(function() {
-                    ourBoard.disconnect().then(function(msg) {
-                        setTimeout(function(){
-                            done();
-                        },50);
-                    }, function(err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
-                }, 8000);
-            });
-            it('should stop the simulator after 5 seconds', function() {
-                expect(running).equals(true);
-            });
-        });
-        xdescribe('#confirm channel 1 off with query register settings', function() {
-            var channelIsOn = false;
-            var didTryToSendPrintCommand = false;
-            var didTryToTurnChannel1Off = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard();
-
-                ourBoard.autoFindOpenBCIBoard(function (portName, ports) {
-                    if (portName) {
-                        ourBoard.connect(portName).then(function (boardSerial) {
-                            //console.log('board connected');
-                            ourBoard.on('ready', function () {
-                                //console.log('Ready to print register settings!');
-                                if (!didTryToSendPrintCommand) {
-                                    didTryToSendPrintCommand = true;
-                                    ourBoard.getSettingsForChannel(1); //sets isChannelOn to true
-                                } else if (!didTryToTurnChannel1Off) {
-                                    didTryToTurnChannel1Off = true;
-                                    //console.log('Tried to turn channel 1 off');
-                                    ourBoard.channelOff(1);
-                                    setTimeout(function() {
-                                        //console.log('Re print register settings');
-                                        ourBoard.getSettingsForChannel(1);
-                                    },100);
-                                }
-                                ourBoard.on('query',function(channelSettingsObject) {
-                                    //ourBoard.debugPrintChannelSettings(channelSettingsObject);
-                                    channelIsOn = ourBoard.channelIsOnFromChannelSettingsObject(channelSettingsObject);
-                                });
-                            });
-                        }).catch(function (err) {
-                            console.log('Error [setup]: ' + err);
-                            done();
-                        });
-
-                    } else {
-                        /** Display list of ports*/
-                        console.log('Port not found... check ports for other ports');
-                        done();
-                    }
-                });
-                setTimeout(function () {
-                    ourBoard.streamStop().then(ourBoard.disconnect).then(function (msg) {
-                        done();
-                    }, function (err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
-                }, 6000);
-            });
-            it('should turn channel off', function() {
-                expect(channelIsOn).equals(false);
-            });
-        });
-        xdescribe('#confirm channel 2 off with query register settings', function() {
-            var channelIsOn = true;
-            var didTryToSendPrintCommand = false;
-            var didTryToTurnChannel1Off = false;
-            beforeEach(function(done) {
-                var ourBoard = new openBCIBoard.OpenBCIBoard();
-
-                ourBoard.autoFindOpenBCIBoard(function (portName, ports) {
-                    if (portName) {
-                        ourBoard.connect(portName).then(function (boardSerial) {
-                            //console.log('board connected');
-                            ourBoard.on('ready', function () {
-                                //console.log('Ready to print register settings!');
-                                if (!didTryToSendPrintCommand) {
-                                    didTryToSendPrintCommand = true;
-                                    ourBoard.getSettingsForChannel(2); //set isChannelOn to true
-                                } else if (!didTryToTurnChannel1Off) {
-                                    didTryToTurnChannel1Off = true;
-                                    //console.log('Tried to turn channel 1 off');
-                                    ourBoard.channelOff(2);
-                                    setTimeout(function() {
-                                        //console.log('Re print register settings');
-                                        ourBoard.getSettingsForChannel(2);
-                                    },100);
-                                }
-                                ourBoard.on('query',function(channelSettingsObject) {
-                                    //ourBoard.debugPrintChannelSettings(channelSettingsObject);
-                                    channelIsOn = ourBoard.channelIsOnFromChannelSettingsObject(channelSettingsObject);
-                                });
-                            });
-                        }).catch(function (err) {
-                            console.log('Error [setup]: ' + err);
-                            done();
-                        });
-
-                    } else {
-                        /** Display list of ports*/
-                        console.log('Port not found... check ports for other ports');
-                        done();
-                    }
-                });
-                setTimeout(function () {
-                    ourBoard.streamStop().then(ourBoard.disconnect).then(function (msg) {
-                        done();
-                    }, function (err) {
-                        console.log('Error: ' + err);
-                        done();
-                    });
-                }, 6000);
-            });
-            it('should turn channel off', function() {
-                expect(channelIsOn).equals(false);
-            });
+                },19000);
+            } else {
+                done();
+            }
         });
     });
-
 
 });
 
 describe('#impedanceTesting', function() {
     var ourBoard;
     this.timeout(20000);
+
     before(function(done) {
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose: true
@@ -703,13 +532,19 @@ describe('#impedanceTesting', function() {
 
 
         ourBoard.once('ready',() => {
-            ourBoard.streamStart();
+            ourBoard.streamStart()
+                .then(() => {
+                    setTimeout(() => {
+                        done();
+                    }, 100); // give some time for the stream command to be sent
+                })
+                .catch(err => {
+                    console.log(err);
+                    done(err);
+                })
         });
 
-        ourBoard.once('sample',() => {
-            console.log('done in impedance before');
-            done(); // good to start impedance testing..
-        });
+
     });
     after(function() {
         ourBoard.disconnect();
@@ -731,22 +566,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[0].channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[0].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[0].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -758,22 +587,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[1].channel.should.be.equal(2);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[1].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[1].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -785,22 +608,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[2].channel.should.be.equal(3);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[2].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[2].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -812,22 +629,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[3].channel.should.be.equal(4);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[3].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[3].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -839,22 +650,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[4].channel.should.be.equal(5);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[4].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[4].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -866,22 +671,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[5].channel.should.be.equal(6);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[5].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[5].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -893,22 +692,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[6].channel.should.be.equal(7);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[6].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[6].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -920,22 +713,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[7].channel.should.be.equal(8);
             });
             describe('#inputP', function () {
-                it('data array present', function () {
-                    impedanceArray[7].P.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].P.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function () {
-                it('data array present', function () {
-                    impedanceArray[7].N.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].N.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -969,22 +756,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[0].channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[0].P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[0].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[0].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[0].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[0].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -996,22 +777,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[1].channel.should.be.equal(2);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[1].P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[1].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[1].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[1].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[1].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -1023,22 +798,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[2].channel.should.be.equal(3);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[2].P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[2].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[2].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[2].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[2].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -1050,22 +819,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[3].channel.should.be.equal(4);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[3].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[3].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[3].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[3].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[3].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -1077,22 +840,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[4].channel.should.be.equal(5);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[4].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[4].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[4].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[4].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[4].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -1104,22 +861,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[5].channel.should.be.equal(6);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[5].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceArray[5].N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[5].N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[5].N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[5].N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -1131,22 +882,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[6].channel.should.be.equal(7);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceArray[6].P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceArray[6].N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceArray[6].N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceArray[6].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceArray[6].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -1158,22 +903,16 @@ describe('#impedanceTesting', function() {
                 impedanceArray[7].channel.should.be.equal(8);
             });
             describe('#inputP', function () {
-                it('data array present', function () {
-                    impedanceArray[7].P.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].P.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function () {
-                it('data array present', function () {
-                    impedanceArray[7].N.data.length.should.be.above(0);
-                });
-                it('valid average', function () {
-                    impedanceArray[7].N.should.have.property('average').above(-1);
+                it('got raw impedance value', function () {
+                    impedanceArray[7].N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function () {
                     impedanceArray[7].N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -1197,22 +936,16 @@ describe('#impedanceTesting', function() {
                 impedanceObject.channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceObject.P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceObject.N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
@@ -1236,22 +969,16 @@ describe('#impedanceTesting', function() {
                 impedanceObject.channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array present',function() {
-                    impedanceObject.P.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.P.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.P.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.P.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array NOT present',function() {
-                    impedanceObject.N.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.N.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.N.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.N.should.have.property('text').equal(k.OBCIImpedanceTextInit);
@@ -1260,13 +987,26 @@ describe('#impedanceTesting', function() {
         });
     });
     describe('#impedanceTestChannelInputN', function () {
+
         var impedanceObject = {};
+        //wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
 
         before(function(done) {
+
+            console.log('7');
+
+            ourBoard.on('sample',sample => {
+                //console.log('8');
+                //OpenBCISample.debugPrettyPrint(sample);
+                // good to start impedance testing..
+            });
+
             ourBoard.impedanceTestChannelInputN(1)
                 .then(impdObj => {
                     impedanceObject = impdObj;
-                    done();
+                    setTimeout(() => {
+                        done();
+                    }, 1000);
                 })
                 .catch(err => done(err));
         });
@@ -1275,27 +1015,55 @@ describe('#impedanceTesting', function() {
                 impedanceObject.channel.should.be.equal(1);
             });
             describe('#inputP', function() {
-                it('data array NOT present',function() {
-                    impedanceObject.P.data.length.should.be.equal(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.P.should.have.property('average').equal(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.P.should.have.property('raw').equal(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.P.should.have.property('text').equal(k.OBCIImpedanceTextInit);
                 });
             });
             describe('#inputN', function() {
-                it('data array present',function() {
-                    impedanceObject.N.data.length.should.be.above(0);
-                });
-                it('valid average',function() {
-                    impedanceObject.N.should.have.property('average').above(-1);
+                it('got raw impedance value',function() {
+                    impedanceObject.N.should.have.property('raw').above(-1);
                 });
                 it('text is not \'init\'', function() {
                     impedanceObject.N.should.have.property('text').not.be.equal(k.OBCIImpedanceTextInit);
                 });
             });
+        });
+    });
+    describe('#impedanceTestContinuousStXX', function () {
+
+        var impedanceArray = [];
+
+        before(function(done) {
+            ourBoard.impedanceTestContinuousStart()
+                .then(done).catch(err => done(err));
+
+        });
+
+        after(function(done) {
+            ourBoard.impedanceTestContinuousStop()
+                .then(done);
+        });
+
+        it('prints 10 impedance arrays', function(done) {
+            var count = 1;
+
+            var listener = impedanceArray => {
+                //console.log('\nImpedance Array: ' + count);
+                //console.log(impedanceArray);
+                count++;
+                if (count > 10) {
+                    ourBoard.removeListener('impedanceArray', listener);
+                    done();
+                }
+            };
+            ourBoard.on('impedanceArray', listener);
+
+
+
+
         });
     });
     describe('#_impedanceTestSetChannel', function () {
@@ -1329,6 +1097,55 @@ describe('#impedanceTesting', function() {
         });
         it('reject with invalid data type nInput', function(done) {
             ourBoard._impedanceTestFinalizeChannel(1,false,'taco').should.be.rejected.and.notify(done);
+        });
+    });
+});
+
+xdescribe('#sync', function() {
+    var ourBoard;
+    this.timeout(5000);
+    before(function (done) {
+        ourBoard = new openBCIBoard.OpenBCIBoard({
+            verbose: true
+        });
+
+        var useSim = () => {
+            ourBoard.simulatorEnable()
+                .then(() => {
+
+                    return ourBoard.connect(k.OBCISimulatorPortName);
+                })
+                .then(() => {
+                    return ourBoard.softReset();
+                })
+                .catch(err => console.log(err));
+        };
+        ourBoard.autoFindOpenBCIBoard()
+            .then(portName => {
+                return ourBoard.connect(portName);
+            })
+            .catch((err) => {
+                useSim();
+            })
+            .then(() => {
+                console.log('connected');
+            })
+            .catch(err => {
+                console.log('Error: ' + err);
+            });
+
+
+        ourBoard.once('ready', () => {
+
+            done();
+        });
+    });
+    after(function () {
+        ourBoard.disconnect();
+    });
+    describe('#sntp', function() {
+        it('can get current ntp time', function(done) {
+
         });
     });
 });

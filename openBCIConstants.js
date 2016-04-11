@@ -40,7 +40,10 @@ const kOBCIChannelOn_14 = 'Y';
 const kOBCIChannelOn_15 = 'U';
 const kOBCIChannelOn_16 = 'I';
 
-/** Test Signal Control Commands */
+/** Test Signal Control Commands
+ * 1x - Voltage will be 1 * (VREFP - VREFN) / 2.4 mV
+ * 2x - Voltage will be 2 * (VREFP - VREFN) / 2.4 mV
+ */
 const kOBCITestSignalConnectToDC            = 'p';
 const kOBCITestSignalConnectToGround        = '0';
 const kOBCITestSignalConnectToPulse1xFast   = '=';
@@ -150,6 +153,11 @@ const kOBCIFilterEnable = 'f';
 /** Triggers */
 const kOBCITrigger = '`';
 
+/** Sync Clocks */
+const kOBCISyncClockServerData = '<';
+const kOBCISyncClockStart = '>';
+const kOBCISyncClockStop = '.';
+
 /** Possible number of channels */
 const kOBCINumberOfChannelsDaisy = 16;
 const kOBCINumberOfChannelsDefault = 8;
@@ -167,6 +175,18 @@ const kOBCISampleRate250 = 250;
 /** Packet Size */
 const kOBCIPacketSize = 33;
 
+/** OpenBCI V3 Standard Packet Positions */
+/**
+ * 0:[startByte] | 1:[sampleNumber] | 2:[Channel-1.1] | 3:[Channel-1.2] | 4:[Channel-1.3] | 5:[Channel-2.1] | 6:[Channel-2.2] | 7:[Channel-2.3] | 8:[Channel-3.1] | 9:[Channel-3.2] | 10:[Channel-3.3] | 11:[Channel-4.1] | 12:[Channel-4.2] | 13:[Channel-4.3] | 14:[Channel-5.1] | 15:[Channel-5.2] | 16:[Channel-5.3] | 17:[Channel-6.1] | 18:[Channel-6.2] | 19:[Channel-6.3] | 20:[Channel-7.1] | 21:[Channel-7.2] | 22:[Channel-7.3] | 23:[Channel-8.1] | 24:[Channel-8.2] | 25:[Channel-8.3] | 26:[Aux-1.1] | 27:[Aux-1.2] | 28:[Aux-2.1] | 29:[Aux-2.2] | 30:[Aux-3.1] | 31:[Aux-3.2] | 32:StopByte
+ */
+const kOBCIPacketPositionStartByte          = 0;   // first byte
+const kOBCIPacketPositionStopByte           = 32;  // [32]
+const kOBCIPacketPositionStartAux           = 26;  // [26,27]:Aux 1 | [28,29]:Aux 2 | [30,31]:Aux 3
+const kOBCIPacketPositionStopAux            = 31;  // - - - [30,31]:Aux 3 | 32: Stop byte
+const kOBCIPacketPositionChannelDataStart   = 2;   // 0:startByte | 1:sampleNumber | [2:4] | [5:7] | [8:10] | [11:13] | [14:16] | [17:19] | [21:23] | [24:26]
+const kOBCIPacketPositionChannelDataStop    = 25;  // 24 bytes for channel data
+const kOBCIPacketPositionSampleNumber       = 1;
+
 /** Notable Bytes */
 const kOBCIByteStart = 0xA0;
 const kOBCIByteStop = 0xC0;
@@ -178,10 +198,11 @@ const kErrorInvalidByteStop = "Invalid Stop Byte";
 const kErrorUndefinedOrNullInput = "Undefined or Null Input";
 
 /** Max Master Buffer Size */
-const kOBCIMasterBufferSize = kOBCIPacketSize * 100;
+const kOBCIMasterBufferSize = 4096;
 
 /** Impedance Calculation Variables */
 const kOBCILeadOffDriveInAmps = 0.000000006;
+const kOBCILeadOffFrequencyHz = 31.5;
 
 /** Command send delay */
 const kOBCIWriteIntervalDelayMSLong = 50;
@@ -205,7 +226,15 @@ const kOBCIImpedanceThresholdBadMax = 1000000;
 const kOBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resistor that must be subtracted
 
 /** Simulator */
-const kOBCISimulatorPortName = '/dev/tty.openBCISimulator';
+const kOBCISimulatorPortName = 'OpenBCISimulator';
+
+/**
+ * Raw data packet types/codes
+ */
+const kOBCIPacketTypeRawAux         = 3; // 0011
+const kOBCIPacketTypeStandard       = 0; // 0000
+const kOBCIPacketTypeTimeSynced     = 1; // 0001
+const kOBCIPacketTypeUserDefined    = 2; // 0010
 
 module.exports = {
     /** Turning channels off */
@@ -368,6 +397,36 @@ module.exports = {
     OBCITestSignalConnectToPulse1xSlow:kOBCITestSignalConnectToPulse1xSlow,
     OBCITestSignalConnectToPulse2xFast:kOBCITestSignalConnectToPulse2xFast,
     OBCITestSignalConnectToPulse2xSlow:kOBCITestSignalConnectToPulse2xSlow,
+    getTestSignalCommand: (signal) => {
+        return new Promise((resolve,reject) => {
+            switch (signal) {
+                case 'dc':
+                    resolve(kOBCITestSignalConnectToDC);
+                    break;
+                case 'ground':
+                    resolve(kOBCITestSignalConnectToGround);
+                    break;
+                case 'pulse1xFast':
+                    resolve(kOBCITestSignalConnectToPulse1xFast);
+                    break;
+                case 'pulse1xSlow':
+                    resolve(kOBCITestSignalConnectToPulse1xSlow);
+                    break;
+                case 'pulse2xFast':
+                    resolve(kOBCITestSignalConnectToPulse2xFast);
+                    break;
+                case 'pulse2xSlow':
+                    resolve(kOBCITestSignalConnectToPulse2xSlow);
+                    break;
+                case 'none':
+                    resolve(kOBCIChannelDefaultAllSet);
+                    break;
+                default:
+                    reject('Invalid selection! Check your spelling.');
+                    break;
+            }
+        })
+    },
     /** Channel Setting Commands */
     OBCIChannelCmdADCNormal:kOBCIChannelCmdADCNormal,
     OBCIChannelCmdADCShorted:kOBCIChannelCmdADCShorted,
@@ -412,6 +471,15 @@ module.exports = {
     OBCIChannelCmdSRB1Diconnect:kOBCIChannelCmdSRB1Diconnect,
     OBCIChannelCmdSRB2Connect:kOBCIChannelCmdSRB2Connect,
     OBCIChannelCmdSRB2Diconnect:kOBCIChannelCmdSRB2Diconnect,
+    /** Channel Settings Object */
+    channelSettingsObjectDefault: channelSettingsObjectDefault,
+    channelSettingsArrayInit: (numberOfChannels) => {
+        var newChannelSettingsArray = [];
+        for (var i = 0; i < numberOfChannels; i++) {
+            newChannelSettingsArray.push(channelSettingsObjectDefault(i));
+        }
+        return newChannelSettingsArray;
+    },
     /** Channel Setting Helper Strings */
     OBCIStringADCNormal:kOBCIStringADCNormal,
     OBCIStringADCShorted:kOBCIStringADCShorted,
@@ -537,6 +605,7 @@ module.exports = {
     OBCIMasterBufferSize:kOBCIMasterBufferSize,
     /** Impedance Calculation Variables */
     OBCILeadOffDriveInAmps:kOBCILeadOffDriveInAmps,
+    OBCILeadOffFrequencyHz:kOBCILeadOffFrequencyHz,
     /** Channel Setter Maker */
     getChannelSetter:channelSetter,
     /** Impedance Setter Maker */
@@ -545,6 +614,10 @@ module.exports = {
     OBCIWriteIntervalDelayMSLong:kOBCIWriteIntervalDelayMSLong,
     OBCIWriteIntervalDelayMSNone:kOBCIWriteIntervalDelayMSNone,
     OBCIWriteIntervalDelayMSShort:kOBCIWriteIntervalDelayMSShort,
+    /** Sync Clocks */
+    OBCISyncClockServerData:kOBCISyncClockServerData,
+    OBCISyncClockStart:kOBCISyncClockStart,
+    OBCISyncClockStop:kOBCISyncClockStop,
     /** Impedance */
     OBCIImpedanceTextBad:kOBCIImpedanceTextBad,
     OBCIImpedanceTextGood:kOBCIImpedanceTextGood,
@@ -565,7 +638,24 @@ module.exports = {
         }
     },
     /** Simulator */
-    OBCISimulatorPortName:kOBCISimulatorPortName
+    OBCISimulatorPortName:kOBCISimulatorPortName,
+    /** Raw data packet types */
+    OBCIPacketTypeRawAux:kOBCIPacketTypeRawAux,
+    OBCIPacketTypeStandard:kOBCIPacketTypeStandard,
+    OBCIPacketTypeTimeSynced:kOBCIPacketTypeTimeSynced,
+    OBCIPacketTypeUserDefined:kOBCIPacketTypeUserDefined,
+    /** fun funcs */
+    isNumber:isNumber,
+    isBoolean:isBoolean,
+    isString:isString,
+    /** OpenBCI V3 Standard Packet Positions */
+    OBCIPacketPositionStartByte:kOBCIPacketPositionStartByte,
+    OBCIPacketPositionStopByte:kOBCIPacketPositionStopByte,
+    OBCIPacketPositionStartAux:kOBCIPacketPositionStartAux,
+    OBCIPacketPositionStopAux:kOBCIPacketPositionStopAux,
+    OBCIPacketPositionChannelDataStart:kOBCIPacketPositionChannelDataStart,
+    OBCIPacketPositionChannelDataStop:kOBCIPacketPositionChannelDataStop,
+    OBCIPacketPositionSampleNumber:kOBCIPacketPositionSampleNumber
 };
 
 /**
@@ -635,6 +725,16 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
         // Set SRB1
         cmdSrb1 = srb1 ? kOBCIChannelCmdSRB1Connect : kOBCIChannelCmdSRB1Diconnect;
 
+        var newChannelSettingsObject = {
+            channelNumber:channelNumber,
+            powerDown: powerDown,
+            gain: gain,
+            inputType: inputType,
+            bias: bias,
+            srb2: srb2,
+            srb1: srb1
+        };
+
         Promise.all([p1,p2,p3]).then(function(values) {
             var outputArray = [
                 kOBCIChannelCmdSet,
@@ -648,7 +748,7 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
                 kOBCIChannelCmdLatch
             ];
             //console.log(outputArray);
-            resolve(outputArray);
+            resolve(outputArray,newChannelSettingsObject);
         });
     });
 }
@@ -671,24 +771,24 @@ function impedanceSetter(channelNumber,pInputApplied,nInputApplied) {
         if (!isBoolean(pInputApplied)) reject('pInputApplied must be of type \'boolean\' ');
         if (!isBoolean(nInputApplied)) reject('nInputApplied must be of type \'boolean\' ');
 
-        // Set nInputApplied
-        cmdNInputApplied = nInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
-
         // Set pInputApplied
         cmdPInputApplied = pInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
+
+        // Set nInputApplied
+        cmdNInputApplied = nInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
 
         // Set Channel Number
         commandChannelForCmd(channelNumber).then(command => {
             var outputArray = [
                 kOBCIChannelImpedanceSet,
                 command,
-                cmdNInputApplied,
                 cmdPInputApplied,
+                cmdNInputApplied,
                 kOBCIChannelImpedanceLatch
             ];
             //console.log(outputArray);
             resolve(outputArray);
-        }).catch(err => reject(err));;
+        }).catch(err => reject(err));
     });
 }
 
@@ -823,4 +923,15 @@ function commandChannelForCmd(channelNumber) {
                 break;
         }
     });
+}
+function channelSettingsObjectDefault(channelNumber) {
+    return {
+        channelNumber:channelNumber,
+        powerDown: false,
+        gain: 24,
+        inputType: kOBCIStringADCNormal,
+        bias: true,
+        srb2: true,
+        srb1: false
+    };
 }
