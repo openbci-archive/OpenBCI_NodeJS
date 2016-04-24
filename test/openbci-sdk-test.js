@@ -1101,18 +1101,15 @@ describe('#impedanceTesting', function() {
     });
 });
 
-xdescribe('#sync', function() {
+describe('#sync', function() {
     var ourBoard;
     this.timeout(5000);
     before(function (done) {
-        ourBoard = new openBCIBoard.OpenBCIBoard({
-            verbose: true
-        });
+        ourBoard = new openBCIBoard.OpenBCIBoard();
 
         var useSim = () => {
             ourBoard.simulatorEnable()
                 .then(() => {
-
                     return ourBoard.connect(k.OBCISimulatorPortName);
                 })
                 .then(() => {
@@ -1128,7 +1125,7 @@ xdescribe('#sync', function() {
                 useSim();
             })
             .then(() => {
-                console.log('connected');
+                //console.log('connected');
             })
             .catch(err => {
                 console.log('Error: ' + err);
@@ -1144,7 +1141,13 @@ xdescribe('#sync', function() {
         ourBoard.disconnect();
     });
     describe('#sntp', function() {
-        it('can get current ntp time', function(done) {
+        it('can get sntp time and verify extend of sntp valid', function(done) {
+            ourBoard.sntpStart()
+                .then(() => {
+                    // sntp.now should be extended into ourBoard.sntpNow
+                    ourBoard.sntpNow().should.equal(ourBoard.sntp.now());
+                    done();
+                });
 
         });
     });
