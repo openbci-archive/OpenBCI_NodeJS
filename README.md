@@ -13,9 +13,11 @@ The purpose of this module is to **get connected** and **start streaming** as fa
 
 ## TL;DR
 
-Install via npm:
+#### Install via npm:
 
-`npm install openbci-sdk`
+```
+npm install openbci-sdk
+```
 
 #### Get connected and start streaming
 
@@ -42,9 +44,9 @@ ourBoard.connect(portName)
 
 Want to know if the module really works? Check out some projects and organizations using it:
 
-* [_OpenEXP_](https://github.com/openexp/OpenEXP) is an open-source desktop app for running experiments and collecting behavioral and physiological data.
-* [_Thinker_](http://www.pushtheworldllc.com/#!thinker/uc1fn) is a project building the world's first brainwave-word database.
-* [_NeuroJS_](https://github.com/NeuroJS) is a community dedicated to Neuroscience research using JavaScript, they have several great examples.
+* [_OpenEXP_](https://github.com/openexp/OpenEXP): an open-source desktop app for running experiments and collecting behavioral and physiological data.
+* [_Thinker_](http://www.pushtheworldllc.com/#!thinker/uc1fn): a project building the world's first brainwave-word database.
+* [_NeuroJS_](https://github.com/NeuroJS): a community dedicated to Neuroscience research using JavaScript, they have several great examples.
 
 Still not satisfied it works?? Check out this [detailed report](http://s132342840.onlinehome.us/pushtheworld/files/voltageVerificationTestPlanAndResults.pdf) that scientifically validates the output voltages of this module.
 
@@ -286,7 +288,7 @@ Board optional configurations.
 * `verbose` To output more messages to the command line.
 * `simulate` Full functionality, just synthetic data.
 * `simulatorSampleRate` - The sample rate to use for the simulator (Default is `250`)
-* `NTP` - Syncs the module up with an NTP time server. Syncs the board on startup with the NTP time. Adds a time stamp to the AUX channels. NOTE: (NOT FULLY IMPLEMENTED) [DO NOT USE]
+* `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup with the SNTP time. Adds a time stamp to the AUX channels. NOTE: (NOT FULLY IMPLEMENTED) [DO NOT USE]
 
 **Note, we have added support for either all lowercase OR camelcase of the options, use whichever style you prefer.**
 
@@ -608,6 +610,10 @@ To leave simulate mode.
 
 **_Returns_** a promise, fulfilled if able to stop simulate mode, reject if not.
 
+### .sntp
+
+Extends the popular STNP package on [npmjs](https://www.npmjs.com/package/sntp)
+
 ### .sntpGetOffset()
 
 Stateful method for querying the current offset only when the last one is too old. (defaults to daily)
@@ -616,13 +622,21 @@ Stateful method for querying the current offset only when the last one is too ol
 
 ### .sntpGetServerTime()
 
-Get time from the NTP server. Must have internet connection!
+Get time from the SNTP server. Must have internet connection!
 
 **_Returns_** a promise fulfilled with time object
 
+### .sntpNow()
+
+This function gets SNTP time since Jan 1, 1970, if we call this after a successful `.sntpStart()` this time will be sycned, or else we will just get the current computer time, the case if there is no internet. 
+
+**_Returns_** time since UNIX epoch in ms.
+
 ### .sntpStart()
 
-This starts the NTP server and gets it to remain in sync with the NTP server;
+This starts the SNTP server and gets it to remain in sync with the SNTP server;
+
+**_Returns_** a promise if the module was able to sync with ntp server.
 
 ### .sntpStop()
 

@@ -23,7 +23,7 @@ function OpenBCIFactory() {
         simulatorSampleRate: 250,
         baudrate: 115200,
         verbose: false,
-        ntp: false
+        sntp: false
     };
 
     /**
@@ -46,8 +46,8 @@ function OpenBCIFactory() {
      *                      firmware on board has been previously configured.
      *
      *     - `verbose` - Print out useful debugging events
-     *     - `NTP` - Syncs the module up with an NTP time server. Syncs the board on startup
-     *                  with the NTP time. Adds a time stamp to the AUX channels. (NOT FULLY
+     *     - `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup
+     *                  with the SNTP time. Adds a time stamp to the AUX channels. (NOT FULLY
      *                  IMPLEMENTED) [DO NOT USE]
      * @constructor
      * @author AJ Keller (@pushtheworldllc)
@@ -66,7 +66,7 @@ function OpenBCIFactory() {
         opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
         opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
         opts.verbose = options.verbose || _options.verbose;
-        opts.ntp = options.NTP || options.ntp || _options.NTP;
+        opts.sntp = options.SNTP || options.sntp || _options.NTP;
         // Set to global options object
         this.options = opts;
 
@@ -99,7 +99,7 @@ function OpenBCIFactory() {
             npt1: 0,
             ntp2: 0
         };
-        this.ntpOptions = {
+        this.sntpOptions = {
             host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
             port: 123,                      // Defaults to 123 (NTP)
             resolveReference: true,         // Default to false (not resolving)
@@ -114,7 +114,7 @@ function OpenBCIFactory() {
         // Strings
 
         // NTP
-        if (this.options.ntp) {
+        if (this.options.sntp) {
             this.sntpGetServerTime()
                 .then((timeObj) => {
                     if (this.options.verbose) {
@@ -1149,13 +1149,13 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Get time from the NTP server. Must have internet connection!
+     * @description Get time from the SNTP server. Must have internet connection!
      * @returns {Promise} - Fulfilled with time object
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sntpGetServerTime = function() {
         return new Promise((resolve,reject) => {
-            Sntp.time(this.ntpOptions, (err, time) => {
+            Sntp.time(this.sntpOptions, (err, time) => {
 
                 if (err) {
                     console.log('Failed: ' + err.message);
@@ -1171,17 +1171,30 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description This starts the NTP server and gets it to remain in sync with the NTP server
+     * @description Allows users to utilize all features of sntp if they want to...
+     */
+    OpenBCIBoard.prototype.sntp = Sntp;
+
+    /**
+     * @description This gets the time plus offset
+     */
+    OpenBCIBoard.prototype.sntpNow = Sntp.now;
+
+    /**
+     * @description This starts the SNTP server and gets it to remain in sync with the SNTP server
+     * @returns {Promise} - A promise if the module was able to sync with ntp server.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sntpStart = function() {
-        var start = () => {
-            Sntp.start(() => {
-                Sntp.now();
+        return new Promise((resolve, reject) => {
+            Sntp.start((err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             });
-        };
-
-        start();
+        });
     };
 
     /**
