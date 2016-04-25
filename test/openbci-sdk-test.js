@@ -128,7 +128,7 @@ describe('openbci-sdk',function() {
         });
     });
     describe('#simulator', function() {
-        it('can enable simulator after contructor', function(done) {
+        it('can enable simulator after constructor', function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true
             });
@@ -214,9 +214,9 @@ describe('openbci-sdk',function() {
                     ourBoard.streamStart().catch(err => done(err)); // start streaming
 
                     ourBoard.once('sample',(sample) => { // wait till we get a sample
-                        console.log('got a sample');
+                        //console.log('got a sample');
                         ourBoard.disconnect().then(() => { // call disconnect
-                            console.log('Device is streaming: ' + ourBoard.streaming ? 'true' : 'false')
+                            //console.log('Device is streaming: ' + ourBoard.streaming ? 'true' : 'false');
                             setTimeout(() => {
                                 spy.should.have.been.calledWithMatch(k.OBCIStreamStop);
                                 var conditionalTimeout = realBoard ? 300 : 0;
@@ -232,10 +232,10 @@ describe('openbci-sdk',function() {
                 ourBoard.connect(masterPortName).catch(err => done(err));
                 // for the ready signal test
                 ourBoard.once('ready', function() {
-                    console.log('got here');
+                    //console.log('got here');
                     ourBoard.disconnect()
                         .then(() => {
-                            console.log('disconnected');
+                            //console.log('disconnected');
                             var conditionalTimeout = realBoard ? 300 : 0;
                             setTimeout(() => {
                                 done();
@@ -244,6 +244,18 @@ describe('openbci-sdk',function() {
                             console.log(err);
                             done(err);
                         });
+                });
+            });
+            it('rawDataPacket is emitted', function(done) {
+                ourBoard.connect(masterPortName).catch(err => done(err));
+                // for the ready signal test
+                ourBoard.once('ready', function() {
+                    ourBoard.streamStart().catch(err => done(err)); // start streaming
+
+                    ourBoard.once('rawDataPacket',(rawDataPacket) => { // wait till we get a raw data packet
+                        console.log('got a sample');
+                        done();
+                    });
                 });
             });
         });

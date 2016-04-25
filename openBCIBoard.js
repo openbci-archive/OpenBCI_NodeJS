@@ -1080,6 +1080,7 @@ function OpenBCIFactory() {
             while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
                 if (data[readingPosition] === k.OBCIByteStart) {
                     var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
+                    this.emit('rawDataPacket',rawPacket);
                     if (data[readingPosition + k.OBCIPacketSize - 1] === k.OBCIByteStop) {
                         // standard packet!
                         openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
