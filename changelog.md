@@ -1,3 +1,9 @@
+# 0.3.3
+
+### Bug Fixes
+
+* `rawDataPacket` not being emitted
+
 # 0.3.2
 
 ### Work In Progress
