@@ -18,7 +18,8 @@
     "gaussian": "^1.0.0",
     "istanbul": "^0.4.2",
     "performance-now": "^0.2.0",
-    "serialport": "~2.1.0",
+    "scientific-statistics": "^0.2.7",
+    "serialport": "~3.0.0",
     "sntp": "^2.0.0"
   },
   "directories": {
