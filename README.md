@@ -288,6 +288,11 @@ Board optional configurations.
 * `verbose` To output more messages to the command line.
 * `simulate` Full functionality, just synthetic data.
 * `simulatorSampleRate` - The sample rate to use for the simulator (Default is `250`)
+* `simulatorAlpha` - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+* `simulatorLineNoise` - Injects line noise on channels.
+  * `60Hz` - 60Hz line noise (Default) (ex. __Unite States__)
+  * `50Hz` - 50Hz line noise (ex. __Europe__)
+  * `None` - Do not inject line noise.
 * `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup with the SNTP time. Adds a time stamp to the AUX channels. NOTE: (NOT FULLY IMPLEMENTED) [DO NOT USE]
 
 **Note, we have added support for either all lowercase OR camelcase of the options, use whichever style you prefer.**

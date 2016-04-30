@@ -39,10 +39,12 @@ describe('openbci-sdk',function() {
         it('constructs with the correct default options', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard();
             (ourBoard.options.boardType).should.equal('default');
-            (ourBoard.options.simulate).should.equal(false);
-            (ourBoard.options.simulatorSampleRate).should.equal(250);
             (ourBoard.options.baudRate).should.equal(115200);
             (ourBoard.options.verbose).should.equal(false);
+            (ourBoard.options.simulate).should.equal(false);
+            (ourBoard.options.simulatorSampleRate).should.equal(250);
+            (ourBoard.options.simulatorAlpha).should.equal(true);
+            (ourBoard.options.simulatorLineNoise).should.equal('60Hz');
             describe('#sampleRate', function() {
                 it('should get value for default',function() {
                     ourBoard.sampleRate().should.equal(250);
@@ -101,6 +103,24 @@ describe('openbci-sdk',function() {
                 simulate: true
             });
             (ourBoard.options.simulate).should.equal(true);
+        });
+        it('can turn 50Hz line noise on', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulatorLineNoise: '50Hz'
+            });
+            (ourBoard.options.simulatorLineNoise).should.equal('50Hz');
+        });
+        it('defaults to 60Hz line noise when bad input', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulatorLineNoise: '20Hz'
+            });
+            (ourBoard.options.simulatorLineNoise).should.equal('60Hz');
+        });
+        it('will not inject alpha', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulatorAlpha: false
+            });
+            (ourBoard.options.simulatorAlpha).should.equal(false);
         });
         it('configures impedance testing variables correctly', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard();

@@ -168,6 +168,10 @@ const kOBCIBoardDaisy = 'daisy';
 const kOBCIBoardDefault = 'default';
 const kOBCIBoardGanglion = 'ganglion';
 
+/** Possible Simulator Line Noise injections */
+const kOBCISimulatorLineNoiseHz60 = '60Hz';
+const kOBCISimulatorLineNoiseHz50 = '50Hz';
+const kOBCISimulatorLineNoiseNone = 'None';
 /** Possible Sample Rates*/
 const kOBCISampleRate125 = 125;
 const kOBCISampleRate250 = 250;
@@ -655,7 +659,11 @@ module.exports = {
     OBCIPacketPositionStopAux:kOBCIPacketPositionStopAux,
     OBCIPacketPositionChannelDataStart:kOBCIPacketPositionChannelDataStart,
     OBCIPacketPositionChannelDataStop:kOBCIPacketPositionChannelDataStop,
-    OBCIPacketPositionSampleNumber:kOBCIPacketPositionSampleNumber
+    OBCIPacketPositionSampleNumber:kOBCIPacketPositionSampleNumber,
+    /** Possible Simulator Line Noise injections */
+    OBCISimulatorLineNoiseHz60:kOBCISimulatorLineNoiseHz60,
+    OBCISimulatorLineNoiseHz50:kOBCISimulatorLineNoiseHz50,
+    OBCISimulatorLineNoiseNone:kOBCISimulatorLineNoiseNone
 };
 
 /**

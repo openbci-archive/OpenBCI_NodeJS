@@ -19,11 +19,13 @@ function OpenBCIFactory() {
 
     var _options = {
         boardType: k.OBCIBoardDefault,
-        simulate: false,
-        simulatorSampleRate: 250,
         baudrate: 115200,
         verbose: false,
-        sntp: false
+        sntp: false,
+        simulate: false,
+        simulatorSampleRate: 250,
+        simulatorAlpha: true,
+        simulatorLineNoise: '60Hz'
     };
 
     /**
@@ -37,15 +39,24 @@ function OpenBCIFactory() {
      *              `ganglion` - 4 Channel board
      *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
      *
+     *     - `baudRate` - Baud Rate, defaults to 115200. Manipulating this is allowed if
+     *                      firmware on board has been previously configured.
+     *
+     *     - `verbose` - Print out useful debugging events
+     *
      *     - `simulate` - Full functionality, just mock data.
      *
      *     - `simulatorSampleRate` - The sample rate to use for the simulator
      *                      (Default is `250`)
      *
-     *     - `baudRate` - Baud Rate, defaults to 115200. Manipulating this is allowed if
-     *                      firmware on board has been previously configured.
+     *     - `simulatorAlpha` - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
      *
-     *     - `verbose` - Print out useful debugging events
+     *     - `simulatorLineNoise` - Injects line noise on channels.
+     *          3 Possible Boards:
+     *              `60Hz` - 60Hz line noise (Default) [America]
+     *              `50Hz` - 50Hz line noise [Europe]
+     *              `None` - Do not inject line noise.
+     *
      *     - `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup
      *                  with the SNTP time. Adds a time stamp to the AUX channels. (NOT FULLY
      *                  IMPLEMENTED) [DO NOT USE]
@@ -62,11 +73,17 @@ function OpenBCIFactory() {
 
         /** Configuring Options */
         opts.boardType = options.boardType || options.boardtype || _options.boardType;
-        opts.simulate = options.simulate || _options.simulate;
-        opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
         opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
         opts.verbose = options.verbose || _options.verbose;
         opts.sntp = options.SNTP || options.sntp || _options.NTP;
+        opts.simulate = options.simulate || _options.simulate;
+        opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
+        opts.simulatorAlpha = options.simulatorAlpha || options.simulatoralpha || _options.simulatorAlpha;
+        opts.simulatorLineNoise = options.simulatorLineNoise || options.simulatorlinenoise || _options.simulatorLineNoise;
+        // Safety check!
+        if (opts.simulatorLineNoise !== '60Hz' || opts.simulatorLineNoise !== '60Hz') {
+            opts.simulatorLineNoise = '60Hz';
+        }
         // Set to global options object
         this.options = opts;
 
@@ -149,7 +166,9 @@ function OpenBCIFactory() {
                 if (this.options.verbose) console.log('using faux board ' + portName);
                 boardSerial = new openBCISimulator.OpenBCISimulator(portName, {
                     verbose: this.options.verbose,
-                    sampleRate: this.options.simulatorSampleRate
+                    sampleRate: this.options.simulatorSampleRate,
+                    alpha: this.options.simulatorAlpha,
+                    lineNoise: this.options.simulatorLineNoise
                 });
             } else {
                 /* istanbul ignore if */
