@@ -1,7 +1,5 @@
 'use strict';
 var gaussian = require('gaussian');
-var outliers = require('outliers');
-var stats = require('scientific-statistics');
 
 var k = require('./openBCIConstants');
 

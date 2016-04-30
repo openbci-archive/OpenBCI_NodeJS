@@ -49,7 +49,7 @@ function OpenBCIFactory() {
      *     - `simulatorSampleRate` - The sample rate to use for the simulator
      *                      (Default is `250`)
      *
-     *     - `simulatorAlpha` - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+     *     - `simulatorAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
      *
      *     - `simulatorLineNoise` - Injects line noise on channels.
      *          3 Possible Boards:
@@ -81,7 +81,7 @@ function OpenBCIFactory() {
         opts.simulatorAlpha = options.simulatorAlpha || options.simulatoralpha || _options.simulatorAlpha;
         opts.simulatorLineNoise = options.simulatorLineNoise || options.simulatorlinenoise || _options.simulatorLineNoise;
         // Safety check!
-        if (opts.simulatorLineNoise !== '60Hz' || opts.simulatorLineNoise !== '60Hz') {
+        if (opts.simulatorLineNoise !== '60Hz' && opts.simulatorLineNoise !== '50Hz') {
             opts.simulatorLineNoise = '60Hz';
         }
         // Set to global options object
