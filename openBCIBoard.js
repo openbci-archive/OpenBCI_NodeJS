@@ -78,11 +78,15 @@ function OpenBCIFactory() {
         opts.sntp = options.SNTP || options.sntp || _options.NTP;
         opts.simulate = options.simulate || _options.simulate;
         opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
-        opts.simulatorAlpha = options.simulatorAlpha || options.simulatoralpha || _options.simulatorAlpha;
         opts.simulatorLineNoise = options.simulatorLineNoise || options.simulatorlinenoise || _options.simulatorLineNoise;
         // Safety check!
         if (opts.simulatorLineNoise !== '60Hz' && opts.simulatorLineNoise !== '50Hz') {
             opts.simulatorLineNoise = '60Hz';
+        }
+        if (options.simulatorAlpha === false || options.simulatoralpha === false) {
+            opts.simulatorAlpha = false;
+        } else {
+            opts.simulatorAlpha = _options.simulatorAlpha;
         }
         // Set to global options object
         this.options = opts;
