@@ -80,7 +80,7 @@ function OpenBCIFactory() {
         opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
         opts.simulatorLineNoise = options.simulatorLineNoise || options.simulatorlinenoise || _options.simulatorLineNoise;
         // Safety check!
-        if (opts.simulatorLineNoise !== '60Hz' && opts.simulatorLineNoise !== '50Hz') {
+        if (opts.simulatorLineNoise !== '60Hz' && opts.simulatorLineNoise !== '50Hz' && opts.simulatorLineNoise !== 'None') {
             opts.simulatorLineNoise = '60Hz';
         }
         if (options.simulatorAlpha === false || options.simulatoralpha === false) {
