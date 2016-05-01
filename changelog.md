@@ -1,5 +1,16 @@
 # 0.3.3
 
+### New Features
+
+* Simulator made to look more like brainwave data to the user. Implemented a 1/f filter. Defaults to injecting 60Hz line noise with two channels of alpha (10Hz) boost.
+
+### Github Issues Addressed
+
+* [https://github.com/OpenBCI/openbci-js-sdk/issues/44](#44)
+
+
+# 0.3.3
+
 ### Bug Fixes
 
 * `rawDataPacket` not being emitted

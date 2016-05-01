@@ -17,7 +17,9 @@ function OpenBCISimulatorFactory() {
     var _options = {
         samplerate: 250,
         daisy: false,
-        verbose: false
+        verbose: false,
+        alpha: true,
+        lineNoise: '60Hz'
     };
 
 
@@ -31,6 +33,8 @@ function OpenBCISimulatorFactory() {
         /** Configuring Options */
         opts.sampleRate = options.sampleRate || options.samplerate || _options.samplerate;
         opts.daisy = options.daisy || _options.daisy;
+        opts.lineNoise = options.lineNoise || options.linenoise || _options.lineNoise;
+        opts.alpha = options.alpha || _options.alpha;
         opts.verbose = options.verbose || _options.verbose;
 
         this.options = opts;
@@ -130,7 +134,7 @@ function OpenBCISimulatorFactory() {
 
         if (intervalInMS < 2) intervalInMS = 2;
 
-        var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);
+        var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, this.options.alpha, this.options.lineNoise);
 
         var getNewPacket = sampNumber => {
             return openBCISample.convertSampleToPacket(generateSample(sampNumber));

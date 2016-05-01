@@ -1,7 +1,5 @@
 'use strict';
 var gaussian = require('gaussian');
-var outliers = require('outliers');
-var stats = require('scientific-statistics');
 
 var k = require('./openBCIConstants');
 
@@ -278,14 +276,20 @@ var sampleModule = {
             stopByte: k.OBCIByteStop
         }
     },
-    randomSample: function(numberOfChannels,sampleRateHz) {
+    /**
+     * @description Create a configurable function to return samples for a simulator. This implements 1/f filtering injection to create more brain like data.
+     * @param numberOfChannels
+     * @param sampleRateHz
+     * @param injectAlpha
+     * @param lineNoise
+     * @returns {Function}
+     */
+    randomSample: function(numberOfChannels,sampleRateHz, injectAlpha,lineNoise) {
         var self = this;
-        const distribution = gaussian(0,2);
+        const distribution = gaussian(0,1);
         const sineWaveFreqHz10 = 10;
         const sineWaveFreqHz50 = 50;
         const sineWaveFreqHz60 = 60;
-        const pi = Math.PI;
-        const sqrt2 = Math.sqrt(2);
         const uVolts = 1000000;
 
         var sinePhaseRad = new Array(numberOfChannels+1); //prevent index error with '+1'
@@ -293,41 +297,58 @@ var sampleModule = {
 
         var auxData = [0,0,0];
 
+        // Init arrays to hold coefficients for each channel
+        var b0 = new Array(numberOfChannels);
+        var b1 = new Array(numberOfChannels);
+        var b2 = new Array(numberOfChannels);
+
+        // Init coefficients to 0
+        b0.fill(0);
+        b1.fill(0);
+        b2.fill(0);
+
         return function(previousSampleNumber) {
             var newSample = self.newSample();
-
-            //console.log('New Sample: ' + JSON.stringify(newSample));
-
+            var whiteNoise;
             for(var i = 0; i < numberOfChannels; i++) { //channels are 0 indexed
-                newSample.channelData[i] = distribution.ppf(Math.random())*Math.sqrt(sampleRateHz/2)/uVolts;
+                // This produces white noise
+                whiteNoise = distribution.ppf(Math.random()) * Math.sqrt(sampleRateHz/2)/uVolts;
 
                 switch (i) {
-                    case 1: // scale first channel higher
-                        newSample.channelData[i] *= 10;
-                        break;
-                    case 2:
-                        sinePhaseRad[i] += 2 * pi * sineWaveFreqHz10 / sampleRateHz;
-                        if (sinePhaseRad[i] > 2 * pi) {
-                            sinePhaseRad[i] -= 2 * pi;
+                    case 0: // Add 10Hz signal to channel 1... briany
+                    case 1:
+                        if (injectAlpha) {
+                            sinePhaseRad[i] += 2 * Math.PI * sineWaveFreqHz10 / sampleRateHz;
+                            if (sinePhaseRad[i] > 2 * Math.PI) {
+                                sinePhaseRad[i] -= 2 * Math.PI;
+                            }
+                            whiteNoise += (5 * Math.SQRT2 * Math.sin(sinePhaseRad[i]))/uVolts;
                         }
-                        newSample.channelData[i] += (10 * sqrt2 * Math.sin(sinePhaseRad[i]))/uVolts;
                         break;
-                    case 3:
-                        sinePhaseRad[i] += 2 * pi * sineWaveFreqHz50 / sampleRateHz;
-                        if (sinePhaseRad[i] > 2 * pi) {
-                            sinePhaseRad[i] -= 2 * pi;
+                    default:
+                        if (lineNoise === k.OBCISimulatorLineNoiseHz60) {
+                            // If we're in murica we want to add 60Hz line noise
+                            sinePhaseRad[i] += 2 * Math.PI * sineWaveFreqHz60 / sampleRateHz;
+                            if (sinePhaseRad[i] > 2 * Math.PI) {
+                                sinePhaseRad[i] -= 2 * Math.PI;
+                            }
+                            whiteNoise += (8 * Math.SQRT2 * Math.sin(sinePhaseRad[i])) / uVolts;
+                        } else if (lineNoise === k.OBCISimulatorLineNoiseHz50){
+                            // add 50Hz line noise if we are not in america
+                            sinePhaseRad[i] += 2 * Math.PI * sineWaveFreqHz50 / sampleRateHz;
+                            if (sinePhaseRad[i] > 2 * Math.PI) {
+                                sinePhaseRad[i] -= 2 * Math.PI;
+                            }
+                            whiteNoise += (8 * Math.SQRT2 * Math.sin(sinePhaseRad[i])) / uVolts;
                         }
-                        newSample.channelData[i] += (50 * sqrt2 * Math.sin(sinePhaseRad[i]))/uVolts;
-                        break;
-                    case 4:
-                        sinePhaseRad[i] += 2 * pi * sineWaveFreqHz60 / sampleRateHz;
-                        if (sinePhaseRad[i] > 2 * pi) {
-                            sinePhaseRad[i] -= 2 * pi;
-                        }
-                        newSample.channelData[i] += (50 * sqrt2 * Math.sin(sinePhaseRad[i]))/uVolts;
-                        break;
-
                 }
+                /**
+                 * See http://www.firstpr.com.au/dsp/pink-noise/ section "Filtering white noise to make it pink"
+                 */
+                b0[i] = 0.99765 * b0[i] + whiteNoise * 0.0990460;
+                b1[i] = 0.96300 * b1[i] + whiteNoise * 0.2965164;
+                b2[i] = 0.57000 * b2[i] + whiteNoise * 1.0526913;
+                newSample.channelData[i] = b0[i] + b1[i] + b2[i] + whiteNoise * 0.1848;
             }
             if (previousSampleNumber == 255) {
                 newSample.sampleNumber = 0;
