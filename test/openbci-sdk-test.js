@@ -110,6 +110,12 @@ describe('openbci-sdk',function() {
             });
             (ourBoard.options.simulatorLineNoise).should.equal('50Hz');
         });
+        it('can turn no line noise on', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulatorLineNoise: 'None'
+            });
+            (ourBoard.options.simulatorLineNoise).should.equal('None');
+        });
         it('defaults to 60Hz line noise when bad input', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 simulatorLineNoise: '20Hz'
