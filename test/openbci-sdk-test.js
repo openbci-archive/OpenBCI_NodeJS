@@ -1139,7 +1139,8 @@ describe('#impedanceTesting', function() {
     });
 });
 
-describe('#sync', function() {
+// Need a better test
+xdescribe('#sync', function() {
     var ourBoard;
     this.timeout(5000);
     before(function (done) {
