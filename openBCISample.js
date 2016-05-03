@@ -3,6 +3,8 @@ var gaussian = require('gaussian');
 
 var k = require('./openBCIConstants');
 
+var bigInt = require('big-integer');
+
 /** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
 //   Set by its hardware.
@@ -57,6 +59,19 @@ var sampleModule = {
                     }).catch(err => reject(err));
                     break;
             }
+
+        });
+    },
+    getRawPacketType:getRawPacketType,
+    parseTimeSyncSetPacket: (dataBuf,currentTime) => {
+        return new Promise((resolve, reject) => {
+            if (dataBuf === undefined || dataBuf === null) reject('Error [parseRawPacket]: dataBuf must be defined.');
+            // Verify proper start byte
+            if (dataBuf[0] != k.OBCIByteStart) reject('Error [parseRawPacket]: Invalid start byte of ' + dataBuf[0].toString(16) + ' expected ' + k.OBCIByteStart.toString(16));
+
+            parsePacketTimeSyncSet(dataBuf,currentTime).then(boardTime => {
+                resolve(boardTime);
+            }).catch(err => reject(err));
 
         });
     },
@@ -517,6 +532,23 @@ function parsePacketStandard(dataBuf, channelSettingsArray) {
 
     });
 }
+
+function parsePacketTimeSyncSet(dataBuf,currentTime) {
+    // Ths packet has 'A0','00'....,'00','FF','FF','FF','FF','C2' where the 'FF's are times
+    const timeStampNumBytes = 4;
+    const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus
+    const mask = bigInt(0xFFFFFFFF00000000);
+    return new Promise((resolve, reject) => {
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncSet]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+
+        // Grab the time from the packet
+        var boardTime = bigInt(dataBuf.readUInt32BE(lastBytePosition - timeStampNumBytes));
+
+        resolve(bigInt(currentTime).and(mask).or(boardTime).toJSNumber());
+    });
+}
+
+
 /**
  * @description Takes a buffer filled with 3 16 bit integers from an OpenBCI device and converts based on settings
  *                  of the MPU, values are in ?

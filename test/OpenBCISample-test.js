@@ -30,7 +30,12 @@ var samplePacketReal = function () {
     return new Buffer([0xA0,0,0x8F,0xF2,0x40,0x8F,0xDF,0xF4,0x90,0x2B,0xB6,0x8F,0xBF,0xBF,0x7F,0xFF,0xFF,0x7F,0xFF,0xFF,0x94,0x25,0x34,0x20,0xB6,0x7D,0,0xE0,0,0xE0,0x0F,0x70, 0xC0]);
 };
 
+var samplePacketTimeSyncSet = function () {
+    return new Buffer([0xA0,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0,0,0,1, 0xC2]);
+};
+
 var sampleBuf = samplePacket();
+var sampleBufTimeSyncSet = samplePacketTimeSyncSet();
 
 
 
@@ -125,6 +130,41 @@ describe('openBCISample',function() {
                 openBCISample.parseRawPacket().should.be.rejected.and.notify(done);
             });
         });
+    });
+    describe.only('#parseTimeSyncSetPacket', function() {
+        it('should fulfill promise', function() {
+            return openBCISample.parseTimeSyncSetPacket(sampleBufTimeSyncSet,0).should.be.fulfilled;
+        });
+        it('should extract the proper time value from packet', function(done) {
+            openBCISample.parseTimeSyncSetPacket(sampleBufTimeSyncSet,0)
+                .then(boardTime => {
+                    assert.equal(boardTime,1,'Could not get 1 out of sampleBufTimeSyncSet');
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        it('should extract the proper time value from packet and add current time', function(done) {
+            var currentTime = 0x800000000;
+            var expectedTime = 0x800000001;//34359738369
+            openBCISample.parseTimeSyncSetPacket(sampleBufTimeSyncSet,currentTime)
+                .then(boardTime => {
+                    assert.equal(boardTime,expectedTime,'Could not add current time with board time');
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        describe('#errorConditions', function() {
+            it('send non data buffer', function(done) {
+                openBCISample.parseTimeSyncSetPacket(1,0).should.be.rejected.and.notify(done)
+            });
+            it('wrong number of bytes', function(done) {
+                openBCISample.parseTimeSyncSetPacket(new Buffer(5),0).should.be.rejected.and.notify(done);
+            });
+            it('undefined', function(done) {
+                openBCISample.parseTimeSyncSetPacket().should.be.rejected.and.notify(done);
+            });
+        });
+
     });
     describe('#convertSampleToPacket', function() {
         var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);

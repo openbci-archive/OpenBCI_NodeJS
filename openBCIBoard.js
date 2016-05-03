@@ -1075,7 +1075,7 @@ function OpenBCIFactory() {
             this._writeAndDrain(k.OBCISyncTimeSet);
             this.sync.timeEnteredQueue = this.sntpNow();
 
-            for (var i = 3; i > 0; i++) {
+            for (var i = 7; i > 0; i--) {
                 this._writeAndDrain(0xff & (this.sync.timeEnteredQueue >> (8 * i)));
             }
 
@@ -1172,16 +1172,13 @@ function OpenBCIFactory() {
                     var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
                     this.emit('rawDataPacket',rawPacket);
                     if (data[readingPosition + k.OBCIPacketSize - 1] & 0xF0 == k.OBCIByteStop) {
-                        var packetType = data[readingPosition + k.OBCIPacketSize - 1] & 0x0f;
+                        var packetType = openBCISample.getRawPacketType(rawPacket[k.OBCIPacketPositionStopByte]);
                         switch (packetType) {
                             case k.OBCIPacketTypeTimeSet:
                                 this._processPacketTimeSyncSet(rawPacket);
                                 break;
-                            case k.OBCIPacketTypeStandard:
-                                this._processPacketTimeSync(rawPacket);
-                                break;
-                            default:
-                                this._processPacketStandard(rawPacket);
+                            default: // Normally route here
+                                this._processPacketWithChannelData(rawPacket);
                                 break;
 
                         }
@@ -1207,7 +1204,7 @@ function OpenBCIFactory() {
         }
     };
 
-    OpenBCIBoard.prototype._processPacketStandard = function(rawPacket) {
+    OpenBCIBoard.prototype._processPacketWithChannelData = function(rawPacket) {
         // standard packet!
         openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
             .then(sampleObject => {
@@ -1232,18 +1229,17 @@ function OpenBCIFactory() {
                     this.emit('sample', sampleObject);
                 }
             });
-    };
-
-    OpenBCIBoard.prototype._processPacketTimeSync = function(rawPacket) {
 
     };
 
 
     OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
-        // Need to grab the time
-        var timeFromBoard = 0;
+        openBCISample.parseTimeSyncSetPacket(rawPacket,this.sntpNow())
+            .then(boardTime => {
+                console.log(boardTime);
+            })
+            .catch(err => console.log(err));
 
-        for (var)
     };
 
     OpenBCIBoard.prototype._reset = function() {

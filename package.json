@@ -15,6 +15,7 @@
   "author": "AJ Keller <aj@pushtheworld.us> (www.openbci.com)",
   "license": "MIT",
   "dependencies": {
+    "big-integer": "^1.6.15",
     "gaussian": "^1.0.0",
     "istanbul": "^0.4.2",
     "performance-now": "^0.2.0",
