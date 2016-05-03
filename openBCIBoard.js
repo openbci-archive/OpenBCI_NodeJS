@@ -97,10 +97,11 @@ function OpenBCIFactory() {
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
         // Bools
         this.isLookingForKeyInBuffer = true;
+        this.firmwareVersion = k.OBCIFirmwareV1;
         // Buffers
         this.masterBuffer = masterBufferMaker();
         this.searchBuffers = {
-            timeSyncStart: new Buffer('$a$'),
+            timeSyncSent: new Buffer(k.OBCISyncTimeSent),
             miscStop: new Buffer('$$$')
         };
         this.searchingBuf = this.searchBuffers.miscStop;
@@ -117,8 +118,8 @@ function OpenBCIFactory() {
             impedanceForChannel: 0
         };
         this.sync = {
-            npt1: 0,
-            ntp2: 0
+            timeSent: 0,
+            timeEnteredQueue: 0
         };
         this.sntpOptions = {
             host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
@@ -1068,9 +1069,16 @@ function OpenBCIFactory() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
             if (this.streaming) reject('Cannot be streaming to sync clocks');
-            this.searchingBuf = this.searchBuffers.timeSyncStart;
+            if (this.firmwareVersion === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
+            this.searchingBuf = this.searchBuffers.timeSyncSent;
             this.isLookingForKeyInBuffer = true;
-            this.write(k.OBCISyncClockStart);
+            this._writeAndDrain(k.OBCISyncTimeSet);
+            this.sync.timeEnteredQueue = this.sntpNow();
+
+            for (var i = 3; i > 0; i++) {
+                this._writeAndDrain(0xff & (this.sync.timeEnteredQueue >> (8 * i)));
+            }
+
             resolve();
         });
     };
@@ -1097,14 +1105,27 @@ function OpenBCIFactory() {
                     if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
                         if (this.options.verbose) console.log('Money!');
                         if (this.options.verbose) console.log(data.toString());
+
+                        // Check and see if this is v2 firmware!
+                        if(i >= 2) {
+                            this.firmwareVersion = data.slice(i-2, i-1).toString() === k.OBCIFirmwareV2 ? k.OBCIFirmwareV2: k.OBCIFirmwareV1;
+                            if (this.options.verbose) {
+                                if (this.firmwareVersion === k.OBCIFirmwareV1) {
+                                    console.log('Using Firmware Version 1');
+                                } else {
+                                    console.log('Using Firmware Version 2');
+                                }
+                            }
+                        }
+
                         this.isLookingForKeyInBuffer = false; // critical!!!
                         this.emit('ready'); // tell user they are ready to stream, etc...
-                    } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncStart)) {
-                        this.sync.ntp1 = now();
-                        if(this.options.verbose) console.log('Got time sync request: ' + this.sync.npt1.toFixed(4));
-                        this.sync.ntp2 = now();
-                        this._writeAndDrain('<' + (this.sync.ntp1 * 1000) + (this.sync.ntp2 * 1000));
+                    } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncSent)) {
+                        this.sync.timeSent = this.sntpNow();
+                        if(this.options.verbose) console.log('Sent time sync');
+
                         this.searchingBuf = this.searchBuffers.miscStop;
+                        this.isLookingForKeyInBuffer = false;
 
                     } else {
                         getChannelSettingsObj(data.slice(i)).then((channelSettingsObject) => {
@@ -1121,7 +1142,8 @@ function OpenBCIFactory() {
 
             var bytesToRead = sizeOfData;
 
-            // is there old data?
+            // Is there old data? If there was saved data in the buffer from last time, let's post-fix the new data
+            //  buffer with the old data.
             if (this.buffer) {
                 // Get size of old buffer
                 var oldBufferSize = this.buffer.byteLength;
@@ -1148,33 +1170,21 @@ function OpenBCIFactory() {
             while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
                 if (data[readingPosition] === k.OBCIByteStart) {
                     var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
-                    if (data[readingPosition + k.OBCIPacketSize - 1] === k.OBCIByteStop) {
-                        this.emit('rawDataPacket',rawPacket);
-                        // standard packet!
-                        openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
-                            .then(sampleObject => {
+                    this.emit('rawDataPacket',rawPacket);
+                    if (data[readingPosition + k.OBCIPacketSize - 1] & 0xF0 == k.OBCIByteStop) {
+                        var packetType = data[readingPosition + k.OBCIPacketSize - 1] & 0x0f;
+                        switch (packetType) {
+                            case k.OBCIPacketTypeTimeSet:
+                                this._processPacketTimeSyncSet(rawPacket);
+                                break;
+                            case k.OBCIPacketTypeStandard:
+                                this._processPacketTimeSync(rawPacket);
+                                break;
+                            default:
+                                this._processPacketStandard(rawPacket);
+                                break;
 
-                                sampleObject._count = this.sampleCount++;
-                                if(this.impedanceTest.active) {
-                                    var impedanceArray;
-                                    if (this.impedanceTest.continuousMode) {
-                                        //console.log('running in contiuous mode...');
-                                        //openBCISample.debugPrettyPrint(sampleObject);
-                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
-                                        if (impedanceArray) {
-                                            this.emit('impedanceArray',impedanceArray);
-                                        }
-                                    } else if (this.impedanceTest.onChannel != 0) {
-                                        // Only calculate impedance for one channel
-                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
-                                        if (impedanceArray) {
-                                            this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
-                                        }
-                                    }
-                                } else {
-                                    this.emit('sample', sampleObject);
-                                }
-                            });
+                        }
                     }
                 }
 
@@ -1195,6 +1205,45 @@ function OpenBCIFactory() {
                 this.buffer = null;
             }
         }
+    };
+
+    OpenBCIBoard.prototype._processPacketStandard = function(rawPacket) {
+        // standard packet!
+        openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
+            .then(sampleObject => {
+                sampleObject._count = this.sampleCount++;
+                if(this.impedanceTest.active) {
+                    var impedanceArray;
+                    if (this.impedanceTest.continuousMode) {
+                        //console.log('running in continuous mode...');
+                        //openBCISample.debugPrettyPrint(sampleObject);
+                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+                        if (impedanceArray) {
+                            this.emit('impedanceArray',impedanceArray);
+                        }
+                    } else if (this.impedanceTest.onChannel != 0) {
+                        // Only calculate impedance for one channel
+                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+                        if (impedanceArray) {
+                            this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
+                        }
+                    }
+                } else {
+                    this.emit('sample', sampleObject);
+                }
+            });
+    };
+
+    OpenBCIBoard.prototype._processPacketTimeSync = function(rawPacket) {
+
+    };
+
+
+    OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
+        // Need to grab the time
+        var timeFromBoard = 0;
+
+        for (var)
     };
 
     OpenBCIBoard.prototype._reset = function() {

@@ -165,9 +165,8 @@ const kOBCIFilterEnable = 'f';
 const kOBCITrigger = '`';
 
 /** Sync Clocks */
-const kOBCISyncClockServerData = '<';
-const kOBCISyncClockStart = '>';
-const kOBCISyncClockStop = '.';
+const kOBCISyncTimeSet = '<';
+const kOBCISyncTimeSent = ',';
 
 /** Possible number of channels */
 const kOBCINumberOfChannelsDaisy = 16;
@@ -246,10 +245,15 @@ const kOBCISimulatorPortName = 'OpenBCISimulator';
 /**
  * Raw data packet types/codes
  */
-const kOBCIPacketTypeRawAux         = 3; // 0011
 const kOBCIPacketTypeStandard       = 0; // 0000
 const kOBCIPacketTypeTimeSynced     = 1; // 0001
-const kOBCIPacketTypeUserDefined    = 2; // 0010
+const kOBCIPacketTypeTimeSet        = 2; // 0001
+const kOBCIPacketTypeUserDefined    = 3; // 0010
+const kOBCIPacketTypeRawAux         = 4; // 0011
+
+/** Firmware version indicator */
+const kOBCIFirmwareV1 = 'v1';
+const kOBCIFirmwareV2 = 'v2';
 
 module.exports = {
     /** Turning channels off */
@@ -682,9 +686,8 @@ module.exports = {
     OBCIWriteIntervalDelayMSNone:kOBCIWriteIntervalDelayMSNone,
     OBCIWriteIntervalDelayMSShort:kOBCIWriteIntervalDelayMSShort,
     /** Sync Clocks */
-    OBCISyncClockServerData:kOBCISyncClockServerData,
-    OBCISyncClockStart:kOBCISyncClockStart,
-    OBCISyncClockStop:kOBCISyncClockStop,
+    OBCISyncTimeSent:kOBCISyncTimeSent,
+    OBCISyncTimeSet:kOBCISyncTimeSet,
     /** Impedance */
     OBCIImpedanceTextBad:kOBCIImpedanceTextBad,
     OBCIImpedanceTextGood:kOBCIImpedanceTextGood,
@@ -709,6 +712,7 @@ module.exports = {
     /** Raw data packet types */
     OBCIPacketTypeRawAux:kOBCIPacketTypeRawAux,
     OBCIPacketTypeStandard:kOBCIPacketTypeStandard,
+    OBCIPacketTypeTimeSet:kOBCIPacketTypeTimeSet,
     OBCIPacketTypeTimeSynced:kOBCIPacketTypeTimeSynced,
     OBCIPacketTypeUserDefined:kOBCIPacketTypeUserDefined,
     /** fun funcs */
@@ -726,7 +730,10 @@ module.exports = {
     /** Possible Simulator Line Noise injections */
     OBCISimulatorLineNoiseHz60:kOBCISimulatorLineNoiseHz60,
     OBCISimulatorLineNoiseHz50:kOBCISimulatorLineNoiseHz50,
-    OBCISimulatorLineNoiseNone:kOBCISimulatorLineNoiseNone
+    OBCISimulatorLineNoiseNone:kOBCISimulatorLineNoiseNone,
+    /** Firmware version indicator */
+    OBCIFirmwareV1:kOBCIFirmwareV1,
+    OBCIFirmwareV2:kOBCIFirmwareV2
 };
 
 /**
