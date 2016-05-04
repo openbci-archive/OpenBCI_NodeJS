@@ -19,7 +19,8 @@ function OpenBCISimulatorFactory() {
         daisy: false,
         verbose: false,
         alpha: true,
-        lineNoise: '60Hz'
+        lineNoise: '60Hz',
+        firmware: k.OBCIFirmwareV2
     };
 
 
@@ -36,6 +37,7 @@ function OpenBCISimulatorFactory() {
         opts.lineNoise = options.lineNoise || options.linenoise || _options.lineNoise;
         opts.alpha = options.alpha || _options.alpha;
         opts.verbose = options.verbose || _options.verbose;
+        opts.firmware = options.firmware || _options.firmware;
 
         this.options = opts;
 
@@ -132,10 +134,10 @@ function OpenBCISimulatorFactory() {
                 }
                 this.SDLogActive = false;
                 break;
-            case k.OBCISyncClockStart:
+            case k.OBCISyncTimeSet:
                 setTimeout(() => {
-                    if (this.options.verbose) console.log('Recieved sync command');
-                    this._syncStart();
+                    this.emit('data',k.OBCISyncTimeSent);
+                    //this._syncStart();
                 }, 10);
                 break;
             case k.OBCISyncClockServerData:

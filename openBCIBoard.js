@@ -96,13 +96,15 @@ function OpenBCIFactory() {
         this.writeOutArray = new Array(100);
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
         // Bools
+        this.parsingForFirmwareVersion = false;
         this.isLookingForKeyInBuffer = true;
         this.firmwareVersion = k.OBCIFirmwareV1;
         // Buffers
         this.masterBuffer = masterBufferMaker();
         this.searchBuffers = {
             timeSyncSent: new Buffer(k.OBCISyncTimeSent),
-            miscStop: new Buffer('$$$')
+            miscStop: new Buffer('$$$'),
+            firmwareVersion: new Buffer(k.OBCIFirmwareV2)
         };
         this.searchingBuf = this.searchBuffers.miscStop;
         // Objects
@@ -118,6 +120,7 @@ function OpenBCIFactory() {
             impedanceForChannel: 0
         };
         this.sync = {
+            active: false,
             timeSent: 0,
             timeEnteredQueue: 0
         };
@@ -137,13 +140,15 @@ function OpenBCIFactory() {
 
         // NTP
         if (this.options.sntp) {
-            this.sntpGetServerTime()
-                .then((timeObj) => {
-                    if (this.options.verbose) {
-                        console.log('NTP synced successfully, time object:');
-                        console.log(timeObj);
-                    }
-                });
+            // establishing ntp connection
+            this.sntpStart()
+                .then(() => {
+                    if(this.options.verbose) console.log('SNTP: connected');
+                })
+                .catch(err => {
+                    if(this.options.verbose) console.log('SNTP: unable to connect');
+                    console.log(err);
+                })
         }
 
         //TODO: Add connect immediately functionality, suggest this to be the default...
@@ -504,6 +509,7 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.softReset = function() {
+        this.parsingForFirmwareVersion = true;
         this.isLookingForKeyInBuffer = true;
         this.searchingBuf = this.searchBuffers.miscStop;
         return this.write(k.OBCIMiscSoftReset);
@@ -1070,12 +1076,12 @@ function OpenBCIFactory() {
             if (!this.connected) reject('Must be connected to the device');
             if (this.streaming) reject('Cannot be streaming to sync clocks');
             if (this.firmwareVersion === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
-            this.searchingBuf = this.searchBuffers.timeSyncSent;
-            this.isLookingForKeyInBuffer = true;
-            this._writeAndDrain(k.OBCISyncTimeSet);
+            //this.searchingBuf = this.searchBuffers.timeSyncSent;
+            //this.isLookingForKeyInBuffer = true;
             this.sync.timeEnteredQueue = this.sntpNow();
-
-            for (var i = 7; i > 0; i--) {
+            if (this.options.verbose) console.log('PC time sent to board: ' + this.sync.timeEnteredQueue);
+            this._writeAndDrain(k.OBCISyncTimeSet);
+            for (var i = 3; i > 0; i--) {
                 this._writeAndDrain(0xff & (this.sync.timeEnteredQueue >> (8 * i)));
             }
 
@@ -1095,29 +1101,27 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
-        //console.log(data);
+        console.log(data.toString());
         var sizeOfData = data.byteLength;
         this.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
         if(this.isLookingForKeyInBuffer) { //in a reset state
             var sizeOfSearchBuf = this.searchingBuf.byteLength; // then size in bytes of the buffer we are searching for
             for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
+                if (this.parsingForFirmwareVersion) {
+                    if (this.searchBuffers.firmwareVersion.equals(data.slice(i, i+2))) {
+                        this.firmwareVersion = k.OBCIFirmwareV2;
+                        if (this.options.verbose) {
+                            console.log('Using Firmware Version 2');
+                        }
+                        this.parsingForFirmwareVersion = false;
+                    }
+                }
                 if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
+
                     if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
                         if (this.options.verbose) console.log('Money!');
                         if (this.options.verbose) console.log(data.toString());
-
-                        // Check and see if this is v2 firmware!
-                        if(i >= 2) {
-                            this.firmwareVersion = data.slice(i-2, i-1).toString() === k.OBCIFirmwareV2 ? k.OBCIFirmwareV2: k.OBCIFirmwareV1;
-                            if (this.options.verbose) {
-                                if (this.firmwareVersion === k.OBCIFirmwareV1) {
-                                    console.log('Using Firmware Version 1');
-                                } else {
-                                    console.log('Using Firmware Version 2');
-                                }
-                            }
-                        }
-
+                        this.parsingForFirmwareVersion = false; // because we didnt find it
                         this.isLookingForKeyInBuffer = false; // critical!!!
                         this.emit('ready'); // tell user they are ready to stream, etc...
                     } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncSent)) {
@@ -1234,9 +1238,12 @@ function OpenBCIFactory() {
 
 
     OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
+        if (this.options.verbose) console.log('Got time set packet from the board');
         openBCISample.parseTimeSyncSetPacket(rawPacket,this.sntpNow())
             .then(boardTime => {
+                console.log('The board thinks the time is...');
                 console.log(boardTime);
+                this.emit('synced');
             })
             .catch(err => console.log(err));
 
@@ -1303,8 +1310,10 @@ function OpenBCIFactory() {
         return new Promise((resolve, reject) => {
             Sntp.start((err) => {
                 if (err) {
+                    this.sync.active = true;
                     reject(err);
                 } else {
+                    this.sync.active = false;
                     resolve();
                 }
             });
@@ -1316,6 +1325,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.sntpStop = function() {
         Sntp.stop();
+        this.sync.active = false;
     };
 
     /**

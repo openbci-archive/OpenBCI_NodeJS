@@ -1237,11 +1237,14 @@ describe('#impedanceTesting', function() {
 });
 
 // Need a better test
-xdescribe('#sync', function() {
+describe.only('#sync', function() {
     var ourBoard;
-    this.timeout(5000);
+    this.timeout(10000);
     before(function (done) {
-        ourBoard = new openBCIBoard.OpenBCIBoard();
+        ourBoard = new openBCIBoard.OpenBCIBoard({
+            verbose:true,
+            sntp: true
+        });
 
         var useSim = () => {
             ourBoard.simulatorEnable()
@@ -1276,14 +1279,16 @@ xdescribe('#sync', function() {
     after(function () {
         ourBoard.disconnect();
     });
-    describe('#sntp', function() {
+    describe('#syncClocksStart', function() {
         it('can get sntp time and verify extend of sntp valid', function(done) {
-            ourBoard.sntpStart()
-                .then(() => {
-                    // sntp.now should be extended into ourBoard.sntpNow
-                    ourBoard.sntpNow().should.equal(ourBoard.sntp.now());
-                    done();
+            console.log('Sync clocks started!');
+            ourBoard.syncClocksStart()
+                .catch(err => {
+                    done(err);
                 });
+            ourBoard.on('synced',() => {
+                done()
+            });
 
         });
     });
