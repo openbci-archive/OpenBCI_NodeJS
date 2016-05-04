@@ -9,6 +9,7 @@ var k = openBCISample.k;
 var openBCISimulator = require('./openBCISimulator');
 var now = require('performance-now');
 var Sntp = require('sntp');
+var bignum = require('bignum');
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -1079,10 +1080,18 @@ function OpenBCIFactory() {
             //this.searchingBuf = this.searchBuffers.timeSyncSent;
             //this.isLookingForKeyInBuffer = true;
             this.sync.timeEnteredQueue = this.sntpNow();
+
+            var timeBuf = bignum(this.sync.timeEnteredQueue).toBuffer(0);
+            //console.log('timeBuf',timeBuf);
+
             if (this.options.verbose) console.log('PC time sent to board: ' + this.sync.timeEnteredQueue);
             this._writeAndDrain(k.OBCISyncTimeSet);
-            for (var i = 3; i > 0; i--) {
-                this._writeAndDrain(0xff & (this.sync.timeEnteredQueue >> (8 * i)));
+
+            if (timeBuf.byteLength < 4) reject('Err: Time less than 4 bytes?');
+
+            for (var i = timeBuf.byteLength - 4; i < timeBuf.byteLength; i++) {
+                //console.log('timeChunk',timeBuf.slice(i,i+1));
+                this._writeAndDrain(timeBuf.slice(i,i+1));
             }
 
             resolve();
@@ -1101,7 +1110,7 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
-        console.log(data.toString());
+        //console.log(data.toString());
         var sizeOfData = data.byteLength;
         this.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
         if(this.isLookingForKeyInBuffer) { //in a reset state
@@ -1117,7 +1126,6 @@ function OpenBCIFactory() {
                     }
                 }
                 if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
-
                     if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
                         if (this.options.verbose) console.log('Money!');
                         if (this.options.verbose) console.log(data.toString());
@@ -1175,7 +1183,7 @@ function OpenBCIFactory() {
                 if (data[readingPosition] === k.OBCIByteStart) {
                     var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
                     this.emit('rawDataPacket',rawPacket);
-                    if (data[readingPosition + k.OBCIPacketSize - 1] & 0xF0 == k.OBCIByteStop) {
+                    if ((data[readingPosition + k.OBCIPacketSize - 1] & 0xF0) === k.OBCIByteStop) {
                         var packetType = openBCISample.getRawPacketType(rawPacket[k.OBCIPacketPositionStopByte]);
                         switch (packetType) {
                             case k.OBCIPacketTypeTimeSet:

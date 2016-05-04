@@ -1258,7 +1258,10 @@ describe.only('#sync', function() {
         };
         ourBoard.autoFindOpenBCIBoard()
             .then(portName => {
-                return ourBoard.connect(portName);
+                return setTimeout(() => {
+                    console.log('Issuing connect');
+                    ourBoard.connect("/dev/cu.usbserial-DB00JAKZ");
+                },500);
             })
             .catch((err) => {
                 useSim();
@@ -1272,8 +1275,10 @@ describe.only('#sync', function() {
 
 
         ourBoard.once('ready', () => {
-
-            done();
+            console.log("Got ready signal...");
+            setTimeout(() => {
+                done();
+            }, 500);
         });
     });
     after(function () {
