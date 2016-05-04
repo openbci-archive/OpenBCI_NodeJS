@@ -123,7 +123,11 @@ function OpenBCIFactory() {
         this.sync = {
             active: false,
             timeSent: 0,
-            timeEnteredQueue: 0
+            timeEnteredQueue: 0,
+            timeGotSetPacket: 0,
+            timeRoundTrip: 0,
+            timeTransmission: 0,
+            timeOffset: 0
         };
         this.sntpOptions = {
             host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
@@ -1077,8 +1081,8 @@ function OpenBCIFactory() {
             if (!this.connected) reject('Must be connected to the device');
             if (this.streaming) reject('Cannot be streaming to sync clocks');
             if (this.firmwareVersion === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
-            //this.searchingBuf = this.searchBuffers.timeSyncSent;
-            //this.isLookingForKeyInBuffer = true;
+            this.searchingBuf = this.searchBuffers.timeSyncSent;
+            this.isLookingForKeyInBuffer = true;
             this.sync.timeEnteredQueue = this.sntpNow();
 
             var timeBuf = bignum(this.sync.timeEnteredQueue).toBuffer(0);
@@ -1187,6 +1191,7 @@ function OpenBCIFactory() {
                         var packetType = openBCISample.getRawPacketType(rawPacket[k.OBCIPacketPositionStopByte]);
                         switch (packetType) {
                             case k.OBCIPacketTypeTimeSet:
+                                this.sync.timeGotSetPacket = this.sntpNow();
                                 this._processPacketTimeSyncSet(rawPacket);
                                 break;
                             default: // Normally route here
@@ -1249,9 +1254,16 @@ function OpenBCIFactory() {
         if (this.options.verbose) console.log('Got time set packet from the board');
         openBCISample.parseTimeSyncSetPacket(rawPacket,this.sntpNow())
             .then(boardTime => {
-                console.log('The board thinks the time is...');
-                console.log(boardTime);
-                this.emit('synced');
+                this.sync.timeRoundTrip = this.sync.timeGotSetPacket - this.sync.timeSent;
+                this.sync.timeTransmission = this.sync.timeRoundTrip / 2;
+                if (this.options.verbose) {
+                    console.log("Queue time to actual send time: " + (this.sync.timeSent - this.sync.timeEnteredQueue) + " ms");
+                    console.log("Round trip time: " + this.sync.timeRoundTrip + " ms");
+                    console.log("Transmission time: " + this.sync.timeTransmission + " ms");
+                    console.log("Corrected board time: " + (this.sync.timeTransmission + boardTime) + " ms");
+                    console.log("Diff between corrected board time and actual time we got that packet: " + (this.sync.timeGotSetPacket - boardTime) + " ms");
+                }
+                this.emit('synced',this.sync);
             })
             .catch(err => console.log(err));
 
