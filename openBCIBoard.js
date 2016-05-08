@@ -123,6 +123,7 @@ function OpenBCIFactory() {
         this.sync = {
             active: false,
             timeSent: 0,
+            timeLastBoardTime: 0,
             timeEnteredQueue: 0,
             timeGotSetPacket: 0,
             timeRoundTrip: 0,
@@ -1123,9 +1124,7 @@ function OpenBCIFactory() {
                 if (this.parsingForFirmwareVersion) {
                     if (this.searchBuffers.firmwareVersion.equals(data.slice(i, i+2))) {
                         this.firmwareVersion = k.OBCIFirmwareV2;
-                        if (this.options.verbose) {
-                            console.log('Using Firmware Version 2');
-                        }
+                        if (this.options.verbose) console.log('Using Firmware Version 2');
                         this.parsingForFirmwareVersion = false;
                     }
                 }

@@ -243,13 +243,14 @@ const kOBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resist
 const kOBCISimulatorPortName = 'OpenBCISimulator';
 
 /**
- * Raw data packet types/codes
+ * Stream packet types/codes
  */
-const kOBCIPacketTypeStandard       = 0; // 0000
-const kOBCIPacketTypeTimeSynced     = 1; // 0001
-const kOBCIPacketTypeTimeSet        = 2; // 0001
-const kOBCIPacketTypeUserDefined    = 3; // 0010
-const kOBCIPacketTypeRawAux         = 4; // 0011
+const kOBCIStreamPacketStandardAccel      = 0; // 0000
+const kOBCIStreamPacketStandardRawAux     = 1; // 0001
+const kOBCIStreamPacketUserDefinedType    = 2; // 0010
+const kOBCIStreamPacketTimeSyncSet        = 3; // 0011
+const kOBCIStreamPacketTimeSyncedAccel    = 4; // 0100
+const kOBCIStreamPacketTimeSyncedRawAux   = 5; // 0101
 
 /** Firmware version indicator */
 const kOBCIFirmwareV1 = 'v1';
@@ -709,12 +710,16 @@ module.exports = {
     },
     /** Simulator */
     OBCISimulatorPortName:kOBCISimulatorPortName,
-    /** Raw data packet types */
-    OBCIPacketTypeRawAux:kOBCIPacketTypeRawAux,
-    OBCIPacketTypeStandard:kOBCIPacketTypeStandard,
-    OBCIPacketTypeTimeSet:kOBCIPacketTypeTimeSet,
-    OBCIPacketTypeTimeSynced:kOBCIPacketTypeTimeSynced,
-    OBCIPacketTypeUserDefined:kOBCIPacketTypeUserDefined,
+    /**
+     * Stream packet types/codes
+     */
+    OBCIStreamPacketStandardAccel:kOBCIStreamPacketStandardAccel,
+    OBCIStreamPacketStandardRawAux:kOBCIStreamPacketStandardRawAux,
+    OBCIStreamPacketUserDefinedType:kOBCIStreamPacketUserDefinedType,
+    OBCIStreamPacketTimeSyncSet:kOBCIStreamPacketTimeSyncSet,
+    OBCIStreamPacketTimeSyncedAccel:kOBCIStreamPacketTimeSyncedAccel,
+    OBCIStreamPacketTimeSyncedRawAux:kOBCIStreamPacketTimeSyncedRawAux,
+
     /** fun funcs */
     isNumber:isNumber,
     isBoolean:isBoolean,

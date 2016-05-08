@@ -435,6 +435,26 @@ describe('OpenBCIConstants', function() {
             assert.equal('f', k.OBCIFilterEnable);
         });
     });
+    describe('Stream packet types/codes',function() {
+        it('Standard with Accel',function () {
+            assert.equal(0, k.OBCIStreamPacketStandardAccel);
+        });
+        it('Standard with Raw Aux',function () {
+            assert.equal(1, k.OBCIStreamPacketStandardRawAux);
+        });
+        it('User Defined Packet',function () {
+            assert.equal(2, k.OBCIStreamPacketUserDefinedType);
+        });
+        it('Time Sync Set',function () {
+            assert.equal(3, k.OBCIStreamPacketTimeSyncSet);
+        });
+        it('Time Synced with Accel',function () {
+            assert.equal(4, k.OBCIStreamPacketTimeSyncedAccel);
+        });
+        it('Time Synced with Raw Aux',function () {
+            assert.equal(5, k.OBCIStreamPacketTimeSyncedRawAux);
+        });
+    });
     describe('should return the right command for each channel', function(){
         it('Channel 1', function() {
             var expectation = '1';
