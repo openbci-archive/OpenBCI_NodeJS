@@ -94,6 +94,7 @@ function OpenBCIFactory() {
 
         /** Properties (keep alphabetical) */
         // Arrays
+        this.accelArray = [0,0,0]; // X, Y, Z
         this.writeOutArray = new Array(100);
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
         // Bools
@@ -1189,12 +1190,16 @@ function OpenBCIFactory() {
                     if ((data[readingPosition + k.OBCIPacketSize - 1] & 0xF0) === k.OBCIByteStop) {
                         var packetType = openBCISample.getRawPacketType(rawPacket[k.OBCIPacketPositionStopByte]);
                         switch (packetType) {
-                            case k.OBCIPacketTypeTimeSet:
+                            case k.OBCIStreamPacketTimeSyncSet:
                                 this.sync.timeGotSetPacket = this.sntpNow();
                                 this._processPacketTimeSyncSet(rawPacket);
                                 break;
+                            case k.OBCIStreamPacketTimeSyncedAccel:
+                                this._processPacketTimeSyncedAccel(rawPacket);
+                                break;
+                            case k.OBCIStreamPacketStandardAccel:
                             default: // Normally route here
-                                this._processPacketWithChannelData(rawPacket);
+                                this._processPacketStandardAccel(rawPacket);
                                 break;
 
                         }
@@ -1220,32 +1225,10 @@ function OpenBCIFactory() {
         }
     };
 
-    OpenBCIBoard.prototype._processPacketWithChannelData = function(rawPacket) {
-        // standard packet!
+    OpenBCIBoard.prototype._processPacketStandardAccel = function(rawPacket) {
         openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
-            .then(sampleObject => {
-                sampleObject._count = this.sampleCount++;
-                if(this.impedanceTest.active) {
-                    var impedanceArray;
-                    if (this.impedanceTest.continuousMode) {
-                        //console.log('running in continuous mode...');
-                        //openBCISample.debugPrettyPrint(sampleObject);
-                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
-                        if (impedanceArray) {
-                            this.emit('impedanceArray',impedanceArray);
-                        }
-                    } else if (this.impedanceTest.onChannel != 0) {
-                        // Only calculate impedance for one channel
-                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
-                        if (impedanceArray) {
-                            this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
-                        }
-                    }
-                } else {
-                    this.emit('sample', sampleObject);
-                }
-            });
-
+            .then(this._finalizeNewSample)
+            .catch(err => console.log('Error in _processPacketWithChannelData',err));
     };
 
 
@@ -1255,7 +1238,10 @@ function OpenBCIFactory() {
             .then(boardTime => {
                 this.sync.timeRoundTrip = this.sync.timeGotSetPacket - this.sync.timeSent;
                 this.sync.timeTransmission = this.sync.timeRoundTrip / 2;
+                this.sync.timeOffset = this.sync.timeGotSetPacket - this.sync.timeTransmission - boardTime;
+                this.sync.active = true;
                 if (this.options.verbose) {
+                    console.log('Board offset time: ' + this.sync.timeOffset);
                     console.log("Queue time to actual send time: " + (this.sync.timeSent - this.sync.timeEnteredQueue) + " ms");
                     console.log("Round trip time: " + this.sync.timeRoundTrip + " ms");
                     console.log("Transmission time: " + this.sync.timeTransmission + " ms");
@@ -1265,7 +1251,40 @@ function OpenBCIFactory() {
                 this.emit('synced',this.sync);
             })
             .catch(err => console.log(err));
+    };
 
+    OpenBCIBoard.prototype._processPacketTimeSyncedAccel = function(rawPacket) {
+        if (this.sync.active === false) console.log('Need to sync with board...');
+        openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
+            .then(this._finalizeNewSample)
+            .catch(err => console.log(err));
+    };
+
+    OpenBCIBoard.prototype._finalizeNewSample = function(sampleObject) {
+        sampleObject._count = this.sampleCount++;
+        if(this.impedanceTest.active) {
+            this._processImpedanceTest(sampleObject);
+        } else {
+            this.emit('sample', sampleObject);
+        }
+    };
+
+    OpenBCIBoard.prototype._processImpedanceTest = function(sampleObject) {
+        var impedanceArray;
+        if (this.impedanceTest.continuousMode) {
+            //console.log('running in continuous mode...');
+            //openBCISample.debugPrettyPrint(sampleObject);
+            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+            if (impedanceArray) {
+                this.emit('impedanceArray',impedanceArray);
+            }
+        } else if (this.impedanceTest.onChannel != 0) {
+            // Only calculate impedance for one channel
+            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+            if (impedanceArray) {
+                this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
+            }
+        }
     };
 
     OpenBCIBoard.prototype._reset = function() {

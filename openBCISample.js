@@ -75,6 +75,7 @@ var sampleModule = {
 
         });
     },
+    parsePacketTimeSyncedAccel: parsePacketTimeSyncedAccel,
 
     /**
      * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
@@ -545,7 +546,8 @@ function parsePacketTimeSyncSet(dataBuf) {
 }
 
 function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime,accelArray) {
-    // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4' where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
+    // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
+    //  where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
     const timeStampNumBytes = 4;
     const accelNumBytes = 2;
     const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus
@@ -558,40 +560,30 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
 
         // Get the sample number
         sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+        // Get the start byte
+        sampleObject.startByte = dataBuf[0];
+        // Get the stop byte
+        sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
 
         getBoardTime(dataBuf,boardOffsetTime)
             .then(boardTime => {
                 sampleObject.timeStamp = boardTime;
-                return getAccelDataArray(dataBuf);
+                return getAccelFromTimePacket(dataBuf, sampleObject.sampleNumber, accelArray);
             })
             .then(accelArrayFilled => {
                 if (accelArrayFilled) {
                     sampleObject.accelData = accelArray;
                 }
+                //sampleObject.auxData = dataBuf.slice(k.OBCIPacketSize - 7, k.OBCIPacketSize - 1);
+                return getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray);
             })
-
-        // Grab the time from the packet and add the offset time
-        var boardTime = dataBuf.readUInt32BE(lastBytePosition - timeStampNumBytes - accelNumBytes) + boardOffsetTime;
-
-
-
-        getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray)
-            .then(channelSettingArray => {
-                sampleObject.channelData = channelSettingArray;
-                // Get the sample number
-                sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-                // Get the start byte
-                sampleObject.startByte = dataBuf[0];
-                // Get the stop byte
-                sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
-                resolve(sampleObject);
+            .then(channelDataArray => {
+                sampleObject.channelData = channelDataArray;
             })
             .catch(err => {
-                console.log(err);
                 reject(err);
             });
 
-        resolve(boardTime.toJSNumber());
     });
 }
 
