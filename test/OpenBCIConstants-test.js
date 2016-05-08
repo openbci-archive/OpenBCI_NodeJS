@@ -455,6 +455,22 @@ describe('OpenBCIConstants', function() {
             assert.equal(5, k.OBCIStreamPacketTimeSyncedRawAux);
         });
     });
+    describe('Time synced with accel packet',function() {
+        it('X axis',function () {
+            assert.equal(0, k.OBCIAccelAxisX);
+        });
+        it('Y axis',function () {
+            assert.equal(1, k.OBCIAccelAxisY);
+        });
+        it('Z axis',function () {
+            assert.equal(2, k.OBCIAccelAxisZ);
+        });
+    });
+    describe('Time sync useful numbers',function() {
+        it('Time from the board is 4 bytes',function () {
+            assert.equal(4, k.OBCIStreamPacketTimeByteSize);
+        });
+    });
     describe('should return the right command for each channel', function(){
         it('Channel 1', function() {
             var expectation = '1';

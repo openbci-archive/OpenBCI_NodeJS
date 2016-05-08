@@ -252,6 +252,14 @@ const kOBCIStreamPacketTimeSyncSet        = 3; // 0011
 const kOBCIStreamPacketTimeSyncedAccel    = 4; // 0100
 const kOBCIStreamPacketTimeSyncedRawAux   = 5; // 0101
 
+/** Time from board */
+const kOBCIStreamPacketTimeByteSize = 4;
+
+/** Time synced with accel packet */
+const kOBCIAccelAxisX = 0;
+const kOBCIAccelAxisY = 1;
+const kOBCIAccelAxisZ = 2;
+
 /** Firmware version indicator */
 const kOBCIFirmwareV1 = 'v1';
 const kOBCIFirmwareV2 = 'v2';
@@ -738,7 +746,13 @@ module.exports = {
     OBCISimulatorLineNoiseNone:kOBCISimulatorLineNoiseNone,
     /** Firmware version indicator */
     OBCIFirmwareV1:kOBCIFirmwareV1,
-    OBCIFirmwareV2:kOBCIFirmwareV2
+    OBCIFirmwareV2:kOBCIFirmwareV2,
+    /** Time synced accel packet */
+    OBCIAccelAxisX:kOBCIAccelAxisX,
+    OBCIAccelAxisY:kOBCIAccelAxisY,
+    OBCIAccelAxisZ:kOBCIAccelAxisZ,
+    /** Time from board */
+    OBCIStreamPacketTimeByteSize:kOBCIStreamPacketTimeByteSize
 };
 
 /**
