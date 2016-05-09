@@ -3,11 +3,13 @@
 ### New Features
 
 * Firmware version 2.0 support
-* Clock synchronization between OpenBCI board and this driver 
+* Clock synchronization between OpenBCI board and this driver
 
 ### Breaking Changes
 
-* Accelerometer data now goes into `.accelData` array instead of `auxData` array.
+* Accelerometer data now goes into `.accelData` array instead of `.auxData` array.
+* In openBCISample.js 
+  * `parseRawPacket()` is now called `parseRawPacketStandard()`
 
 # 0.3.9
 

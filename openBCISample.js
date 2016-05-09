@@ -58,20 +58,11 @@ var sampleModule = {
 
         });
     },
-    getRawPacketType:getRawPacketType,
-    parseTimeSyncSetPacket: (dataBuf,currentTime) => {
-        return new Promise((resolve, reject) => {
-            if (dataBuf === undefined || dataBuf === null) reject('Error [parseRawPacket]: dataBuf must be defined.');
-            // Verify proper start byte
-            if (dataBuf[0] != k.OBCIByteStart) reject('Error [parseRawPacket]: Invalid start byte of ' + dataBuf[0].toString(16) + ' expected ' + k.OBCIByteStart.toString(16));
-
-            parsePacketTimeSyncSet(dataBuf,currentTime).then(boardTime => {
-                resolve(boardTime);
-            }).catch(err => reject(err));
-
-        });
-    },
+    getRawPacketType: getRawPacketType,
+    getFromTimePacketAccel: getFromTimePacketAccel,
+    getFromTimePacketTime: getFromTimePacketTime,
     parsePacketTimeSyncedAccel: parsePacketTimeSyncedAccel,
+    parsePacketTimeSyncedRawAux: parsePacketTimeSyncedRawAux,
     /**
      * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
      * @param sample - A sample object
@@ -106,7 +97,6 @@ var sampleModule = {
 
         return packetBuffer;
     },
-
     debugPrettyPrint: function(sample) {
         if(sample === null || sample === undefined) {
             console.log('== Sample is undefined ==');
@@ -496,7 +486,7 @@ function newImpedanceObject(channelNumber) {
  * @returns {Promise} - Fulfilled with a sample object that has form:
  *                  {
      *                      channelData: Array of floats
-     *                      auxData: Array of floats of accel data
+     *                      accelData: Array of floats of accel data
      *                      sampleNumber: a Number that is the sample
      *                  }
  */
@@ -523,9 +513,8 @@ function parsePacketStandardAccel(dataBuf, channelSettingsArray) {
             })
             .catch(err => {
                 console.log(err);
-                //reject(err);
+                reject(err);
             });
-
     });
 }
 
@@ -571,24 +560,9 @@ function parsePacketStandardRawAux(dataBuf, channelSettingsArray) {
     });
 }
 
-function parsePacketTimeSyncSet(dataBuf) {
-    // Ths packet has 'A0','00'....,'00','FF','FF','FF','FF','C3' where the 'FF's are times
-    const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus
-    return new Promise((resolve, reject) => {
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncSet]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-
-        // Grab the time from the packet
-        resolve(bigInt(dataBuf.readUInt32BE(lastBytePosition - k.OBCIStreamPacketTimeByteSize)));
-    });
-}
-
-
 function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime,accelArray) {
     // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
     //  where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
-    const timeStampNumBytes = 4;
-    const accelNumBytes = 2;
-    const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus
 
     return new Promise((resolve, reject) => {
         // The sample object we are going to build
@@ -603,20 +577,56 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
         // Get the stop byte
         sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
 
-        getBoardTime(dataBuf,boardOffsetTime)
+        getFromTimePacketTime(dataBuf)
             .then(boardTime => {
-                sampleObject.timeStamp = boardTime;
+                sampleObject.timeStamp = boardTime + boardOffsetTime;
                 return getFromTimePacketAccel(dataBuf, sampleObject.sampleNumber, accelArray);
             })
             .then(accelArrayFilled => {
                 if (accelArrayFilled) {
                     sampleObject.accelData = accelArray;
                 }
-                //sampleObject.auxData = dataBuf.slice(k.OBCIPacketSize - 7, k.OBCIPacketSize - 1);
                 return getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray);
             })
             .then(channelDataArray => {
                 sampleObject.channelData = channelDataArray;
+                resolve(sampleObject);
+            })
+            .catch(err => {
+                reject(err);
+            });
+
+    });
+}
+
+function parsePacketTimeSyncedRawAux(dataBuf,channelSettingsArray,boardOffsetTime) {
+    // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
+    //  where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
+    return new Promise((resolve, reject) => {
+        // The sample object we are going to build
+        var sampleObject = {};
+
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncSet]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+
+        // Get the sample number
+        sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+        // Get the start byte
+        sampleObject.startByte = dataBuf[0];
+        // Get the stop byte
+        sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
+
+        getFromTimePacketTime(dataBuf)
+            .then(boardTime => {
+                sampleObject.timeStamp = boardTime + boardOffsetTime;
+                return getFromTimePacketRawAux(dataBuf);
+            })
+            .then(auxDataBuffer => {
+                sampleObject.auxData = auxDataBuffer;
+                return getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray);
+            })
+            .then(channelDataArray => {
+                sampleObject.channelData = channelDataArray;
+                resolve(sampleObject);
             })
             .catch(err => {
                 reject(err);
@@ -626,19 +636,19 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
 }
 
 /**
- * @description Extract a time from a time packet and optionally add (or subtract) an offset also in ms.
+ * @description Extract a time from a time packet in ms.
  * @param dataBuf - A raw packet with 33 bytes of data
- * @param boardOffsetTime {Number} (optional) - A time in ms to be added to the time extracted out of the buffer
  * @returns {Promise} - Fulfills with time in milli seconds
+ * @author AJ Keller (@pushtheworldllc)
  */
-function getBoardTime(dataBuf, boardOffsetTime) {
-    return new Promise((resolve,reject) => {
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getBoardTime]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-        if (boardOffsetTime === undefined || boardOffsetTime === null) boardOffsetTime = 0;
-        const timeStampNumBytes = 4;
-        const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus
+function getFromTimePacketTime(dataBuf) {
+    // Ths packet has 'A0','00'....,'00','00','FF','FF','FF','FF','C3' where the 'FF's are times
+    const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus 1 for the stop byte and another two for the aux channel or the
+    return new Promise((resolve, reject) => {
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketTime]: input buffer must be " + k.OBCIPacketSize + " bytes!");
 
-        resolve(dataBuf.readUInt32BE(lastBytePosition - timeStampNumBytes) + boardOffsetTime);
+        // Grab the time from the packet
+        resolve(dataBuf.readUInt32BE(lastBytePosition - k.OBCIStreamPacketTimeByteSize));
     });
 }
 
@@ -648,16 +658,15 @@ function getBoardTime(dataBuf, boardOffsetTime) {
  *      Y axis data is sent with every sampleNumber % 10 === 1
  *      Z axis data is sent with every sampleNumber % 10 === 2
  * @param dataBuf {Buffer} - The 33byte raw time synced accel packet
- * @param sampleNumber {Number} - The sample number of the packet
  * @param accelArray {Array} - A 3 element array that allows us to have inter packet memory of x and y axis data and emit only on the z axis packets.
  * @returns {Promise} - Fulfills with a boolean that is true only when the accel array is ready to be emitted... i.e. when this is a Z axis packet
  */
-function getFromTimePacketAccel(dataBuf, sampleNumber, accelArray) {
+function getFromTimePacketAccel(dataBuf, accelArray) {
     const accelNumBytes = 2;
     const lastBytePosition = k.OBCIPacketSize - 1 - k.OBCIStreamPacketTimeByteSize - accelNumBytes; // This is 33, but 0 indexed would be 32 minus
     return new Promise((resolve, reject) => {
         if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-
+        var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
         switch (sampleNumber % 10) { // The accelerometer is on a 25Hz sample rate, so every ten channel samples, we can get new data
             case k.OBCIAccelAxisX:
                 accelArray[k.OBCIAccelAxisX] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
@@ -669,6 +678,7 @@ function getFromTimePacketAccel(dataBuf, sampleNumber, accelArray) {
                 break;
             case k.OBCIAccelAxisZ:
                 accelArray[k.OBCIAccelAxisZ] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
+                console.log('Z AXIS!');
                 resolve(true);
                 break;
             case k.OBCIAccelAxisZ + 1:
@@ -685,13 +695,13 @@ function getFromTimePacketAccel(dataBuf, sampleNumber, accelArray) {
 /**
  * @description Grabs a raw aux value from a raw but time synced packet.
  * @param dataBuf {Buffer} - The 33byte raw time synced raw aux packet
- * @returns {Promise} - Fulfills with a boolean that is true only when the accel array is ready to be emitted... i.e. when this is a Z axis packet
+ * @returns {Promise} - Fulfills a 2 byte buffer
  */
 function getFromTimePacketRawAux(dataBuf) {
     const lastBytePosition = k.OBCIPacketSize - 1 - k.OBCIStreamPacketTimeByteSize - accelNumBytes; // This is 33, but 0 indexed would be 32 minus
     return new Promise((resolve, reject) => {
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-        resolve(sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)));
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketRawAux]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        resolve(dataBuf.slice(lastBytePosition, lastBytePosition + 2));
     });
 }
 

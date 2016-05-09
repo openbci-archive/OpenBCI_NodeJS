@@ -1235,7 +1235,10 @@ function OpenBCIFactory() {
 
     OpenBCIBoard.prototype._processPacketStandardAccel = function(rawPacket) {
         openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray)
-            .then(this._finalizeNewSample)
+            .then(sampleObject => {
+                openBCISample.debugPrettyPrint(sampleObject);
+                this._finalizeNewSample(sampleObject);
+            })
             .catch(err => console.log('Error in _processPacketStandardAccel',err));
     };
 
@@ -1255,7 +1258,7 @@ function OpenBCIFactory() {
 
     OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
         if (this.options.verbose) console.log('Got time set packet from the board');
-        openBCISample.parseTimeSyncSetPacket(rawPacket,this.sntpNow())
+        openBCISample.getFromTimePacketTime(rawPacket)
             .then(boardTime => {
                 this.sync.timeRoundTrip = this.sync.timeGotSetPacket - this.sync.timeSent;
                 this.sync.timeTransmission = this.sync.timeRoundTrip / 2;
