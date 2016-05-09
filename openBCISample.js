@@ -34,30 +34,26 @@ var sampleModule = {
      * @param channelSettingsArray
      * @returns {Promise}
      */
-    parseRawPacket: (dataBuf,channelSettingsArray) => {
+    parseRawPacketStandard: (dataBuf,channelSettingsArray,convertAuxToAccel) => {
         const defaultChannelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
+
         return new Promise((resolve, reject) => {
             if (dataBuf === undefined || dataBuf === null) reject('Error [parseRawPacket]: dataBuf must be defined.');
             // Verify proper start byte
             if (dataBuf[0] != k.OBCIByteStart) reject('Error [parseRawPacket]: Invalid start byte of ' + dataBuf[0].toString(16) + ' expected ' + k.OBCIByteStart.toString(16));
             // channelSettingsArray is optional, defaults to CHANNEL_SETTINGS_ARRAY_DEFAULT
             channelSettingsArray = channelSettingsArray || defaultChannelSettingsArray;
-            // Last nibble contains packet type
-            var packetType = getRawPacketType(dataBuf[k.OBCIPacketPositionStopByte]);
+            // By default convert to g's
+            if (convertAuxToAccel === undefined || convertAuxToAccel === null) convertAuxToAccel = true;
 
-            switch (packetType) {
-                case k.OBCIPacketTypeUserDefined:
-                    // Do something with the packet, maybe nothing
-                    resolve();
-                    break;
-                case k.OBCIPacketTypeTimeSynced:
-                    // Parse the time synced packet
-                    break;
-                default: //normal packet
-                    parsePacketStandard(dataBuf,channelSettingsArray).then(sampleObject => {
-                        resolve(sampleObject);
-                    }).catch(err => reject(err));
-                    break;
+            if (convertAuxToAccel) {
+                parsePacketStandardAccel(dataBuf,channelSettingsArray).then(sampleObject => {
+                    resolve(sampleObject);
+                }).catch(err => reject(err));
+            } else {
+                parsePacketStandardRawAux(dataBuf,channelSettingsArray).then(sampleObject => {
+                    resolve(sampleObject);
+                }).catch(err => reject(err));
             }
 
         });
@@ -76,7 +72,6 @@ var sampleModule = {
         });
     },
     parsePacketTimeSyncedAccel: parsePacketTimeSyncedAccel,
-
     /**
      * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
      * @param sample - A sample object
@@ -505,15 +500,15 @@ function newImpedanceObject(channelNumber) {
      *                      sampleNumber: a Number that is the sample
      *                  }
  */
-function parsePacketStandard(dataBuf, channelSettingsArray) {
+function parsePacketStandardAccel(dataBuf, channelSettingsArray) {
     return new Promise((resolve, reject) => {
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketStandard]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketStandardAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
 
         var sampleObject = {};
         // Need build the standard sample object
-        getAccelDataArray(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1))
+        getDataArrayAccel(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1))
             .then(accelData => {
-                sampleObject.auxData = accelData;
+                sampleObject.accelData = accelData;
                 return getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray);
             })
             .then(channelSettingArray => {
@@ -534,6 +529,48 @@ function parsePacketStandard(dataBuf, channelSettingsArray) {
     });
 }
 
+/**
+ * @description This method parses a 33 byte OpenBCI V3 packet and converts to a sample object
+ * @param dataBuf - 33 byte packet that has bytes:
+ * 0:[startByte] | 1:[sampleNumber] | 2:[Channel-1.1] | 3:[Channel-1.2] | 4:[Channel-1.3] | 5:[Channel-2.1] | 6:[Channel-2.2] | 7:[Channel-2.3] | 8:[Channel-3.1] | 9:[Channel-3.2] | 10:[Channel-3.3] | 11:[Channel-4.1] | 12:[Channel-4.2] | 13:[Channel-4.3] | 14:[Channel-5.1] | 15:[Channel-5.2] | 16:[Channel-5.3] | 17:[Channel-6.1] | 18:[Channel-6.2] | 19:[Channel-6.3] | 20:[Channel-7.1] | 21:[Channel-7.2] | 22:[Channel-7.3] | 23:[Channel-8.1] | 24:[Channel-8.2] | 25:[Channel-8.3] | 26:[Aux-1.1] | 27:[Aux-1.2] | 28:[Aux-2.1] | 29:[Aux-2.2] | 30:[Aux-3.1] | 31:[Aux-3.2] | 32:StopByte
+ * @param channelSettingsArray - An array of channel settings that is an Array that has shape similar to the one
+ *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
+ *                  Array of objects that have key-value pair {gain:NUMBER}
+ * @returns {Promise} - Fulfilled with a sample object that has form:
+ *                  {
+     *                      channelData: Array of floats
+     *                      auxData: 6 byte long buffer of raw aux data
+     *                      sampleNumber: a Number that is the sample
+     *                  }
+ */
+function parsePacketStandardRawAux(dataBuf, channelSettingsArray) {
+    return new Promise((resolve, reject) => {
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketStandardAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+
+        var sampleObject = {};
+        // Need build the standard sample object
+        getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray)
+            .then(channelSettingArray => {
+                // Slice the buffer for the aux data
+                sampleObject.auxData = dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1);
+                // Store the channel data
+                sampleObject.channelData = channelSettingArray;
+                // Get the sample number
+                sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+                // Get the start byte
+                sampleObject.startByte = dataBuf[0];
+                // Get the stop byte
+                sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
+                resolve(sampleObject);
+            })
+            .catch(err => {
+                //console.log(err);
+                reject(err);
+            });
+
+    });
+}
+
 function parsePacketTimeSyncSet(dataBuf) {
     // Ths packet has 'A0','00'....,'00','FF','FF','FF','FF','C3' where the 'FF's are times
     const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus
@@ -544,6 +581,7 @@ function parsePacketTimeSyncSet(dataBuf) {
         resolve(bigInt(dataBuf.readUInt32BE(lastBytePosition - k.OBCIStreamPacketTimeByteSize)));
     });
 }
+
 
 function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime,accelArray) {
     // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
@@ -568,7 +606,7 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
         getBoardTime(dataBuf,boardOffsetTime)
             .then(boardTime => {
                 sampleObject.timeStamp = boardTime;
-                return getAccelFromTimePacket(dataBuf, sampleObject.sampleNumber, accelArray);
+                return getFromTimePacketAccel(dataBuf, sampleObject.sampleNumber, accelArray);
             })
             .then(accelArrayFilled => {
                 if (accelArrayFilled) {
@@ -614,11 +652,11 @@ function getBoardTime(dataBuf, boardOffsetTime) {
  * @param accelArray {Array} - A 3 element array that allows us to have inter packet memory of x and y axis data and emit only on the z axis packets.
  * @returns {Promise} - Fulfills with a boolean that is true only when the accel array is ready to be emitted... i.e. when this is a Z axis packet
  */
-function getAccelFromTimePacket(dataBuf, sampleNumber, accelArray) {
+function getFromTimePacketAccel(dataBuf, sampleNumber, accelArray) {
     const accelNumBytes = 2;
     const lastBytePosition = k.OBCIPacketSize - 1 - k.OBCIStreamPacketTimeByteSize - accelNumBytes; // This is 33, but 0 indexed would be 32 minus
     return new Promise((resolve, reject) => {
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getAccelFromTimePacket]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
 
         switch (sampleNumber % 10) { // The accelerometer is on a 25Hz sample rate, so every ten channel samples, we can get new data
             case k.OBCIAccelAxisX:
@@ -644,6 +682,20 @@ function getAccelFromTimePacket(dataBuf, sampleNumber, accelArray) {
     });
 }
 
+/**
+ * @description Grabs a raw aux value from a raw but time synced packet.
+ * @param dataBuf {Buffer} - The 33byte raw time synced raw aux packet
+ * @returns {Promise} - Fulfills with a boolean that is true only when the accel array is ready to be emitted... i.e. when this is a Z axis packet
+ */
+function getFromTimePacketRawAux(dataBuf) {
+    const lastBytePosition = k.OBCIPacketSize - 1 - k.OBCIStreamPacketTimeByteSize - accelNumBytes; // This is 33, but 0 indexed would be 32 minus
+    return new Promise((resolve, reject) => {
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        resolve(sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)));
+    });
+}
+
+
 
 /**
  * @description Takes a buffer filled with 3 16 bit integers from an OpenBCI device and converts based on settings
@@ -652,7 +704,7 @@ function getAccelFromTimePacket(dataBuf, sampleNumber, accelArray) {
  * @returns {Promise} - Fulfilled with Array of floats 3 elements long
  * @author AJ Keller (@pushtheworldllc)
  */
-function getAccelDataArray(dataBuf) {
+function getDataArrayAccel(dataBuf) {
     return new Promise(resolve => {
         var accelData = [];
         for (var i = 0; i < ACCEL_NUMBER_AXIS; i++) {
@@ -689,6 +741,7 @@ function getChannelDataArray(dataBuf, channelSettingsArray) {
         resolve(channelData);
     });
 }
+
 function getRawPacketType(stopByte) {
     return stopByte & 0xF;
 }

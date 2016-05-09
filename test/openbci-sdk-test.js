@@ -1237,7 +1237,7 @@ describe('#impedanceTesting', function() {
 });
 
 // Need a better test
-describe.only('#sync', function() {
+describe('#sync', function() {
     var ourBoard;
     this.timeout(10000);
     before(function (done) {
@@ -1260,7 +1260,8 @@ describe.only('#sync', function() {
             .then(portName => {
                 return setTimeout(() => {
                     console.log('Issuing connect');
-                    ourBoard.connect("/dev/cu.usbserial-DB00JAKZ");
+                    ourBoard.connect(portName);
+                    //ourBoard.connect("/dev/cu.usbserial-DB00JAKZ");
                 },500);
             })
             .catch((err) => {

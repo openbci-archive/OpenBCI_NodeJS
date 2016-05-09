@@ -1,3 +1,14 @@
+# 0.4.0
+
+### New Features
+
+* Firmware version 2.0 support
+* Clock synchronization between OpenBCI board and this driver 
+
+### Breaking Changes
+
+* Accelerometer data now goes into `.accelData` array instead of `auxData` array.
+
 # 0.3.9
 
 ### Enhancements

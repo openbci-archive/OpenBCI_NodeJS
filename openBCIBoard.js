@@ -1199,6 +1199,12 @@ function OpenBCIFactory() {
                             case k.OBCIStreamPacketTimeSyncedAccel:
                                 this._processPacketTimeSyncedAccel(rawPacket);
                                 break;
+                            case k.OBCIStreamPacketTimeSyncedRawAux:
+                                this._processPacketTimeSyncedRawAux(rawPacket);
+                                break;
+                            case k.OBCIStreamPacketStandardRawAux:
+                                this._processPacketStandardRawAux(rawPacket);
+                                break;
                             case k.OBCIStreamPacketStandardAccel:
                             default: // Normally route here
                                 this._processPacketStandardAccel(rawPacket);
@@ -1228,10 +1234,23 @@ function OpenBCIFactory() {
     };
 
     OpenBCIBoard.prototype._processPacketStandardAccel = function(rawPacket) {
-        openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
+        openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray)
             .then(this._finalizeNewSample)
-            .catch(err => console.log('Error in _processPacketWithChannelData',err));
+            .catch(err => console.log('Error in _processPacketStandardAccel',err));
     };
+
+    /**
+     * @description A method to parse a stream packet that has channel data and data in the aux channels that should not be scared.
+     * @param rawPacket - A 33byte data buffer from _processBytes
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processPacketStandardRawAux = function(rawPacket) {
+        openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray,false)
+            .then(this._finalizeNewSample)
+            .catch(err => console.log('Error in _processPacketStandardRawAux',err));
+    };
+
 
 
     OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
@@ -1257,6 +1276,13 @@ function OpenBCIFactory() {
     };
 
     OpenBCIBoard.prototype._processPacketTimeSyncedAccel = function(rawPacket) {
+        if (this.sync.active === false) console.log('Need to sync with board...');
+        openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
+            .then(this._finalizeNewSample)
+            .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
+    };
+
+    OpenBCIBoard.prototype._processPacketTimeSyncedRawAux = function(rawPacket) {
         if (this.sync.active === false) console.log('Need to sync with board...');
         openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
             .then(this._finalizeNewSample)
