@@ -34,15 +34,27 @@ var samplePacketTimeSyncSet = function () {
     return new Buffer([0xA0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0,0,0,1,0xC3]);
 };
 
-var samplePacketTimeSyncedAccel = function () {
-    var byteSample = 0x45;
-    return new Buffer([0xA0,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0x00,0x00,0,0,0,1,0xC4]);
+var samplePacketTimeSyncedAccel = function (sampleNumber) {
+    if (sampleNumber || sampleNumber === 0) {
+        if (sampleNumber > 255) {
+            sampleNumber = 255;
+        }
+    } else {
+        sampleNumber = 0x45;
+    }
+    return new Buffer([0xA0,sampleNumber,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,1,0,0,0,1,0xC4]);
 };
 
 
-var samplePacketTimeSyncedRawAux = function () {
-    var byteSample = 0x45;
-    return new Buffer([0xA0,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0x00,0x00,0,0,0,1,0xC5]);
+var samplePacketTimeSyncedRawAux = function (sampleNumber) {
+    if (sampleNumber || sampleNumber === 0) {
+        if (sampleNumber > 255) {
+            sampleNumber = 255;
+        }
+    } else {
+        sampleNumber = 0x45;
+    }
+    return new Buffer([0xA0,sampleNumber,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0x00,0x01,0,0,0,1,0xC5]);
 };
 
 const defaultChannelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
@@ -55,9 +67,9 @@ var sampleBufTimeSyncedAccel = samplePacketTimeSyncedAccel();
 
 var accelArray;
 
+var channelScaleFactor = 4.5 / 24 / (Math.pow(2,23) - 1);
 
 describe('openBCISample',function() {
-    var channelScaleFactor = 4.5 / 24 / (Math.pow(2,23) - 1);
     beforeEach(function() {
         accelArray = [0,0,0];
     });
@@ -75,7 +87,7 @@ describe('openBCISample',function() {
                     //  be its index + 1 (i.e. channel number) multiplied by the channel scale factor set by the
                     //  ADS1299 for a gain of 24 (default)
                     sampleObject.channelData.forEach((channelValue, index) => {
-                        assert.equal(channelValue,channelScaleFactor * (index + 1),'Channel ' + index + ' does not compute correctly');
+                        channelValue.should.equal(channelScaleFactor * (index + 1));
                     });
                     done();
                 })
@@ -84,8 +96,8 @@ describe('openBCISample',function() {
         it('all the auxs should have the same number value as their index * scaleFactor', function(done) {
             openBCISample.parseRawPacketStandard(sampleBuf)
                 .then(sampleObject => {
-                    sampleObject.accelData.forEach((auxValue, index) => {
-                        assert.equal(auxValue,openBCISample.scaleFactorAux * index,'Aux ' + index + ' does not compute correctly');
+                    sampleObject.accelData.forEach((accelValue, index) => {
+                        accelValue.should.equal(openBCISample.scaleFactorAux * index);
                     });
                     done();
                 })
@@ -103,7 +115,7 @@ describe('openBCISample',function() {
                 })
                 .catch(err => done(err));
         });
-        it('check to see if negative numbers work on aux data',function() {
+        it('check to see if negative numbers work on aux data',function(done) {
             var temp = samplePacket();
             var taco = new Buffer([0x81]);
             taco.copy(temp,26);
@@ -158,9 +170,8 @@ describe('openBCISample',function() {
         it('should extract the proper time value from packet', function(done) {
             openBCISample.getFromTimePacketTime(sampleBufTimeSyncSet)
                 .then(packetTime => {
-                    console.log(packetTime);
-                    assert.equal(packetTime,1,'Could not get time 1 out of sampleBufTimeSyncSet');
-                    assert.equal(true,k.isNumber(packetTime),'Time is not a number');
+                    //console.log(packetTime);
+                    packetTime.should.equal(1);
                     done();
                 })
                 .catch(err => done(err));
@@ -171,79 +182,182 @@ describe('openBCISample',function() {
             });
         });
     });
-    describe.only('#getFromTimePacketAccel',function() {
+    describe('#getFromTimePacketAccel',function() {
         var packet;
-        // Generate a new packet
-        packet = samplePacketTimeSyncedAccel();
 
-        it('should emit and array if z axis', function() {
-            openBCISample.getFromTimePacketAccel(packet,0,accelArray)
-                .then()
+        it('should emit and array if z axis i.e. sampleNumber % 10 === 2', function(done) {
+            // Make a packet with a sample number that represents z axis
+            packet = samplePacketTimeSyncedAccel(2);
+            openBCISample.getFromTimePacketAccel(packet,accelArray)
+                .then(isZAxis => {
+                    // accel array ready
+                    isZAxis.should.equal(true);
+                    done();
+                })
+                .catch(err => {
+                    done(err);
+                })
+        });
+        it('false if sample number is not sampleNumber % 10 === 2', function(done) {
+            // Make a packet that is anything but the z axis
+            packet = samplePacketTimeSyncedAccel(0);
+            openBCISample.getFromTimePacketAccel(packet,accelArray)
+                .then(isZAxis => {
+                    // Accel array not ready for sampleNumber % 10 === 0
+                    isZAxis.should.equal(false);
+
+                    packet = samplePacketTimeSyncedAccel(1);
+                    return openBCISample.getFromTimePacketAccel(packet,accelArray);
+                })
+                .then(isZAxis => {
+                    // Accel array not ready for sampleNumber % 10 === 1
+                    isZAxis.should.equal(false);
+
+                    packet = samplePacketTimeSyncedAccel(34);
+                    return openBCISample.getFromTimePacketAccel(packet,accelArray);
+                })
+                .then(isZAxis => {
+                    // Accel array not ready for sampleNumber % 10 === 4
+                    isZAxis.should.equal(false);
+
+                    packet = samplePacketTimeSyncedAccel(99);
+                    return openBCISample.getFromTimePacketAccel(packet,accelArray);
+                })
+                .then(isZAxis => {
+                    // Accel array not ready for sampleNumber % 10 === 9
+                    isZAxis.should.equal(false);
+                    done();
+                })
+                .catch(err => {
+                    done(err);
+                })
+        });
+        describe('#errorConditions', function() {
+            it('wrong number of bytes', function(done) {
+                openBCISample.getFromTimePacketAccel(new Buffer(5),accelArray).should.be.rejected.and.notify(done);
+            });
         });
     });
     describe('#parsePacketTimeSyncedAccel', function() {
         // Global array (at least it's global in practice) to store accel data between packets
-
         var packet1, packet2, packet3;
-        // Generate three packets, packets only get one axis value per packet
-        packet1 = samplePacketTimeSyncedAccel();
-        packet2 = samplePacketTimeSyncedAccel();
-        packet3 = samplePacketTimeSyncedAccel();
-
-        // Change the sample numbers so we produce the correct sequence.
-        //  X axis data is sent with every sampleNumber % 10 === 0
-        packet1[k.OBCIPacketPositionSampleNumber] = 0;
-        //  Y axis data is sent with every sampleNumber % 10 === 1
-        packet2[k.OBCIPacketPositionSampleNumber] = 1;
-        //  Z axis data is sent with every sampleNumber % 10 === 2
-        packet3[k.OBCIPacketPositionSampleNumber] = 2;
 
         it('should only include accel data array on sampleNumber%10 === 2', function(done) {
-            openBCISample.parsePacketTimeSyncedAccel(packet1,defaultChannelSettingsArray,0,accelDataArray)
+            // Generate three packets, packets only get one axis value per packet
+            //  X axis data is sent with every sampleNumber % 10 === 0
+            packet1 = samplePacketTimeSyncedAccel(0);
+            //  Y axis data is sent with every sampleNumber % 10 === 1
+            packet2 = samplePacketTimeSyncedAccel(1);
+            //  Z axis data is sent with every sampleNumber % 10 === 2
+            packet3 = samplePacketTimeSyncedAccel(2);
+
+            openBCISample.parsePacketTimeSyncedAccel(packet1,defaultChannelSettingsArray,0,accelArray)
                 .then(sampleObject => {
-                    assert.equal(false,sampleObject.hasOwnProperty('accelData'),'should not have accel data yet in first packet, the X');
-                    return openBCISample.parsePacketTimeSyncedAccel(packet2,defaultChannelSettingsArray,0,accelDataArray);
+                    sampleObject.should.not.have.property('accelData');
+                    return openBCISample.parsePacketTimeSyncedAccel(packet2,defaultChannelSettingsArray,0,accelArray);
                 })
                 .then(sampleObject => {
-                    assert.equal(false,sampleObject.hasOwnProperty('accelData'),'should not have accel data yet in second packet, the Y');
-                    return openBCISample.parsePacketTimeSyncedAccel(packet3,defaultChannelSettingsArray,0,accelDataArray);
+                    sampleObject.should.not.have.property('accelData');
+                    return openBCISample.parsePacketTimeSyncedAccel(packet3,defaultChannelSettingsArray,0,accelArray);
                 })
                 .then(sampleObject => {
-                    assert.equal(true,sampleObject.hasOwnProperty('accelData'),'finally gets the accel data in the third packet, the Z');
+                    sampleObject.should.have.property('accelData');
                     done();
                 })
                 .catch(err => done(err));
         });
         it('should convert raw numbers into g\'s with scale factor',function(done) {
-            openBCISample.parsePacketTimeSyncedAccel(packet1,defaultChannelSettingsArray,0,accelDataArray)
+            // Generate three packets, packets only get one axis value per packet
+            //  X axis data is sent with every sampleNumber % 10 === 0
+            packet1 = samplePacketTimeSyncedAccel(0);
+            //  Y axis data is sent with every sampleNumber % 10 === 1
+            packet2 = samplePacketTimeSyncedAccel(1);
+            //  Z axis data is sent with every sampleNumber % 10 === 2
+            packet3 = samplePacketTimeSyncedAccel(2);
+
+            openBCISample.parsePacketTimeSyncedAccel(packet1,defaultChannelSettingsArray,0,accelArray)
                 .then(() => {
-                    return openBCISample.parsePacketTimeSyncedAccel(packet2,defaultChannelSettingsArray,0,accelDataArray);
+                    return openBCISample.parsePacketTimeSyncedAccel(packet2,defaultChannelSettingsArray,0,accelArray);
                 })
                 .then(() => {
-                    return openBCISample.parsePacketTimeSyncedAccel(packet3,defaultChannelSettingsArray,0,accelDataArray);
+                    return openBCISample.parsePacketTimeSyncedAccel(packet3,defaultChannelSettingsArray,0,accelArray);
                 })
                 .then(sampleObject => {
-                    console.log(sampleObject.accelData);
                     sampleObject.accelData.forEach((accelValue, index) => {
-                        assert.equal(accelValue,openBCISample.scaleFactorAux,'Accel ' + index + ' does not compute correctly');
+                        accelValue.should.equal(openBCISample.scaleFactorAux);
                     });
                     done();
                 })
                 .catch(err => done(err));
-
+        });
+        it('all the channels should have the same number value as their (index + 1) * scaleFactor', function(done) {
+            packet1 = samplePacketTimeSyncedAccel(0);
+            openBCISample.parsePacketTimeSyncedAccel(packet1,defaultChannelSettingsArray,0,accelArray) // sampleBuf has its channel number for each 3 byte integer. See line 20...
+                .then(sampleObject => {
+                    sampleObject.channelData.forEach((channelValue, index) => {
+                        channelValue.should.equal(channelScaleFactor * (index + 1));
+                    });
+                    done();
+                })
+                .catch(err => done(err));
         });
         describe('#errorConditions', function() {
             it('wrong number of bytes', function(done) {
-                openBCISample.getFromTimePacketTime(new Buffer(5),0).should.be.rejected.and.notify(done);
+                openBCISample.parsePacketTimeSyncedAccel(new Buffer(5),defaultChannelSettingsArray,0,accelArray).should.be.rejected.and.notify(done);
             });
         });
     });
-    describe('#parsePacketTimeSyncedAccel', function() {
-        var accelArray = [0,0,0];
-        it('should fulfill promise', function() {
-            return openBCISample.parsePacketTimeSyncedAccel(sampleBufTimeSyncedAccel,defaultChannelSettingsArray,0,accelArray).should.be.fulfilled;
-        });
+    describe('#getFromTimePacketRawAux', function() {
+        var packet;
+        it('should put the two aux bytes into a buffer',function(done) {
+            // Get a packet
+            packet = samplePacketTimeSyncedRawAux(0);
 
+            openBCISample.getFromTimePacketRawAux(packet)
+                .then(rawAuxBuffer => {
+                    Buffer.isBuffer(rawAuxBuffer).should.equal(true);
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        describe('#errorConditions', function() {
+            it('wrong number of bytes', function(done) {
+                openBCISample.getFromTimePacketRawAux(new Buffer(5)).should.be.rejected.and.notify(done);
+            });
+        });
+    });
+    describe('#parsePacketTimeSyncedRawAux', function() {
+        var packet;
+        it('should put the two aux bytes into a buffer',function(done) {
+            // Generate three packets, packets only get one axis value per packet
+            packet = samplePacketTimeSyncedRawAux(0);
+
+            openBCISample.parsePacketTimeSyncedRawAux(packet,defaultChannelSettingsArray,0)
+                .then(sampleObject => {
+                    sampleObject.should.have.property('auxData');
+                    sampleObject.auxData[0].should.equal(0);
+                    sampleObject.auxData[1].should.equal(1);
+                    sampleObject.auxData.byteLength.should.equal(2);
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        it('all the channels should have the same number value as their (index + 1) * scaleFactor', function(done) {
+            packet = samplePacketTimeSyncedRawAux(0);
+            openBCISample.parsePacketTimeSyncedRawAux(packet,defaultChannelSettingsArray,0)
+                .then(sampleObject => {
+                    sampleObject.channelData.forEach((channelValue, index) => {
+                        channelValue.should.equal(channelScaleFactor * (index + 1));
+                    });
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        describe('#errorConditions', function() {
+            it('wrong number of bytes', function(done) {
+                openBCISample.parsePacketTimeSyncedRawAux(new Buffer(5),defaultChannelSettingsArray,0,accelArray).should.be.rejected.and.notify(done);
+            });
+        });
     });
     describe('#convertSampleToPacket', function() {
         var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);

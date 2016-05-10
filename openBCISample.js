@@ -61,6 +61,7 @@ var sampleModule = {
     getRawPacketType: getRawPacketType,
     getFromTimePacketAccel: getFromTimePacketAccel,
     getFromTimePacketTime: getFromTimePacketTime,
+    getFromTimePacketRawAux: getFromTimePacketRawAux,
     parsePacketTimeSyncedAccel: parsePacketTimeSyncedAccel,
     parsePacketTimeSyncedRawAux: parsePacketTimeSyncedRawAux,
     /**
@@ -480,7 +481,7 @@ function newImpedanceObject(channelNumber) {
  * @description This method parses a 33 byte OpenBCI V3 packet and converts to a sample object
  * @param dataBuf - 33 byte packet that has bytes:
  * 0:[startByte] | 1:[sampleNumber] | 2:[Channel-1.1] | 3:[Channel-1.2] | 4:[Channel-1.3] | 5:[Channel-2.1] | 6:[Channel-2.2] | 7:[Channel-2.3] | 8:[Channel-3.1] | 9:[Channel-3.2] | 10:[Channel-3.3] | 11:[Channel-4.1] | 12:[Channel-4.2] | 13:[Channel-4.3] | 14:[Channel-5.1] | 15:[Channel-5.2] | 16:[Channel-5.3] | 17:[Channel-6.1] | 18:[Channel-6.2] | 19:[Channel-6.3] | 20:[Channel-7.1] | 21:[Channel-7.2] | 22:[Channel-7.3] | 23:[Channel-8.1] | 24:[Channel-8.2] | 25:[Channel-8.3] | 26:[Aux-1.1] | 27:[Aux-1.2] | 28:[Aux-2.1] | 29:[Aux-2.2] | 30:[Aux-3.1] | 31:[Aux-3.2] | 32:StopByte
- * @param channelSettingsArray - An array of channel settings that is an Array that has shape similar to the one
+ * @param channelSettingsArray {Array} - An array of channel settings that is an Array that has shape similar to the one
  *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
  *                  Array of objects that have key-value pair {gain:NUMBER}
  * @returns {Promise} - Fulfilled with a sample object that has form:
@@ -560,6 +561,19 @@ function parsePacketStandardRawAux(dataBuf, channelSettingsArray) {
     });
 }
 
+/**
+ * @description Grabs an accel value from a raw but time synced packet. Important that this utilizes the fact that:
+ *      X axis data is sent with every sampleNumber % 10 === 0
+ *      Y axis data is sent with every sampleNumber % 10 === 1
+ *      Z axis data is sent with every sampleNumber % 10 === 2
+ * @param dataBuf {Buffer} - The 33byte raw time synced accel packet
+ * @param channelSettingsArray {Array} - An array of channel settings that is an Array that has shape similar to the one
+ *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
+ *                  Array of objects that have key-value pair {gain:NUMBER}
+ * @param boardOffsetTime {Number} - The difference between board time and current time calculated with sync methods.
+ * @param accelArray {Array} - A 3 element array that allows us to have inter packet memory of x and y axis data and emit only on the z axis packets.
+ * @returns {Promise} - Fulfills with a sample object. NOTE: Only has accelData if this is a Z axis packet.
+ */
 function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime,accelArray) {
     // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
     //  where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
@@ -568,7 +582,7 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
         // The sample object we are going to build
         var sampleObject = {};
 
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncSet]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncedAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
 
         // Get the sample number
         sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
@@ -580,7 +594,7 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
         getFromTimePacketTime(dataBuf)
             .then(boardTime => {
                 sampleObject.timeStamp = boardTime + boardOffsetTime;
-                return getFromTimePacketAccel(dataBuf, sampleObject.sampleNumber, accelArray);
+                return getFromTimePacketAccel(dataBuf, accelArray);
             })
             .then(accelArrayFilled => {
                 if (accelArrayFilled) {
@@ -599,6 +613,18 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
     });
 }
 
+/**
+ * @description Grabs an accel value from a raw but time synced packet. Important that this utilizes the fact that:
+ *      X axis data is sent with every sampleNumber % 10 === 0
+ *      Y axis data is sent with every sampleNumber % 10 === 1
+ *      Z axis data is sent with every sampleNumber % 10 === 2
+ * @param dataBuf {Buffer} - The 33byte raw time synced accel packet
+ * @param channelSettingsArray {Array} - An array of channel settings that is an Array that has shape similar to the one
+ *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
+ *                  Array of objects that have key-value pair {gain:NUMBER}
+ * @param boardOffsetTime {Number} - The difference between board time and current time calculated with sync methods.
+ * @returns {Promise} - Fulfills with a sample object. NOTE: The aux data is placed in a 2 byte buffer
+ */
 function parsePacketTimeSyncedRawAux(dataBuf,channelSettingsArray,boardOffsetTime) {
     // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
     //  where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
@@ -606,7 +632,7 @@ function parsePacketTimeSyncedRawAux(dataBuf,channelSettingsArray,boardOffsetTim
         // The sample object we are going to build
         var sampleObject = {};
 
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncSet]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncedRawAux]: input buffer must be " + k.OBCIPacketSize + " bytes!");
 
         // Get the sample number
         sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
@@ -678,12 +704,7 @@ function getFromTimePacketAccel(dataBuf, accelArray) {
                 break;
             case k.OBCIAccelAxisZ:
                 accelArray[k.OBCIAccelAxisZ] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
-                console.log('Z AXIS!');
                 resolve(true);
-                break;
-            case k.OBCIAccelAxisZ + 1:
-                accelArray[k.OBCIAccelAxisX] = accelArray[k.OBCIAccelAxisY] = accelArray[k.OBCIAccelAxisZ] = 0;
-                resolve(false);
                 break;
             default:
                 resolve(false);
@@ -698,10 +719,9 @@ function getFromTimePacketAccel(dataBuf, accelArray) {
  * @returns {Promise} - Fulfills a 2 byte buffer
  */
 function getFromTimePacketRawAux(dataBuf) {
-    const lastBytePosition = k.OBCIPacketSize - 1 - k.OBCIStreamPacketTimeByteSize - accelNumBytes; // This is 33, but 0 indexed would be 32 minus
     return new Promise((resolve, reject) => {
         if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketRawAux]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-        resolve(dataBuf.slice(lastBytePosition, lastBytePosition + 2));
+        resolve(Buffer.from(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
     });
 }
 

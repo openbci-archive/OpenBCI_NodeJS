@@ -193,13 +193,18 @@ const kOBCIPacketSize = 33;
 /**
  * 0:[startByte] | 1:[sampleNumber] | 2:[Channel-1.1] | 3:[Channel-1.2] | 4:[Channel-1.3] | 5:[Channel-2.1] | 6:[Channel-2.2] | 7:[Channel-2.3] | 8:[Channel-3.1] | 9:[Channel-3.2] | 10:[Channel-3.3] | 11:[Channel-4.1] | 12:[Channel-4.2] | 13:[Channel-4.3] | 14:[Channel-5.1] | 15:[Channel-5.2] | 16:[Channel-5.3] | 17:[Channel-6.1] | 18:[Channel-6.2] | 19:[Channel-6.3] | 20:[Channel-7.1] | 21:[Channel-7.2] | 22:[Channel-7.3] | 23:[Channel-8.1] | 24:[Channel-8.2] | 25:[Channel-8.3] | 26:[Aux-1.1] | 27:[Aux-1.2] | 28:[Aux-2.1] | 29:[Aux-2.2] | 30:[Aux-3.1] | 31:[Aux-3.2] | 32:StopByte
  */
-const kOBCIPacketPositionStartByte          = 0;   // first byte
-const kOBCIPacketPositionStopByte           = 32;  // [32]
-const kOBCIPacketPositionStartAux           = 26;  // [26,27]:Aux 1 | [28,29]:Aux 2 | [30,31]:Aux 3
-const kOBCIPacketPositionStopAux            = 31;  // - - - [30,31]:Aux 3 | 32: Stop byte
-const kOBCIPacketPositionChannelDataStart   = 2;   // 0:startByte | 1:sampleNumber | [2:4] | [5:7] | [8:10] | [11:13] | [14:16] | [17:19] | [21:23] | [24:26]
-const kOBCIPacketPositionChannelDataStop    = 25;  // 24 bytes for channel data
+const kOBCIPacketPositionChannelDataStart   = 2;  // 0:startByte | 1:sampleNumber | [2:4] | [5:7] | [8:10] | [11:13] | [14:16] | [17:19] | [21:23] | [24:26]
+const kOBCIPacketPositionChannelDataStop    = 25; // 24 bytes for channel data
 const kOBCIPacketPositionSampleNumber       = 1;
+const kOBCIPacketPositionStartByte          = 0;  // first byte
+const kOBCIPacketPositionStopByte           = 32; // [32]
+const kOBCIPacketPositionStartAux           = 26; // [26,27]:Aux 1 | [28,29]:Aux 2 | [30,31]:Aux 3
+const kOBCIPacketPositionStopAux            = 31; // - - - [30,31]:Aux 3 | 32: Stop byte
+const kOBCIPacketPositionTimeSyncAuxStart   = 26;
+const kOBCIPacketPositionTimeSyncAuxStop    = 28;
+const kOBCIPacketPositionTimeSyncTimeStart  = 28;
+const kOBCIPacketPositionTimeSyncTimeStop   = 32;
+
 
 /** Notable Bytes */
 const kOBCIByteStart = 0xA0;
@@ -740,7 +745,11 @@ module.exports = {
     OBCIPacketPositionChannelDataStart:kOBCIPacketPositionChannelDataStart,
     OBCIPacketPositionChannelDataStop:kOBCIPacketPositionChannelDataStop,
     OBCIPacketPositionSampleNumber:kOBCIPacketPositionSampleNumber,
-    /** Possible Simulator Line Noise injections */
+    OBCIPacketPositionTimeSyncAuxStart:kOBCIPacketPositionTimeSyncAuxStart,
+    OBCIPacketPositionTimeSyncAuxStop:kOBCIPacketPositionTimeSyncAuxStop,
+    OBCIPacketPositionTimeSyncTimeStart:kOBCIPacketPositionTimeSyncTimeStart,
+    OBCIPacketPositionTimeSyncTimeStop:kOBCIPacketPositionTimeSyncTimeStop,
+/** Possible Simulator Line Noise injections */
     OBCISimulatorLineNoiseHz60:kOBCISimulatorLineNoiseHz60,
     OBCISimulatorLineNoiseHz50:kOBCISimulatorLineNoiseHz50,
     OBCISimulatorLineNoiseNone:kOBCISimulatorLineNoiseNone,
