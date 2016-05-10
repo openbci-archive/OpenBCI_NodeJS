@@ -30,9 +30,12 @@ var sampleModule = {
     /**
      * @description This takes a 33 byte packet and converts it based on the last four bits.
      *                  0000 - Standard OpenBCI V3 Sample Packet
-     * @param dataBuf
-     * @param channelSettingsArray
-     * @returns {Promise}
+     * @param dataBuf {Buffer} - A 33 byte buffer
+     * @param channelSettingsArray - An array of channel settings that is an Array that has shape similar to the one
+     *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
+     *                  Array of objects that have key-value pair {gain:NUMBER}
+     * @param convertAuxToAccel (optional) {Boolean} - Do you want to convert to g's? (Defaults to true)
+     * @returns {Promise} - A sample object
      */
     parseRawPacketStandard: (dataBuf,channelSettingsArray,convertAuxToAccel) => {
         const defaultChannelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
@@ -504,6 +507,8 @@ function parsePacketStandardAccel(dataBuf, channelSettingsArray) {
             })
             .then(channelSettingArray => {
                 sampleObject.channelData = channelSettingArray;
+                // Get the raw aux values
+                sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
                 // Get the sample number
                 sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
                 // Get the start byte
@@ -542,7 +547,7 @@ function parsePacketStandardRawAux(dataBuf, channelSettingsArray) {
         getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray)
             .then(channelSettingArray => {
                 // Slice the buffer for the aux data
-                sampleObject.auxData = dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1);
+                sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
                 // Store the channel data
                 sampleObject.channelData = channelSettingArray;
                 // Get the sample number
@@ -594,6 +599,10 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
         getFromTimePacketTime(dataBuf)
             .then(boardTime => {
                 sampleObject.timeStamp = boardTime + boardOffsetTime;
+                return getFromTimePacketRawAux(dataBuf);
+            })
+            .then(auxDataBuffer => {
+                sampleObject.auxData = auxDataBuffer;
                 return getFromTimePacketAccel(dataBuf, accelArray);
             })
             .then(accelArrayFilled => {
