@@ -126,6 +126,17 @@ const kOBCISDLogForMin30    = 'F';
 const kOBCISDLogForSec14    = 'a';
 const kOBCISDLogStop        = 'j';
 
+/** SD Card String Commands */
+const kOBCIStringSDHour1    = '1hour';
+const kOBCIStringSDHour2    = '2hour';
+const kOBCIStringSDHour4    = '4hour';
+const kOBCIStringSDHour12   = '12hour';
+const kOBCIStringSDHour24   = '24hour';
+const kOBCIStringSDMin5     = '5min';
+const kOBCIStringSDMin15    = '15min';
+const kOBCIStringSDMin30    = '30min';
+const kOBCIStringSDSec14    = '14sec';
+
 /** Stream Data Commands */
 const kOBCIStreamStart  = 'b';
 const kOBCIStreamStop   = 's';
@@ -519,6 +530,58 @@ module.exports = {
     OBCISDLogForMin30:kOBCISDLogForMin30,
     OBCISDLogForSec14:kOBCISDLogForSec14,
     OBCISDLogStop:kOBCISDLogStop,
+    /** SD Card String Commands */
+    OBCIStringSDHour1:kOBCIStringSDHour1,
+    OBCIStringSDHour2:kOBCIStringSDHour2,
+    OBCIStringSDHour4:kOBCIStringSDHour4,
+    OBCIStringSDHour12:kOBCIStringSDHour12,
+    OBCIStringSDHour24:kOBCIStringSDHour24,
+    OBCIStringSDMin5:kOBCIStringSDMin5,
+    OBCIStringSDMin15:kOBCIStringSDMin15,
+    OBCIStringSDMin30:kOBCIStringSDMin30,
+    OBCIStringSDSec14:kOBCIStringSDSec14,
+    /**
+     * @description Converts a sd string into the proper setting.
+     * @param stringCommand {String} - The length of time you want to record to the SD for.
+     * @returns {Promise} The command to send to the Board, returns an error on improper `stringCommand`
+     */
+    sdSettingForString: (stringCommand) => {
+        return new Promise((resolve,reject) => {
+            switch (stringCommand) {
+                case kOBCIStringSDHour1:
+                    resolve(kOBCISDLogForHour1);
+                    break;
+                case kOBCIStringSDHour2:
+                    resolve(kOBCISDLogForHour2);
+                    break;
+                case kOBCIStringSDHour4:
+                    resolve(kOBCISDLogForHour4);
+                    break;
+                case kOBCIStringSDHour12:
+                    resolve(kOBCISDLogForHour12);
+                    break;
+                case kOBCIStringSDHour24:
+                    resolve(kOBCISDLogForHour24);
+                    break;
+                case kOBCIStringSDMin5:
+                    resolve(kOBCISDLogForMin5);
+                    break;
+                case kOBCIStringSDMin15:
+                    resolve(kOBCISDLogForMin15);
+                    break;
+                case kOBCIStringSDMin30:
+                    resolve(kOBCISDLogForMin30);
+                    break;
+                case kOBCIStringSDSec14:
+                    resolve(kOBCISDLogForSec14);
+                    break;
+                default:
+                    reject(new Error(TypeError));
+                    break;
+
+            }
+        });
+    },
     /** Stream Data Commands */
     OBCIStreamStart:kOBCIStreamStart,
     OBCIStreamStop:kOBCIStreamStop,

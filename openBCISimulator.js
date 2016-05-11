@@ -41,6 +41,11 @@ function OpenBCISimulatorFactory() {
 
         // Bools
         this.connected = false;
+        this.sd = {
+            active:false,
+            startTime: 0
+        };
+        this.streaming = false;
         // Buffers
         this.buffer = new Buffer(500);
         // Numbers
@@ -87,13 +92,45 @@ function OpenBCISimulatorFactory() {
         switch (data[0]) {
             case k.OBCIStreamStart:
                 if (!this.stream) this._startStream();
+                this.streaming = true;
                 break;
             case k.OBCIStreamStop:
                 if (this.stream) clearInterval(this.stream); // Stops the stream
+                this.streaming = false;
                 break;
             case k.OBCIMiscSoftReset:
                 if (this.stream) clearInterval(this.stream);
-                this.emit('data', new Buffer('OpenBCI Board Simulator\nPush The World V-0.2\n$$$'));
+                this.streaming = false;
+                this.emit('data', new Buffer('OpenBCI Board Simulator\nPush The World\nFirmware: v2$$$'));
+                break;
+            case k.OBCISDLogForHour1:
+            case k.OBCISDLogForHour2:
+            case k.OBCISDLogForHour4:
+            case k.OBCISDLogForHour12:
+            case k.OBCISDLogForHour24:
+            case k.OBCISDLogForMin5:
+            case k.OBCISDLogForMin15:
+            case k.OBCISDLogForMin30:
+            case k.OBCISDLogForSec14:
+                // If we are not streaming, then do verbose output
+                if (!this.streaming) {
+                    this.emit('data', new Buffer('Wiring is correct and a card is present.\nCorresponding SD file OBCI_69.TXT\n$$$'));
+                }
+                this.sd.active = true;
+                this.sd.startTime = now();
+                break;
+            case k.OBCISDLogStop:
+                if (!this.streaming) {
+                    if (this.SDLogActive) {
+                        this.emit('data', new Buffer('Total Elapsed Time: ' + (now() - this.sd.startTime) + ' ms\n'));
+                        this.emit('data', new Buffer('Max write time: ' + (Math.random()*500) + ' us\n'));
+                        this.emit('data', new Buffer('Min write time: ' + (Math.random()*200) + ' us\n'));
+                        this.emit('data', new Buffer('Overruns: 0\n$$$'));
+                    } else {
+                        this.emit('data', new Buffer('No open file to close\n$$$'));
+                    }
+                }
+                this.SDLogActive = false;
                 break;
             case k.OBCISyncClockStart:
                 setTimeout(() => {

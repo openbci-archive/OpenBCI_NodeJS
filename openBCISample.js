@@ -297,15 +297,12 @@ var sampleModule = {
 
         var auxData = [0,0,0];
 
-        // Init arrays to hold coefficients for each channel
-        var b0 = new Array(numberOfChannels);
-        var b1 = new Array(numberOfChannels);
-        var b2 = new Array(numberOfChannels);
+        // Init arrays to hold coefficients for each channel and init to 0
+        //  This gives the 1/f filter memory on each iteration
+        var b0 = new Array(numberOfChannels).fill(0);
+        var b1 = new Array(numberOfChannels).fill(0);
+        var b2 = new Array(numberOfChannels).fill(0);
 
-        // Init coefficients to 0
-        b0.fill(0);
-        b1.fill(0);
-        b2.fill(0);
 
         return function(previousSampleNumber) {
             var newSample = self.newSample();
@@ -315,7 +312,7 @@ var sampleModule = {
                 whiteNoise = distribution.ppf(Math.random()) * Math.sqrt(sampleRateHz/2)/uVolts;
 
                 switch (i) {
-                    case 0: // Add 10Hz signal to channel 1... briany
+                    case 0: // Add 10Hz signal to channel 1... brainy
                     case 1:
                         if (injectAlpha) {
                             sinePhaseRad[i] += 2 * Math.PI * sineWaveFreqHz10 / sampleRateHz;

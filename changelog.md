@@ -1,4 +1,14 @@
-# 0.3.3
+# 0.3.5
+
+### New Features
+
+* SD card support! Now logging to an SD card is easier than ever. 
+ 
+### Bug Fixes
+
+* Sample rate does not return correct sample rate for custom rate on simulator. #58
+
+# 0.3.4
 
 ### New Features
 
