@@ -9,7 +9,6 @@ var k = openBCISample.k;
 var openBCISimulator = require('./openBCISimulator');
 var now = require('performance-now');
 var Sntp = require('sntp');
-var bignum = require('bignum');
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -1081,14 +1080,11 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype.syncClocksStart = function() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
-            if (this.streaming) reject('Cannot be streaming to sync clocks');
+            //if (this.streaming) reject('Cannot be streaming to sync clocks');
             if (this.firmwareVersion === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
             this.searchingBuf = this.searchBuffers.timeSyncSent;
             this.isLookingForKeyInBuffer = true;
             this.sync.timeEnteredQueue = this.sntpNow();
-
-            var timeBuf = bignum(this.sync.timeEnteredQueue).toBuffer(0);
-            //console.log('timeBuf',timeBuf);
 
             if (this.options.verbose) console.log('PC time sent to board: ' + this.sync.timeEnteredQueue);
             this.write(k.OBCISyncTimeSet);
@@ -1236,7 +1232,8 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype._processPacketStandardAccel = function(rawPacket) {
         openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray)
             .then(sampleObject => {
-                openBCISample.debugPrettyPrint(sampleObject);
+                //openBCISample.debugPrettyPrint(sampleObject);
+                sampleObject.rawPacket = rawPacket;
                 this._finalizeNewSample(sampleObject);
             })
             .catch(err => console.log('Error in _processPacketStandardAccel',err));
@@ -1281,7 +1278,10 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype._processPacketTimeSyncedAccel = function(rawPacket) {
         if (this.sync.active === false) console.log('Need to sync with board...');
         openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
-            .then(this._finalizeNewSample)
+            .then((sampleObject) => {
+                sampleObject.rawPacket = rawPacket;
+                this._finalizeNewSample(sampleObject);
+            })
             .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
     };
 
@@ -1297,6 +1297,7 @@ function OpenBCIFactory() {
         if(this.impedanceTest.active) {
             this._processImpedanceTest(sampleObject);
         } else {
+            console.log('sample',sampleObject);
             this.emit('sample', sampleObject);
         }
     };

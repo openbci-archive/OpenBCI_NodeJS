@@ -3,8 +3,6 @@ var gaussian = require('gaussian');
 
 var k = require('./openBCIConstants');
 
-var bigInt = require('big-integer');
-
 /** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
 //   Set by its hardware.
@@ -111,8 +109,13 @@ var sampleModule = {
             for(var i = 0; i < 8; i++) {
                 console.log('---- Channel Data ' + (i + 1) + ': ' + sample.channelData[i]);
             }
-            for(var j = 0; j < 3; j++) {
-                console.log('---- Aux Data ' + j + ': ' + sample.auxData[j]);
+            if(!!sample.accelData) {
+                for(var j = 0; j < 3; j++) {
+                    console.log('---- Accel Data ' + j + ': ' + sample.accelData[j]);
+                }
+            }
+            if (!!sample.auxData) {
+                console.log('---- Aux Data ' + sample.auxData);
             }
             console.log('---- Stop Byte: ' + sample.stopByte);
         }
