@@ -621,7 +621,7 @@ The duration you want to log SD information for. Opens a new SD file to write in
 
 **_Returns_** resolves if the command was added to the write queue.
 
-### .sdStop(recordingDuration)
+### .sdStop()
 
 Stop logging to the SD card and close any open file. If you are not streaming when you send this command, then you should expect to get a success or failure message followed by and end of transmission `$$$`. The success message contains a lot of useful information about what happened when writing to the SD card.
 
