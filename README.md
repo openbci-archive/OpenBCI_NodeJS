@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/OpenBCI/openbci-js-sdk.svg?branch=master)](https://travis-ci.org/OpenBCI/openbci-js-sdk)
 [![codecov.io](https://codecov.io/github/OpenBCI/openbci-js-sdk/coverage.svg?branch=master)](https://codecov.io/github/OpenBCI/openbci-js-sdk?branch=master)
 
-# openbci-sdk
+# OpenBCI Node.js SDK
 
 A Node.js module for OpenBCI ~ written with love by [Push The World!](http://www.pushtheworldllc.com)
 
