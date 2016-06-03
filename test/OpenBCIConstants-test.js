@@ -323,6 +323,86 @@ describe('OpenBCIConstants', function() {
             assert.equal('j', k.OBCISDLogStop);
         });
     });
+    describe('SD card string Commands',function() {
+        it('logs for 1 hour', function() {
+            assert.equal('1hour', k.OBCIStringSDHour1);
+        });
+        it('logs for 2 hours', function() {
+            assert.equal('2hour', k.OBCIStringSDHour2);
+        });
+        it('logs for 4 hours', function() {
+            assert.equal('4hour', k.OBCIStringSDHour4);
+        });
+        it('logs for 12 hours', function() {
+            assert.equal('12hour', k.OBCIStringSDHour12);
+        });
+        it('logs for 24 hours', function() {
+            assert.equal('24hour', k.OBCIStringSDHour24);
+        });
+        it('logs for 5 minutes', function() {
+            assert.equal('5min', k.OBCIStringSDMin5);
+        });
+        it('logs for 15 minutes', function() {
+            assert.equal('15min', k.OBCIStringSDMin15);
+        });
+        it('logs for 30 minutes', function() {
+            assert.equal('30min', k.OBCIStringSDMin30);
+        });
+        it('logs for 14 seconds', function() {
+            assert.equal('14sec', k.OBCIStringSDSec14);
+        });
+    });
+    describe('#sdSettingForString',function() {
+        it('correct command for 1 hour', function() {
+            var expectation = k.OBCISDLogForHour1;
+            var result = k.sdSettingForString('1hour');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 2 hour', function() {
+            var expectation = k.OBCISDLogForHour2;
+            var result = k.sdSettingForString('2hour');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 4 hour', function() {
+            var expectation = k.OBCISDLogForHour4;
+            var result = k.sdSettingForString('4hour');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 12 hour', function() {
+            var expectation = k.OBCISDLogForHour12;
+            var result = k.sdSettingForString('12hour');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 24 hour', function() {
+            var expectation = k.OBCISDLogForHour24;
+            var result = k.sdSettingForString('24hour');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 5 min', function() {
+            var expectation = k.OBCISDLogForMin5;
+            var result = k.sdSettingForString('5min');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 15 min', function() {
+            var expectation = k.OBCISDLogForMin15;
+            var result = k.sdSettingForString('15min');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 30 min', function() {
+            var expectation = k.OBCISDLogForMin30;
+            var result = k.sdSettingForString('30min');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('correct command for 14 seconds', function() {
+            var expectation = k.OBCISDLogForSec14;
+            var result = k.sdSettingForString('14sec');
+            return expect(result).to.eventually.equal(expectation);
+        });
+        it('Invalid command request', function() {
+            var result = k.sdSettingForString('taco');
+            return expect(result).to.be.rejected;
+        });
+    });
     describe('Stream Data Commands',function() {
         it('starts',function () {
             assert.equal('b', k.OBCIStreamStart);

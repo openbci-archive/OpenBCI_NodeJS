@@ -104,6 +104,15 @@ describe('openbci-sdk',function() {
             });
             (ourBoard.options.simulate).should.equal(true);
         });
+        it('can enter simulate mode with different sample rate', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulate: true,
+                simulatorSampleRate: 69
+            });
+            (ourBoard.options.simulate).should.equal(true);
+            (ourBoard.options.simulatorSampleRate).should.equal(69);
+            (ourBoard.sampleRate()).should.equal(69);
+        });
         it('can turn 50Hz line noise on', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 simulatorLineNoise: '50Hz'
@@ -314,6 +323,87 @@ describe('openbci-sdk',function() {
                     }
                 });
             })
+        });
+        describe('#sdStart',function() {
+            before(function(done) {
+                ourBoard.connect(masterPortName)
+                    .then(() => {
+                        ourBoard.once('ready',done);
+                    })
+                    .catch(err => done(err));
+            });
+            afterEach(function(done) {
+                ourBoard.sdStop()
+                    .catch(done);
+                ourBoard.once('ready',done);
+
+            });
+            after(function(done) {
+                ourBoard.disconnect()
+                    .then(done)
+                    .catch(err => done(err));
+            });
+            it('can start 14 seconds of logging with sd',function(done) {
+                ourBoard.sdStart('14sec')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 5 minutes of logging with sd',function(done) {
+                ourBoard.sdStart('5min')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 15 minutes of logging with sd',function(done) {
+                ourBoard.sdStart('15min')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 30 minutes of logging with sd',function(done) {
+                ourBoard.sdStart('30min')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 1 hour of logging with sd',function(done) {
+                ourBoard.sdStart('1hour')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 2 hours of logging with sd',function(done) {
+                ourBoard.sdStart('2hour')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 4 hours of logging with sd',function(done) {
+                ourBoard.sdStart('4hour')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 12 hours of logging with sd',function(done) {
+                ourBoard.sdStart('12hour')
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can start 24 hours of logging with sd',function(done) {
+                ourBoard.sdStart('24hour')
+                    .catch(done);
+                ourBoard.once('ready',done);
+            });
+        });
+        describe('#sdStop',function() {
+            before(function(done) {
+                ourBoard.connect(masterPortName).catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
+            it('can stop logging with sd',function(done) {
+                console.log('yoyoyo');
+                ourBoard.sdStop()
+                    .then(() => {
+                        console.log('taco');
+                        spy.should.have.been.calledWith('j');
+                    })
+                    .catch(err => done(err));
+                ourBoard.once('ready',done);
+            });
         });
         // bad
         describe('#channelOff', function () {

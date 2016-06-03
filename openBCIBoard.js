@@ -988,16 +988,62 @@ function OpenBCIFactory() {
     };
 
     /**
+     * @description Start logging to the SD card.
+     * @param recordingDuration {String} - The duration you want to log SD information for. Limited to:
+     *      '14sec', '5min', '15min', '30min', '1hour', '2hour', '4hour', '12hour', '24hour'
+     * @returns {Promise} - Resolves if the command was added to write queue.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.sdStart = function(recordingDuration) {
+        return new Promise((resolve,reject) => {
+            if (!this.connected) reject('Must be connected to the device');
+            k.sdSettingForString(recordingDuration)
+                .then(command => {
+                    // If we are not streaming, then expect a confirmation message back from the board
+                    if (!this.streaming) {
+                        this.isLookingForKeyInBuffer = true;
+                        this.searchingBuf = this.searchBuffers.miscStop;
+                    }
+                    this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
+                    return this.write(command);
+                })
+                .catch(err => reject(err));
+        });
+
+    };
+
+    /**
+     * @description Sends the stop SD logging command to the board.
+     * @returns {Promise}
+     */
+    OpenBCIBoard.prototype.sdStop = function() {
+        return new Promise((resolve,reject) => {
+            if (!this.connected) reject('Must be connected to the device');
+            // If we are not streaming, then expect a confirmation message back from the board
+            if (!this.streaming) {
+                this.isLookingForKeyInBuffer = true;
+                this.searchingBuf = this.searchBuffers.miscStop;
+            }
+            this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
+            return this.write(k.OBCISDLogStop);
+        });
+    };
+
+    /**
      * @description Get the the current sample rate is.
      * @returns {Number} The sample rate
      * Note: This is dependent on if you configured the board correctly on setup options
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sampleRate = function() {
-        if(this.options.boardType === k.OBCIBoardDaisy) {
-            return k.OBCISampleRate125;
+        if (this.options.simulate) {
+            return this.options.simulatorSampleRate;
         } else {
-            return k.OBCISampleRate250;
+            if(this.options.boardType === k.OBCIBoardDaisy) {
+                return k.OBCISampleRate125;
+            } else {
+                return k.OBCISampleRate250;
+            }
         }
     };
 

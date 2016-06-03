@@ -290,7 +290,7 @@ Board optional configurations.
 * `simulatorSampleRate` - The sample rate to use for the simulator (Default is `250`)
 * `simulatorAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
 * `simulatorLineNoise` - Injects line noise on channels.
-  * `60Hz` - 60Hz line noise (Default) (ex. __Unite States__)
+  * `60Hz` - 60Hz line noise (Default) (ex. __United States__)
   * `50Hz` - 50Hz line noise (ex. __Europe__)
   * `None` - Do not inject line noise.
 * `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup with the SNTP time. Adds a time stamp to the AUX channels. NOTE: (NOT FULLY IMPLEMENTED) [DO NOT USE]
@@ -598,6 +598,34 @@ Get the current sample rate.
 **Note: This is dependent on if you configured the board correctly on setup options. Specifically as a daisy.**
 
 **_Returns_** a number, the current sample rate.
+
+### .sdStart(recordingDuration)
+
+Start logging to the SD card. If you are not streaming when you send this command, then you should expect to get a success or failure message followed by and end of transmission `$$$`.
+
+**_recordingDuration_**
+
+The duration you want to log SD information for. Opens a new SD file to write into. Limited to:
+
+ * `14sec` - 14 seconds
+ * `5min` - 5 minutes
+ * `15min` - 15 minutes
+ * `30min` - 30 minutes
+ * `1hour` - 1 hour
+ * `2hour` - 2 hour
+ * `4hour` - 4 hour
+ * `12hour` - 12 hour
+ * `24hour` - 24 hour
+ 
+**Note: You must have the proper type of SD card inserted into the board for logging to work.**
+
+**_Returns_** resolves if the command was added to the write queue.
+
+### .sdStop(recordingDuration)
+
+Stop logging to the SD card and close any open file. If you are not streaming when you send this command, then you should expect to get a success or failure message followed by and end of transmission `$$$`. The success message contains a lot of useful information about what happened when writing to the SD card.
+
+**_Returns_** resolves if the command was added to the write queue.
 
 ### .simulatorEnable()
 
