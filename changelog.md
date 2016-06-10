@@ -1,3 +1,9 @@
+# 0.3.6
+
+### New Features
+
+* Simulator now has accelerometer data
+
 # 0.3.5
 
 ### New Features

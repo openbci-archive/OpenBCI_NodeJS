@@ -242,6 +242,23 @@ describe('openBCISample',function() {
                 });
             });
         });
+        it('should generate a sample with accel data every 25Hz',function() {
+            var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);
+            var newSample = generateSample(0);
+
+            var passed = false;
+            // Should get one non-zero auxData array (on the 10th sample)
+            for (var i = 0; i < 10; i++) {
+                newSample = generateSample(newSample.sampleNumber);
+                if (newSample.auxData[0] !== 0 || newSample.auxData[1] !== 0 || newSample.auxData[2] !== 0) {
+                    passed = true;
+                    newSample.auxData[0].should.be.approximately(0,0.1);
+                    newSample.auxData[1].should.be.approximately(0,0.1);
+                    newSample.auxData[2].should.be.approximately(1,0.4);
+                }
+            }
+            assert(passed,"a sample with accel data was produced");
+        });
     });
     describe('#impedanceCalculationForChannel', function() {
 
