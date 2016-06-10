@@ -296,6 +296,10 @@ var sampleModule = {
         sinePhaseRad.fill(0);
 
         var auxData = [0,0,0];
+        var accelCounter = 0;
+        // With 250Hz, every 10 samples, with 125Hz, every 5...
+        var samplesPerAccelRate = Math.floor(sampleRateHz / 25); // best to make this an integer
+        if (samplesPerAccelRate < 1) samplesPerAccelRate = 1;
 
         // Init arrays to hold coefficients for each channel and init to 0
         //  This gives the 1/f filter memory on each iteration
@@ -352,7 +356,31 @@ var sampleModule = {
             } else {
                 newSample.sampleNumber = previousSampleNumber + 1;
             }
-            newSample.auxData = auxData;
+
+            /**
+             * Sample rate of accelerometer is 25Hz... when the accelCounter hits the relative sample rate of the accel
+             *  we will output a new accel value. The approach will be to consider that Z should be about 1 and X and Y
+             *  should be somewhere around 0.
+             */
+            if (accelCounter == samplesPerAccelRate) {
+                // Initialize a new array
+                var accelArray = [0,0,0];
+                // Calculate X
+                accelArray[0] = (Math.random() * 0.1 * (Math.random() > 0.5 ? -1 : 1));
+                // Calculate Y
+                accelArray[1] = (Math.random() * 0.1 * (Math.random() > 0.5 ? -1 : 1));
+                // Calculate Z, this is around 1
+                accelArray[2] = 1 - ((Math.random() * 0.4) * (Math.random() > 0.5 ? -1 : 1));
+                // Store the newly calculated value
+                newSample.auxData = accelArray;
+                // Reset the counter
+                accelCounter = 0;
+            } else {
+                // Increment counter
+                accelCounter++;
+                // Store the default value
+                newSample.auxData = auxData;
+            }
 
             return newSample;
         };
