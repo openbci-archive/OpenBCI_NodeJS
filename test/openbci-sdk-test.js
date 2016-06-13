@@ -658,7 +658,7 @@ describe('openbci-sdk',function() {
     /**
      * Test the function that routes raw packets for processing
      */
-    describes('#_processQualifiedPacket', function() {
+    describe('#_processQualifiedPacket', function() {
         var ourBoard;
         var funcSpyTimeSyncSet, funcSpyTimeSyncedAccel, funcSpyTimeSyncedRawAux, funcSpyStandardRawAux, funcSpyStandardAccel;
 
