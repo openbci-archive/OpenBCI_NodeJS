@@ -269,11 +269,17 @@ const OBCIAccelAxisZ = 2;
 const OBCIFirmwareV1 = 'v1';
 const OBCIFirmwareV2 = 'v2';
 
+/** Parse */
+const OBCIParseDaisy        = "Daisy";
+const OBCIParseFirmware     = "v2";
+const OBCIParseEndOfFile    = "$$$";
+
 /** Used in parsing incoming serial data*/
-const OBCIStreamStateInit      = 0;
-const OBCIStreamStateStoring   = 1;
-const OBCIStreamStateReady     = 2;
-const OBCIStreamStateTail      = 3;
+const OBCIParsingNone             = 3;
+const OBCIParsingReset            = 0;
+const OBCIParsingTimeSyncSent     = 1;
+const OBCIParsingChannelSettings  = 2;
+
 
 module.exports = {
     /** Turning channels off */
@@ -767,11 +773,15 @@ module.exports = {
     OBCIAccelAxisZ,
     /** Time from board */
     OBCIStreamPacketTimeByteSize,
+    /** Parse */
+    OBCIParseDaisy,
+    OBCIParseFirmware,
+    OBCIParseEndOfFile,
     /** Used in parsing incoming serial data*/
-    OBCIStreamStateInit,
-    OBCIStreamStateStoring,
-    OBCIStreamStateReady,
-    OBCIStreamStateTail
+    OBCIParsingNone,
+    OBCIParsingReset,
+    OBCIParsingTimeSyncSent,
+    OBCIParsingChannelSettings
 };
 
 /**

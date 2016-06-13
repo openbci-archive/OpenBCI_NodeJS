@@ -59,18 +59,18 @@ var sampleModule = {
 
         });
     },
-    getRawPacketType: getRawPacketType,
-    getFromTimePacketAccel: getFromTimePacketAccel,
-    getFromTimePacketTime: getFromTimePacketTime,
-    getFromTimePacketRawAux: getFromTimePacketRawAux,
-    parsePacketTimeSyncedAccel: parsePacketTimeSyncedAccel,
-    parsePacketTimeSyncedRawAux: parsePacketTimeSyncedRawAux,
+    getRawPacketType,
+    getFromTimePacketAccel,
+    getFromTimePacketTime,
+    getFromTimePacketRawAux,
+    parsePacketTimeSyncedAccel,
+    parsePacketTimeSyncedRawAux,
     /**
      * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
      * @param sample - A sample object
      * @returns {Buffer}
      */
-    convertSampleToPacket: function(sample) {
+    convertSampleToPacket: (sample) => {
         var packetBuffer = new Buffer(k.OBCIPacketSize);
         packetBuffer.fill(0);
 
@@ -82,13 +82,13 @@ var sampleModule = {
 
         // channel data
         for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            var threeByteBuffer = this.floatTo3ByteBuffer(sample.channelData[i]);
+            var threeByteBuffer = floatTo3ByteBuffer(sample.channelData[i]);
 
             threeByteBuffer.copy(packetBuffer, 2 + (i * 3));
         }
 
         for (var j = 0; j < 3; j++) {
-            var twoByteBuffer = this.floatTo2ByteBuffer(sample.auxData[j]);
+            var twoByteBuffer = floatTo2ByteBuffer(sample.auxData[j]);
 
             twoByteBuffer.copy(packetBuffer, (k.OBCIPacketSize - 1 - 6) + (i * 2));
         }
@@ -99,7 +99,7 @@ var sampleModule = {
 
         return packetBuffer;
     },
-    debugPrettyPrint: function(sample) {
+    debugPrettyPrint: (sample) => {
         if(sample === null || sample === undefined) {
             console.log('== Sample is undefined ==');
         } else {
@@ -120,12 +120,12 @@ var sampleModule = {
             console.log('---- Stop Byte: ' + sample.stopByte);
         }
     },
-    samplePrintHeader: function() {
+    samplePrintHeader: () => {
         return (
             'All voltages in Volts!' +
             'sampleNumber, channel1, channel2, channel3, channel4, channel5, channel6, channel7, channel8, aux1, aux2, aux3\n');
     },
-    samplePrintLine: function(sample) {
+    samplePrintLine: sample => {
         return new Promise((resolve, reject) => {
             if (sample === null || sample === undefined) reject('undefined sample');
 
@@ -145,47 +145,8 @@ var sampleModule = {
             );
         });
     },
-    /**
-     * @description Convert float number into three byte buffer. This is the opposite of .interpret24bitAsInt32()
-     * @param float - The number you want to convert
-     * @returns {Buffer} - 3-byte buffer containing the float
-     */
-    floatTo3ByteBuffer: function(float) {
-        var intBuf = new Buffer(3); // 3 bytes for 24 bits
-        intBuf.fill(0); // Fill the buffer with 0s
-
-        var temp = float / ( ADS1299_VREF / 24 / (Math.pow(2,23) - 1)); // Convert to counts
-
-        temp = Math.floor(temp); // Truncate counts number
-
-        // Move into buffer
-        intBuf[2] = temp & 255;
-        intBuf[1] = (temp & (255 << 8)) >> 8;
-        intBuf[0] = (temp & (255 << 16)) >> 16;
-
-        return intBuf;
-    },
-    /**
-     * @description Convert float number into three byte buffer. This is the opposite of .interpret24bitAsInt32()
-     * @param float - The number you want to convert
-     * @returns {Buffer} - 3-byte buffer containing the float
-     */
-    floatTo2ByteBuffer: function(float) {
-        var intBuf = new Buffer(2); // 2 bytes for 16 bits
-        intBuf.fill(0); // Fill the buffer with 0s
-
-        var temp = float / SCALE_FACTOR_ACCEL; // Convert to counts
-
-        temp = Math.floor(temp); // Truncate counts number
-
-        //console.log('Num: ' + temp);
-
-        // Move into buffer
-        intBuf[1] = temp & 255;
-        intBuf[0] = (temp & (255 << 8)) >> 8;
-
-        return intBuf;
-    },
+    floatTo3ByteBuffer,
+    floatTo2ByteBuffer,
     /**
      * @description Calculate the impedance for one channel only.
      * @param sampleObject - Standard OpenBCI sample object
@@ -193,7 +154,7 @@ var sampleModule = {
      * @returns {Promise} - Fulfilled with impedance value for the specified channel.
      * @author AJ Keller
      */
-    impedanceCalculationForChannel: function(sampleObject,channelNumber) {
+    impedanceCalculationForChannel: (sampleObject,channelNumber) => {
         const sqrt2 = Math.sqrt(2);
         return new Promise((resolve,reject) => {
             if(sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
@@ -216,7 +177,7 @@ var sampleModule = {
      * @returns {Promise} - Fulfilled with impedances for the sample
      * @author AJ Keller
      */
-    impedanceCalculationForAllChannels: function(sampleObject) {
+    impedanceCalculationForAllChannels: sampleObject => {
         const sqrt2 = Math.sqrt(2);
         return new Promise((resolve,reject) => {
             if(sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
@@ -239,7 +200,7 @@ var sampleModule = {
             resolve(sampleObject);
         });
     },
-    interpret16bitAsInt32: function(twoByteBuffer) {
+    interpret16bitAsInt32: twoByteBuffer => {
         var prefix = 0;
 
         if(twoByteBuffer[0] > 127) {
@@ -249,7 +210,7 @@ var sampleModule = {
 
         return (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
     },
-    interpret24bitAsInt32: function(threeByteBuffer) {
+    interpret24bitAsInt32: threeByteBuffer => {
         var prefix = 0;
 
         if(threeByteBuffer[0] > 127) {
@@ -260,7 +221,7 @@ var sampleModule = {
         return (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
 
     },
-    impedanceArray: (numberOfChannels) => {
+    impedanceArray: numberOfChannels => {
         var impedanceArray = [];
         for (var i = 0; i < numberOfChannels; i++) {
             impedanceArray.push(newImpedanceObject(i+1));
@@ -268,22 +229,14 @@ var sampleModule = {
         return impedanceArray;
     },
     impedanceObject: newImpedanceObject,
-    impedanceSummarize: (singleInputObject) => {
+    impedanceSummarize: singleInputObject => {
         if (singleInputObject.raw > k.OBCIImpedanceThresholdBadMax) { // The case for no load (super high impedance)
             singleInputObject.text = k.OBCIImpedanceTextNone;
         } else {
             singleInputObject.text = k.getTextForRawImpedance(singleInputObject.raw); // Get textual impedance
         }
     },
-    newSample: function() {
-        return {
-            startByte: k.OBCIByteStart,
-            sampleNumber:0,
-            channelData: [],
-            auxData: [],
-            stopByte: k.OBCIByteStop
-        }
-    },
+    newSample,
     /**
      * @description Create a configurable function to return samples for a simulator. This implements 1/f filtering injection to create more brain like data.
      * @param numberOfChannels
@@ -292,7 +245,7 @@ var sampleModule = {
      * @param lineNoise
      * @returns {Function}
      */
-    randomSample: function(numberOfChannels,sampleRateHz, injectAlpha,lineNoise) {
+    randomSample: (numberOfChannels,sampleRateHz, injectAlpha,lineNoise) => {
         var self = this;
         const distribution = gaussian(0,1);
         const sineWaveFreqHz10 = 10;
@@ -316,8 +269,8 @@ var sampleModule = {
         var b2 = new Array(numberOfChannels).fill(0);
 
 
-        return function(previousSampleNumber) {
-            var newSample = self.newSample();
+        return previousSampleNumber => {
+            var sample = newSample();
             var whiteNoise;
             for(var i = 0; i < numberOfChannels; i++) { //channels are 0 indexed
                 // This produces white noise
@@ -357,12 +310,12 @@ var sampleModule = {
                 b0[i] = 0.99765 * b0[i] + whiteNoise * 0.0990460;
                 b1[i] = 0.96300 * b1[i] + whiteNoise * 0.2965164;
                 b2[i] = 0.57000 * b2[i] + whiteNoise * 1.0526913;
-                newSample.channelData[i] = b0[i] + b1[i] + b2[i] + whiteNoise * 0.1848;
+                sample.channelData[i] = b0[i] + b1[i] + b2[i] + whiteNoise * 0.1848;
             }
             if (previousSampleNumber == 255) {
-                newSample.sampleNumber = 0;
+                sample.sampleNumber = 0;
             } else {
-                newSample.sampleNumber = previousSampleNumber + 1;
+                sample.sampleNumber = previousSampleNumber + 1;
             }
 
             /**
@@ -380,21 +333,21 @@ var sampleModule = {
                 // Calculate Z, this is around 1
                 accelArray[2] = 1 - ((Math.random() * 0.4) * (Math.random() > 0.5 ? -1 : 1));
                 // Store the newly calculated value
-                newSample.auxData = accelArray;
+                sample.auxData = accelArray;
                 // Reset the counter
                 accelCounter = 0;
             } else {
                 // Increment counter
                 accelCounter++;
                 // Store the default value
-                newSample.auxData = auxData;
+                sample.auxData = auxData;
             }
 
-            return newSample;
+            return sample;
         };
     },
     scaleFactorAux: SCALE_FACTOR_ACCEL,
-    k:k,
+    k,
     /**
      * @description Use the Goertzel algorithm to calculate impedances
      * @param sample - a sample with channelData Array
@@ -449,7 +402,7 @@ var sampleModule = {
             return;
         }
     },
-    goertzelNewObject: (numberOfChannels) => {
+    goertzelNewObject: numberOfChannels => {
         // Object to help calculate the goertzel
         var q1 = [];
         var q2 = [];
@@ -464,7 +417,28 @@ var sampleModule = {
             numberOfChannels: numberOfChannels
         }
     },
-    GOERTZEL_BLOCK_SIZE:GOERTZEL_BLOCK_SIZE
+    GOERTZEL_BLOCK_SIZE,
+    samplePacket: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 0, 0, 1, 0, 2, 0xC0]);
+    },
+    samplePacketReal: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0x8F, 0xF2, 0x40, 0x8F, 0xDF, 0xF4, 0x90, 0x2B, 0xB6, 0x8F, 0xBF, 0xBF, 0x7F, 0xFF, 0xFF, 0x7F, 0xFF, 0xFF, 0x94, 0x25, 0x34, 0x20, 0xB6, 0x7D, 0, 0xE0, 0, 0xE0, 0x0F, 0x70, 0xC0]);
+    },
+    samplePacketTimeSyncSet: () => {
+        return new Buffer([0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0, 0, 0, 1, 0xC3]);
+    },
+    samplePacketStandardRawAux: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 1, 2, 3, 4, 5, 0xC1]);
+    },
+    samplePacketTimeSyncedAccel: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 1, 0, 0, 0, 1, 0xC4]);
+    },
+    samplePacketTimeSyncedRawAux: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0x00, 0x01, 0, 0, 0, 1, 0xC5]);
+    },
+    samplePacketUserDefined: () => {
+        return new Buffer([0xA0, 0x00, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0xC2]);
+    }
 };
 
 module.exports = sampleModule;
@@ -786,4 +760,74 @@ function getChannelDataArray(dataBuf, channelSettingsArray) {
 
 function getRawPacketType(stopByte) {
     return stopByte & 0xF;
+}
+
+/**
+ * @description This method is useful for normalizing sample numbers for fake sample packets. This is intended to be
+ *      useful for the simulator and automated testing.
+ * @param sampleNumber {Number} - The sample number you want to assign to the packet
+ * @returns {Number} - The normalized input `sampleNumber` between 0-255
+ */
+function sampleNumberNormalize(sampleNumber) {
+    if (sampleNumber || sampleNumber === 0) {
+        if (sampleNumber > 255) {
+            sampleNumber = 255;
+        }
+    } else {
+        sampleNumber = 0x45;
+    }
+    return sampleNumber;
+}
+
+function newSample() {
+    return {
+        startByte: k.OBCIByteStart,
+        sampleNumber:0,
+        channelData: [],
+        auxData: [],
+        stopByte: k.OBCIByteStop
+    }
+}
+
+/**
+ * @description Convert float number into three byte buffer. This is the opposite of .interpret24bitAsInt32()
+ * @param float - The number you want to convert
+ * @returns {Buffer} - 3-byte buffer containing the float
+ */
+function floatTo3ByteBuffer(float) {
+    var intBuf = new Buffer(3); // 3 bytes for 24 bits
+    intBuf.fill(0); // Fill the buffer with 0s
+
+    var temp = float / ( ADS1299_VREF / 24 / (Math.pow(2,23) - 1)); // Convert to counts
+
+    temp = Math.floor(temp); // Truncate counts number
+
+    // Move into buffer
+    intBuf[2] = temp & 255;
+    intBuf[1] = (temp & (255 << 8)) >> 8;
+    intBuf[0] = (temp & (255 << 16)) >> 16;
+
+    return intBuf;
+}
+
+/**
+ * @description Convert float number into three byte buffer. This is the opposite of .interpret24bitAsInt32()
+ * @param float - The number you want to convert
+ * @returns {Buffer} - 3-byte buffer containing the float
+ */
+function floatTo2ByteBuffer(float) {
+    var intBuf = new Buffer(2); // 2 bytes for 16 bits
+    intBuf.fill(0); // Fill the buffer with 0s
+
+    var temp = float / SCALE_FACTOR_ACCEL; // Convert to counts
+
+    temp = Math.floor(temp); // Truncate counts number
+
+    //console.log('Num: ' + temp);
+
+    // Move into buffer
+    intBuf[1] = temp & 255;
+    intBuf[0] = (temp & (255 << 8)) >> 8;
+
+    return intBuf;
 }

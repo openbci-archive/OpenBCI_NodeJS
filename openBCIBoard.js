@@ -96,18 +96,8 @@ function OpenBCIFactory() {
         this.accelArray = [0,0,0]; // X, Y, Z
         this.writeOutArray = new Array(100);
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
-        // Bools
-        this.parsingForFirmwareVersion = false;
-        this.isLookingForKeyInBuffer = true;
-        this.firmwareVersion = k.OBCIFirmwareV1;
         // Buffers
         this.masterBuffer = masterBufferMaker();
-        this.searchBuffers = {
-            timeSyncSent: new Buffer(k.OBCISyncTimeSent),
-            miscStop: new Buffer('$$$'),
-            firmwareVersion: new Buffer(k.OBCIFirmwareV2)
-        };
-        this.searchingBuf = this.searchBuffers.miscStop;
         // Objects
         this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writer = null;
@@ -119,6 +109,11 @@ function OpenBCIFactory() {
             sampleNumber: 0,
             continuousMode: false,
             impedanceForChannel: 0
+        };
+        this.info = {
+            boardType:k.OBCIBoardDefault,
+            sampleRate:k.OBCISampleRate250,
+            firmware:k.OBCIFirmwareV1
         };
         this.sync = {
             active: false,
@@ -142,7 +137,7 @@ function OpenBCIFactory() {
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
         this.sampleCount = 0;
-        this.curStreamState = k.OBCIStreamStateInit;
+        this.curParsingMode = k.OBCIParsingReset;
         // Strings
 
         // NTP
@@ -205,8 +200,6 @@ function OpenBCIFactory() {
                 this._processBytes(data);
             });
             this.connected = true;
-
-
             boardSerial.on('open',() => {
                 var timeoutLength = this.options.simulate ? 50 : 300;
                 if(this.options.verbose) console.log('Serial port open');
@@ -516,9 +509,7 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.softReset = function() {
-        this.parsingForFirmwareVersion = true;
-        this.isLookingForKeyInBuffer = true;
-        this.searchingBuf = this.searchBuffers.miscStop;
+        this.curParsingMode = k.OBCIParsingReset;
         return this.write(k.OBCIMiscSoftReset);
     };
 
@@ -528,10 +519,10 @@ function OpenBCIFactory() {
      * @returns {Promise.<T>|*}
      * @author AJ Keller (@pushtheworldllc)
      */
+    // TODO: REDO THIS FUNCTION
     OpenBCIBoard.prototype.getSettingsForChannel = function(channelNumber) {
-
         return k.channelSettingsKeyForChannel(channelNumber).then((newSearchingBuffer) => {
-            this.searchingBuf = newSearchingBuffer;
+            // this.searchingBuf = newSearchingBuffer;
             return this.printRegisterSettings();
         });
     };
@@ -543,7 +534,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.printRegisterSettings = function() {
         return this.write(k.OBCIMiscQueryRegisterSettings).then(() => {
-            this.isLookingForKeyInBuffer = true; //need to wait for key in
+            this.curParsingMode = k.OBCIParsingChannelSettings;
         });
     };
 
@@ -1014,8 +1005,9 @@ function OpenBCIFactory() {
                 .then(command => {
                     // If we are not streaming, then expect a confirmation message back from the board
                     if (!this.streaming) {
-                        this.isLookingForKeyInBuffer = true;
-                        this.searchingBuf = this.searchBuffers.miscStop;
+                        // TODO: Do we need to parse the incoming data? I think we can just eject it
+                        // this.isLookingForKeyInBuffer = true;
+                        // this.searchingBuf = this.searchBuffers.miscStop;
                     }
                     this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
                     return this.write(command);
@@ -1034,8 +1026,9 @@ function OpenBCIFactory() {
             if (!this.connected) reject('Must be connected to the device');
             // If we are not streaming, then expect a confirmation message back from the board
             if (!this.streaming) {
-                this.isLookingForKeyInBuffer = true;
-                this.searchingBuf = this.searchBuffers.miscStop;
+                // TODO: Do we need to parse the incoming data? I think we can just eject it
+                // this.isLookingForKeyInBuffer = true;
+                // this.searchingBuf = this.searchBuffers.miscStop;
             }
             this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
             return this.write(k.OBCISDLogStop);
@@ -1083,20 +1076,11 @@ function OpenBCIFactory() {
             if (!this.connected) reject('Must be connected to the device');
             //if (this.streaming) reject('Cannot be streaming to sync clocks');
             if (this.firmwareVersion === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
-            this.searchingBuf = this.searchBuffers.timeSyncSent;
-            this.isLookingForKeyInBuffer = true;
+            this.curParsingMode = k.OBCIParsingTimeSyncSent;
             this.sync.timeEnteredQueue = this.sntpNow();
 
             if (this.options.verbose) console.log('PC time sent to board: ' + this.sync.timeEnteredQueue);
             this.write(k.OBCISyncTimeSet);
-
-            //if (timeBuf.byteLength < 4) reject('Err: Time less than 4 bytes?');
-            //
-            //for (var i = timeBuf.byteLength - 4; i < timeBuf.byteLength; i++) {
-            //    //console.log('timeChunk',timeBuf.slice(i,i+1));
-            //    this._writeAndDrain(timeBuf.slice(i,i+1));
-            //}
-
             resolve();
         });
     };
@@ -1264,10 +1248,13 @@ function OpenBCIFactory() {
             }
             parsePosition++;
         }
-        
         return dataBuffer;
     };
 
+    /**
+     * @description Used to route qualified packets to their proper parsers
+     * @param rawDataPacketBuffer
+     */
     OpenBCIBoard.prototype._processQualifiedPacket = function(rawDataPacketBuffer) {
         var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
         switch (packetType) {
@@ -1285,12 +1272,20 @@ function OpenBCIFactory() {
                 this._processPacketStandardRawAux(rawDataPacketBuffer);
                 break;
             case k.OBCIStreamPacketStandardAccel:
-            default: // Normally route here
                 this._processPacketStandardAccel(rawDataPacketBuffer);
+                break;
+            default: // Don't do anything if the packet is not good
                 break;
         }
     };
 
+
+    /**
+     * @description A method to parse a stream packet that has channel data and data in the aux channels that contains accel data.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._processPacketStandardAccel = function(rawPacket) {
         openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray)
             .then(sampleObject => {
@@ -1302,8 +1297,8 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description A method to parse a stream packet that has channel data and data in the aux channels that should not be scared.
-     * @param rawPacket - A 33byte data buffer from _processBytes
+     * @description A method to parse a stream packet that has channel data and data in the aux channels that should not be scaled.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
      * @private
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -1314,7 +1309,12 @@ function OpenBCIFactory() {
     };
 
 
-
+    /**
+     * @description A method to parse a stream packet that does not have channel data or aux/accel data, just a timestamp
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
         if (this.options.verbose) console.log('Got time set packet from the board');
         openBCISample.getFromTimePacketTime(rawPacket)
@@ -1337,6 +1337,13 @@ function OpenBCIFactory() {
             .catch(err => console.log('Error in _processPacketTimeSyncSet', err));
     };
 
+    /**
+     * @description A method to parse a stream packet that contains channel data, a time stamp and event couple packets
+     *      an accelerometer value.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._processPacketTimeSyncedAccel = function(rawPacket) {
         if (this.sync.active === false) console.log('Need to sync with board...');
         openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
@@ -1347,6 +1354,13 @@ function OpenBCIFactory() {
             .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
     };
 
+    /**
+     * @description A method to parse a stream packet that contains channel data, a time stamp and two extra bytes that
+     *      shall be emitted as a raw buffer and not scaled.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._processPacketTimeSyncedRawAux = function(rawPacket) {
         if (this.sync.active === false) console.log('Need to sync with board...');
         openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
@@ -1354,6 +1368,13 @@ function OpenBCIFactory() {
             .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
     };
 
+    /**
+     * @description A method to emit samples through the EventEmitter channel `sample` or compute impedances if are
+     *      being tested.
+     * @param sampleObject - A sample object that follows the normal standards.
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._finalizeNewSample = function(sampleObject) {
         sampleObject._count = this.sampleCount++;
         if(this.impedanceTest.active) {
@@ -1364,6 +1385,12 @@ function OpenBCIFactory() {
         }
     };
 
+    /**
+     * @description A method used to compute impedances.
+     * @param sampleObject - A sample object that follows the normal standards.
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._processImpedanceTest = function(sampleObject) {
         var impedanceArray;
         if (this.impedanceTest.continuousMode) {
@@ -1382,9 +1409,12 @@ function OpenBCIFactory() {
         }
     };
 
+    /**
+     * @description Reset the master buffer and reset the number of bad packets.
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._reset = function() {
         this.masterBuffer = masterBufferMaker();
-        this.searchingBuf = this.searchBuffers.miscStop;
         this.badPackets = 0;
     };
 
@@ -1392,6 +1422,7 @@ function OpenBCIFactory() {
      * @description Stateful method for querying the current offset only when the last
      *                  one is too old. (defaults to daily)
      * @returns {Promise} A promise with the time offset
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sntpGetOffset = function() {
         return new Promise((resolve, reject) => {

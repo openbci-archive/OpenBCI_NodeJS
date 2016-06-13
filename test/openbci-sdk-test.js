@@ -86,7 +86,7 @@ describe('openbci-sdk',function() {
         it('should start in current stream state in the init mode', () => {
             ourBoard = new openBCIBoard.OpenBCIBoard();
 
-            ourBoard.curStreamState.should.equal(k.OBCIStreamStateInit);
+            ourBoard.curParsingMode.should.equal(k.OBCIParsingReset);
         });
         it('can set ganglion mode', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -666,7 +666,6 @@ describe('openbci-sdk',function() {
             // The buffer should not have anything in it any more
             buffer.length.should.equal(extraBuffer.length);
         });
-
     });
 
 
