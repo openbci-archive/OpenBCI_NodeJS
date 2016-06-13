@@ -83,6 +83,11 @@ describe('openbci-sdk',function() {
                 });
             });
         });
+        it('should start in current stream state in the init mode', () => {
+            ourBoard = new openBCIBoard.OpenBCIBoard();
+
+            ourBoard.curStreamState.should.equal(k.OBCIStreamStateInit);
+        });
         it('can set ganglion mode', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 boardType: 'ganglion'
@@ -544,6 +549,90 @@ describe('openbci-sdk',function() {
                     });
                 });
             });
+        });
+
+    });
+
+    var samplePacketReal = function (sampleNumber) {
+        if (sampleNumber || sampleNumber === 0) {
+            if (sampleNumber > 255) {
+                sampleNumber = 255;
+            }
+        } else {
+            sampleNumber = 0x45;
+        }
+        return new Buffer([0xA0,sampleNumber,0x8F,0xF2,0x40,0x8F,0xDF,0xF4,0x90,0x2B,0xB6,0x8F,0xBF,0xBF,0x7F,0xFF,0xFF,0x7F,0xFF,0xFF,0x94,0x25,0x34,0x20,0xB6,0x7D,0,0xE0,0,0xE0,0x0F,0x70, 0xC0]);
+    };
+
+    /**
+     * Test the function that parses an incoming data buffer for packets
+     */
+    describe.only('#_processDataBuffer', function() {
+        var ourBoard = new openBCIBoard.OpenBCIBoard({
+            verbose: true
+        });
+        var _processQualifiedPacketSpy = sinon.spy(ourBoard,"_processQualifiedPacket");
+
+        it('should return an unaltered buffer if there is less than a packets worth of data in it', () => {
+            var expectedString = "AJ";
+            var buffer = new Buffer(expectedString);
+
+            // Reset the spy if it exists
+            if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
+
+            // Test the function
+            buffer = ourBoard._processDataBuffer(buffer);
+
+            // Convert the buffer to a string and ensure that it equals the expected string
+            buffer.toString().should.equal(expectedString);
+
+            // Make sure that the spy was not infact called.
+            _processQualifiedPacketSpy.should.not.have.been.called;
+        });
+
+        it('should identify a packet',() => {
+            var buffer = samplePacketReal(0);
+
+            // Reset the spy if it exists
+            if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
+
+            // Call the function under test
+            buffer = ourBoard._processDataBuffer(buffer);
+
+            // Ensure that we extracted only one buffer
+            _processQualifiedPacketSpy.should.have.been.calledOnce;
+
+            // The buffer should not have anything in it any more
+            buffer.length.should.equal(0);
+        });
+
+        it('should extract a buffer and preseve the remaining data in the buffer',() => {
+            var buffer = samplePacketReal(0);
+        });
+
+        it('should be able to extract multiple packets from a single buffer',() => {
+            // We are going to extract multiple buffers
+            var expectedNumberOfBuffers = 3;
+            // declare the big buffer
+            var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers);
+            // Fill that new big buffer with buffers
+            samplePacketReal(0).copy(buffer,0);
+            samplePacketReal(1).copy(buffer,k.OBCIPacketSize);
+            samplePacketReal(2).copy(buffer,k.OBCIPacketSize * 2);
+
+            // Reset the spy if it exists
+            if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
+
+            // Call the function under test
+            buffer = ourBoard._processDataBuffer(buffer);
+
+            // Ensure that we extracted only one buffer
+            _processQualifiedPacketSpy.should.have.been.calledThrice;
+
+            // The buffer should not have anything in it any more
+            buffer.length.should.equal(0);
+
+
         });
 
     });

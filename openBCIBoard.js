@@ -142,6 +142,7 @@ function OpenBCIFactory() {
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
         this.sampleCount = 0;
+        this.curStreamState = k.OBCIStreamStateInit;
         // Strings
 
         // NTP
@@ -1180,8 +1181,6 @@ function OpenBCIFactory() {
 
             var readingPosition = 0;
 
-            while (readingPosition <= bytesToRead)
-
             // 45 < (200 - 33) --> 45 < 167 (good) | 189 < 167 (bad) | 0 < (28 - 33) --> 0 < -5 (bad)
             while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
                 if (data[readingPosition] === k.OBCIByteStart) {
@@ -1228,6 +1227,65 @@ function OpenBCIFactory() {
             } else {
                 this.buffer = null;
             }
+        }
+    };
+
+    /**
+     * @description Used to extract samples out of a buffer of unknown length
+     * @param dataBuffer {Buffer} - A buffer to parse for samples
+     * @returns {Buffer} - Any data that was not pulled out of the buffer
+     */
+    OpenBCIBoard.prototype._processDataBuffer = function(dataBuffer) {
+        var bytesToParse = dataBuffer.byteLength;
+        // Exit if we have a buffer with less data than a packet
+        if (bytesToParse < k.OBCIPacketSize) return dataBuffer;
+
+        var parsePosition = 0;
+        // Begin parseing
+        while (parsePosition <= bytesToParse - k.OBCIPacketSize) {
+            // Is the current byte a head byte that looks like 0xA0
+            if (dataBuffer[parsePosition] === k.OBCIByteStart) {
+                // Now that we know the first is a head byte, let's see if the last one is a
+                //  tail byte 0xCx where x is the set of numbers from 0-F (hex)
+                if ((dataBuffer[parsePosition + k.OBCIPacketSize - 1] & 0xF0) === k.OBCIByteStop) {
+                    // We just qualified a raw packet
+
+                    // Grab the raw packet, make a copy of it.
+                    var rawPacket = Buffer.from(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
+
+                    // Submit the packet for processing
+                    this._processQualifiedPacket(rawPacket);
+
+                    // Overwrite the dataBuffer with a new buffer
+                    dataBuffer = Buffer.from(dataBuffer.slice(parsePosition + k.OBCIPacketSize));
+                }
+            }
+            parsePosition++;
+        }
+        
+        return dataBuffer;
+    };
+
+    OpenBCIBoard.prototype._processQualifiedPacket = function(rawDataPacketBuffer) {
+        var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
+        switch (packetType) {
+            case k.OBCIStreamPacketTimeSyncSet:
+                this.sync.timeGotSetPacket = this.sntpNow();
+                this._processPacketTimeSyncSet(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketTimeSyncedAccel:
+                this._processPacketTimeSyncedAccel(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketTimeSyncedRawAux:
+                this._processPacketTimeSyncedRawAux(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketStandardRawAux:
+                this._processPacketStandardRawAux(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketStandardAccel:
+            default: // Normally route here
+                this._processPacketStandardAccel(rawDataPacketBuffer);
+                break;
         }
     };
 
