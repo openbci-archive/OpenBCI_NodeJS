@@ -103,7 +103,7 @@ function OpenBCISimulatorFactory() {
             case k.OBCIMiscSoftReset:
                 if (this.stream) clearInterval(this.stream);
                 this.streaming = false;
-                this.emit('data', new Buffer('OpenBCI Board Simulator\nPush The World\nFirmware: v2$$$'));
+                this.emit('data', new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\n${this.options.daisy ? "On Daisy ADS1299 Device ID: 0xFFFFF\n" : ""}LIS3DH Device ID: 0x38422\n${this.options.firmware === k.OBCIFirmwareV2 ? "Firmware: v2\n" : ""}$$$`));
                 break;
             case k.OBCISDLogForHour1:
             case k.OBCISDLogForHour2:
@@ -124,10 +124,10 @@ function OpenBCISimulatorFactory() {
             case k.OBCISDLogStop:
                 if (!this.streaming) {
                     if (this.SDLogActive) {
-                        this.emit('data', new Buffer('Total Elapsed Time: ' + (now() - this.sd.startTime) + ' ms\n'));
-                        this.emit('data', new Buffer('Max write time: ' + (Math.random()*500) + ' us\n'));
-                        this.emit('data', new Buffer('Min write time: ' + (Math.random()*200) + ' us\n'));
-                        this.emit('data', new Buffer('Overruns: 0\n$$$'));
+                        this.emit('data', new Buffer(`Total Elapsed Time: ${now() - this.sd.startTime} ms\n`));
+                        this.emit('data', new Buffer(`Max write time: ${Math.random()*500} us\n`));
+                        this.emit('data', new Buffer(`Min write time: ${Math.random()*200} us\n`));
+                        this.emit('data', new Buffer(`Overruns: 0\n$$$`));
                     } else {
                         this.emit('data', new Buffer('No open file to close\n$$$'));
                     }

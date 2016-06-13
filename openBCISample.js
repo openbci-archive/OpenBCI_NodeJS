@@ -707,7 +707,12 @@ function getFromTimePacketAccel(dataBuf, accelArray) {
 function getFromTimePacketRawAux(dataBuf) {
     return new Promise((resolve, reject) => {
         if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketRawAux]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-        resolve(Buffer.from(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
+        if (process.version >= 6) {
+            resolve(Buffer.from(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
+        } else {
+            resolve(new Buffer(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
+        }
+
     });
 }
 

@@ -758,6 +758,70 @@ describe('openbci-sdk',function() {
         });
     });
 
+    describe.only("#_processParseBufferForReset",function() {
+        var ourBoard;
+
+
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        beforeEach(() => {
+            ourBoard.info = {
+                boardType:"burrito",
+                sampleRate:60,
+                firmware:'taco',
+                numberOfChannels:200
+            };
+        });
+
+
+        it("should recognize firmware version 1 with no daisy", () => {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422$$$`);
+
+            ourBoard._processParseBufferForReset(buf);
+
+            ourBoard.info.firmware.should.equal(k.OBCIFirmwareV1);
+            ourBoard.info.boardType.should.equal(k.OBCIBoardDefault);
+            ourBoard.info.sampleRate.should.equal(k.OBCISampleRate250);
+            ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDefault);
+        });
+        it("should recognize firmware version 1 with daisy", () => {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\n$$$`);
+
+            ourBoard._processParseBufferForReset(buf);
+
+            ourBoard.info.firmware.should.equal(k.OBCIFirmwareV1);
+            ourBoard.info.boardType.should.equal(k.OBCIBoardDaisy);
+            ourBoard.info.sampleRate.should.equal(k.OBCISampleRate125);
+            ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDaisy);
+
+        });
+        it("should recognize firmware version 2 with no daisy", () => {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
+
+            ourBoard._processParseBufferForReset(buf);
+
+            ourBoard.info.firmware.should.equal(k.OBCIFirmwareV2);
+            ourBoard.info.boardType.should.equal(k.OBCIBoardDefault);
+            ourBoard.info.sampleRate.should.equal(k.OBCISampleRate250);
+            ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDefault);
+
+        });
+        it("should recognize firmware version 2 with daisy", () => {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
+
+            ourBoard._processParseBufferForReset(buf);
+
+            ourBoard.info.firmware.should.equal(k.OBCIFirmwareV2);
+            ourBoard.info.boardType.should.equal(k.OBCIBoardDaisy);
+            ourBoard.info.sampleRate.should.equal(k.OBCISampleRate125);
+            ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDaisy);
+
+        });
+    });
+
     xdescribe('#hardwareValidation', function() {
         this.timeout(20000); // long timeout for pleanty of stream time :)
         var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;

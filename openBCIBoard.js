@@ -113,7 +113,8 @@ function OpenBCIFactory() {
         this.info = {
             boardType:k.OBCIBoardDefault,
             sampleRate:k.OBCISampleRate250,
-            firmware:k.OBCIFirmwareV1
+            firmware:k.OBCIFirmwareV1,
+            numberOfChannels:k.OBCINumberOfChannelsDefault
         };
         this.sync = {
             active: false,
@@ -1234,13 +1235,24 @@ function OpenBCIFactory() {
                 if ((dataBuffer[parsePosition + k.OBCIPacketSize - 1] & 0xF0) === k.OBCIByteStop) {
                     /** We just qualified a raw packet */
                     // Grab the raw packet, make a copy of it.
-                    var rawPacket = Buffer.from(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
+                    var rawPacket;
+                    if (process.version > 6) {
+                        // From introcuded in node version 6.x.x
+                        rawPacket = Buffer.from(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
+                    } else {
+                        rawPacket = new Buffer(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
+                    }
+
                     // Emit that buffer
                     this.emit('rawDataPacket',rawPacket);
                     // Submit the packet for processing
                     this._processQualifiedPacket(rawPacket);
                     // Overwrite the dataBuffer with a new buffer
-                    dataBuffer = Buffer.from(dataBuffer.slice(k.OBCIPacketSize));
+                    if (process.version > 6) {
+                        dataBuffer = Buffer.from(dataBuffer.slice(k.OBCIPacketSize));
+                    } else {
+                        dataBuffer = new Buffer(dataBuffer.slice(k.OBCIPacketSize));
+                    }
                     // Move the parse position up one packet
                     parsePosition = -1;
                     bytesToParse -= k.OBCIPacketSize;
@@ -1282,8 +1294,7 @@ function OpenBCIFactory() {
                 break;
         }
     };
-
-
+    
     /**
      * @description A method to parse a stream packet that has channel data and data in the aux channels that contains accel data.
      * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
@@ -1410,6 +1421,58 @@ function OpenBCIFactory() {
             if (impedanceArray) {
                 this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
             }
+        }
+    };
+
+    OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
+        var sizeOfSearchBuf = this.searchingBuf.byteLength; // then size in bytes of the buffer we are searching for
+        for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
+            if (this.parsingForFirmwareVersion) {
+                if (this.searchBuffers.firmwareVersion.equals(data.slice(i, i+2))) {
+                    this.firmwareVersion = k.OBCIFirmwareV2;
+                    if (this.options.verbose) console.log('Using Firmware Version 2');
+                    this.parsingForFirmwareVersion = false;
+                    // If we are using the v2 firmware, no need for a delay
+                    this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
+                }
+            }
+            if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
+                if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
+                    if (this.options.verbose) console.log('Money!');
+                    if (this.options.verbose) console.log(data.toString());
+                    this.parsingForFirmwareVersion = false; // because we didnt find it
+                    this.isLookingForKeyInBuffer = false; // critical!!!
+                    this.emit('ready'); // tell user they are ready to stream, etc...
+                } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncSent)) {
+                    this.sync.timeSent = this.sntpNow();
+                    if(this.options.verbose) console.log('Sent time sync');
+
+                    this.searchingBuf = this.searchBuffers.miscStop;
+                    this.isLookingForKeyInBuffer = false;
+
+                } else {
+                    getChannelSettingsObj(data.slice(i)).then((channelSettingsObject) => {
+                        this.emit('query',channelSettingsObject);
+                    }, (err) => {
+                        console.log('Error: ' + err);
+                    });
+                    this.searchingBuf = this.searchBuffers.miscStop;
+                    break;
+                }
+            }
+        }
+    };
+
+    OpenBCIBoard.prototype._isDaisyPresentFromBuffer = function(dataBuffer) {
+        // We are going to count how many of these buffers are contained in the response message.
+        //  if there is only one then no daisy, but if there are two then there is a daisy board.
+        const ads1299 = new Buffer("ADS1299");
+
+        var sizeOfSearchBuf = ads1299.byteLength;
+        var sizeOfData = dataBuffer.byteLength;
+
+        for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
+            
         }
     };
 
