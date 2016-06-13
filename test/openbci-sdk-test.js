@@ -567,7 +567,7 @@ describe('openbci-sdk',function() {
     /**
      * Test the function that parses an incoming data buffer for packets
      */
-    describe.only('#_processDataBuffer', function() {
+    describe('#_processDataBuffer', function() {
         var ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose: true
         });
@@ -607,7 +607,24 @@ describe('openbci-sdk',function() {
         });
 
         it('should extract a buffer and preseve the remaining data in the buffer',() => {
-            var buffer = samplePacketReal(0);
+            var expectedString = "AJ";
+            var extraBuffer = new Buffer(expectedString);
+            console.log('extraBuffer',extraBuffer);
+            // declare the big buffer
+            var buffer = new Buffer(k.OBCIPacketSize + extraBuffer.length);
+            // Fill that new big buffer with buffers
+            samplePacketReal(0).copy(buffer,0);
+            extraBuffer.copy(buffer,k.OBCIPacketSize);
+            // Reset the spy if it exists
+            if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
+            // Call the function under test
+            buffer = ourBoard._processDataBuffer(buffer);
+            // Ensure that we extracted only one buffer
+            _processQualifiedPacketSpy.should.have.been.called;
+            // The buffer should have the epxected number of bytes left
+            buffer.length.should.equal(expectedString.length);
+            // Convert the buffer to a string and ensure that it equals the expected string
+            buffer.toString().should.equal(expectedString);
         });
 
         it('should be able to extract multiple packets from a single buffer',() => {
@@ -619,20 +636,35 @@ describe('openbci-sdk',function() {
             samplePacketReal(0).copy(buffer,0);
             samplePacketReal(1).copy(buffer,k.OBCIPacketSize);
             samplePacketReal(2).copy(buffer,k.OBCIPacketSize * 2);
-
             // Reset the spy if it exists
             if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
-
             // Call the function under test
             buffer = ourBoard._processDataBuffer(buffer);
-
             // Ensure that we extracted only one buffer
             _processQualifiedPacketSpy.should.have.been.calledThrice;
-
             // The buffer should not have anything in it any more
             buffer.length.should.equal(0);
+        });
 
-
+        it('should be able to get multiple packets and keep extra data on the end', () => {
+            var expectedString = "AJ";
+            var extraBuffer = new Buffer(expectedString);
+            // We are going to extract multiple buffers
+            var expectedNumberOfBuffers = 2;
+            // declare the big buffer
+            var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers + extraBuffer.length);
+            // Fill that new big buffer with buffers
+            samplePacketReal(0).copy(buffer,0);
+            samplePacketReal(1).copy(buffer,k.OBCIPacketSize);
+            extraBuffer.copy(buffer,k.OBCIPacketSize * 2);
+            // Reset the spy if it exists
+            if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
+            // Call the function under test
+            buffer = ourBoard._processDataBuffer(buffer);
+            // Ensure that we extracted only one buffer
+            _processQualifiedPacketSpy.should.have.been.calledTwice;
+            // The buffer should not have anything in it any more
+            buffer.length.should.equal(extraBuffer.length);
         });
 
     });
@@ -1326,7 +1358,7 @@ describe('#impedanceTesting', function() {
 });
 
 // Need a better test
-describe('#sync', function() {
+xdescribe('#sync', function() {
     var ourBoard;
     this.timeout(10000);
     before(function (done) {

@@ -1248,16 +1248,18 @@ function OpenBCIFactory() {
                 // Now that we know the first is a head byte, let's see if the last one is a
                 //  tail byte 0xCx where x is the set of numbers from 0-F (hex)
                 if ((dataBuffer[parsePosition + k.OBCIPacketSize - 1] & 0xF0) === k.OBCIByteStop) {
-                    // We just qualified a raw packet
-
+                    /** We just qualified a raw packet */
                     // Grab the raw packet, make a copy of it.
                     var rawPacket = Buffer.from(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
-
+                    // Emit that buffer
+                    this.emit('rawDataPacket',rawPacket);
                     // Submit the packet for processing
                     this._processQualifiedPacket(rawPacket);
-
                     // Overwrite the dataBuffer with a new buffer
-                    dataBuffer = Buffer.from(dataBuffer.slice(parsePosition + k.OBCIPacketSize));
+                    dataBuffer = Buffer.from(dataBuffer.slice(k.OBCIPacketSize));
+                    // Move the parse position up one packet
+                    parsePosition = -1;
+                    bytesToParse -= k.OBCIPacketSize;
                 }
             }
             parsePosition++;
@@ -1357,7 +1359,7 @@ function OpenBCIFactory() {
         if(this.impedanceTest.active) {
             this._processImpedanceTest(sampleObject);
         } else {
-            console.log('sample',sampleObject);
+            // console.log('sample',sampleObject);
             this.emit('sample', sampleObject);
         }
     };
