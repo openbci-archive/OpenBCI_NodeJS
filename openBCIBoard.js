@@ -1180,6 +1180,8 @@ function OpenBCIFactory() {
 
             var readingPosition = 0;
 
+            while (readingPosition <= bytesToRead)
+
             // 45 < (200 - 33) --> 45 < 167 (good) | 189 < 167 (bad) | 0 < (28 - 33) --> 0 < -5 (bad)
             while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
                 if (data[readingPosition] === k.OBCIByteStart) {

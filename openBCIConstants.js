@@ -5,288 +5,294 @@
  */
 'use strict';
 /** Turning channels off */
-const kOBCIChannelOff_1 = '1';
-const kOBCIChannelOff_2 = '2';
-const kOBCIChannelOff_3 = '3';
-const kOBCIChannelOff_4 = '4';
-const kOBCIChannelOff_5 = '5';
-const kOBCIChannelOff_6 = '6';
-const kOBCIChannelOff_7 = '7';
-const kOBCIChannelOff_8 = '8';
-const kOBCIChannelOff_9 = 'q';
-const kOBCIChannelOff_10 = 'w';
-const kOBCIChannelOff_11 = 'e';
-const kOBCIChannelOff_12 = 'r';
-const kOBCIChannelOff_13 = 't';
-const kOBCIChannelOff_14 = 'y';
-const kOBCIChannelOff_15 = 'u';
-const kOBCIChannelOff_16 = 'i';
+const OBCIChannelOff_1 = '1';
+const OBCIChannelOff_2 = '2';
+const OBCIChannelOff_3 = '3';
+const OBCIChannelOff_4 = '4';
+const OBCIChannelOff_5 = '5';
+const OBCIChannelOff_6 = '6';
+const OBCIChannelOff_7 = '7';
+const OBCIChannelOff_8 = '8';
+const OBCIChannelOff_9 = 'q';
+const OBCIChannelOff_10 = 'w';
+const OBCIChannelOff_11 = 'e';
+const OBCIChannelOff_12 = 'r';
+const OBCIChannelOff_13 = 't';
+const OBCIChannelOff_14 = 'y';
+const OBCIChannelOff_15 = 'u';
+const OBCIChannelOff_16 = 'i';
 
 /** Turn channels on */
-const kOBCIChannelOn_1 = '!';
-const kOBCIChannelOn_2 = '@';
-const kOBCIChannelOn_3 = '#';
-const kOBCIChannelOn_4 = '$';
-const kOBCIChannelOn_5 = '%';
-const kOBCIChannelOn_6 = '^';
-const kOBCIChannelOn_7 = '&';
-const kOBCIChannelOn_8 = '*';
-const kOBCIChannelOn_9 = 'Q';
-const kOBCIChannelOn_10 = 'W';
-const kOBCIChannelOn_11 = 'E';
-const kOBCIChannelOn_12 = 'R';
-const kOBCIChannelOn_13 = 'T';
-const kOBCIChannelOn_14 = 'Y';
-const kOBCIChannelOn_15 = 'U';
-const kOBCIChannelOn_16 = 'I';
+const OBCIChannelOn_1 = '!';
+const OBCIChannelOn_2 = '@';
+const OBCIChannelOn_3 = '#';
+const OBCIChannelOn_4 = '$';
+const OBCIChannelOn_5 = '%';
+const OBCIChannelOn_6 = '^';
+const OBCIChannelOn_7 = '&';
+const OBCIChannelOn_8 = '*';
+const OBCIChannelOn_9 = 'Q';
+const OBCIChannelOn_10 = 'W';
+const OBCIChannelOn_11 = 'E';
+const OBCIChannelOn_12 = 'R';
+const OBCIChannelOn_13 = 'T';
+const OBCIChannelOn_14 = 'Y';
+const OBCIChannelOn_15 = 'U';
+const OBCIChannelOn_16 = 'I';
 
 /** Test Signal Control Commands
  * 1x - Voltage will be 1 * (VREFP - VREFN) / 2.4 mV
  * 2x - Voltage will be 2 * (VREFP - VREFN) / 2.4 mV
  */
-const kOBCITestSignalConnectToDC            = 'p';
-const kOBCITestSignalConnectToGround        = '0';
-const kOBCITestSignalConnectToPulse1xFast   = '=';
-const kOBCITestSignalConnectToPulse1xSlow   = '-';
-const kOBCITestSignalConnectToPulse2xFast   = ']';
-const kOBCITestSignalConnectToPulse2xSlow   = '[';
+const OBCITestSignalConnectToDC            = 'p';
+const OBCITestSignalConnectToGround        = '0';
+const OBCITestSignalConnectToPulse1xFast   = '=';
+const OBCITestSignalConnectToPulse1xSlow   = '-';
+const OBCITestSignalConnectToPulse2xFast   = ']';
+const OBCITestSignalConnectToPulse2xSlow   = '[';
 
 /** Channel Setting Commands */
-const kOBCIChannelCmdADCNormal      = '0';
-const kOBCIChannelCmdADCShorted     = '1';
-const kOBCIChannelCmdADCBiasDRP     = '6';
-const kOBCIChannelCmdADCBiasDRN     = '7';
-const kOBCIChannelCmdADCBiasMethod  = '2';
-const kOBCIChannelCmdADCMVDD        = '3';
-const kOBCIChannelCmdADCTemp        = '4';
-const kOBCIChannelCmdADCTestSig     = '5';
-const kOBCIChannelCmdBiasInclude    = '1';
-const kOBCIChannelCmdBiasRemove     = '0';
-const kOBCIChannelCmdChannel_1      = '1';
-const kOBCIChannelCmdChannel_2      = '2';
-const kOBCIChannelCmdChannel_3      = '3';
-const kOBCIChannelCmdChannel_4      = '4';
-const kOBCIChannelCmdChannel_5      = '5';
-const kOBCIChannelCmdChannel_6      = '6';
-const kOBCIChannelCmdChannel_7      = '7';
-const kOBCIChannelCmdChannel_8      = '8';
-const kOBCIChannelCmdChannel_9      = 'Q';
-const kOBCIChannelCmdChannel_10     = 'W';
-const kOBCIChannelCmdChannel_11     = 'E';
-const kOBCIChannelCmdChannel_12     = 'R';
-const kOBCIChannelCmdChannel_13     = 'T';
-const kOBCIChannelCmdChannel_14     = 'Y';
-const kOBCIChannelCmdChannel_15     = 'U';
-const kOBCIChannelCmdChannel_16     = 'I';
-const kOBCIChannelCmdGain_1         = '0';
-const kOBCIChannelCmdGain_2         = '1';
-const kOBCIChannelCmdGain_4         = '2';
-const kOBCIChannelCmdGain_6         = '3';
-const kOBCIChannelCmdGain_8         = '4';
-const kOBCIChannelCmdGain_12        = '5';
-const kOBCIChannelCmdGain_24        = '6';
-const kOBCIChannelCmdLatch          = 'X';
-const kOBCIChannelCmdPowerOff       = '1';
-const kOBCIChannelCmdPowerOn        = '0';
-const kOBCIChannelCmdSet            = 'x';
-const kOBCIChannelCmdSRB1Connect    = '1';
-const kOBCIChannelCmdSRB1Diconnect  = '0';
-const kOBCIChannelCmdSRB2Connect    = '1';
-const kOBCIChannelCmdSRB2Diconnect  = '0';
+const OBCIChannelCmdADCNormal      = '0';
+const OBCIChannelCmdADCShorted     = '1';
+const OBCIChannelCmdADCBiasDRP     = '6';
+const OBCIChannelCmdADCBiasDRN     = '7';
+const OBCIChannelCmdADCBiasMethod  = '2';
+const OBCIChannelCmdADCMVDD        = '3';
+const OBCIChannelCmdADCTemp        = '4';
+const OBCIChannelCmdADCTestSig     = '5';
+const OBCIChannelCmdBiasInclude    = '1';
+const OBCIChannelCmdBiasRemove     = '0';
+const OBCIChannelCmdChannel_1      = '1';
+const OBCIChannelCmdChannel_2      = '2';
+const OBCIChannelCmdChannel_3      = '3';
+const OBCIChannelCmdChannel_4      = '4';
+const OBCIChannelCmdChannel_5      = '5';
+const OBCIChannelCmdChannel_6      = '6';
+const OBCIChannelCmdChannel_7      = '7';
+const OBCIChannelCmdChannel_8      = '8';
+const OBCIChannelCmdChannel_9      = 'Q';
+const OBCIChannelCmdChannel_10     = 'W';
+const OBCIChannelCmdChannel_11     = 'E';
+const OBCIChannelCmdChannel_12     = 'R';
+const OBCIChannelCmdChannel_13     = 'T';
+const OBCIChannelCmdChannel_14     = 'Y';
+const OBCIChannelCmdChannel_15     = 'U';
+const OBCIChannelCmdChannel_16     = 'I';
+const OBCIChannelCmdGain_1         = '0';
+const OBCIChannelCmdGain_2         = '1';
+const OBCIChannelCmdGain_4         = '2';
+const OBCIChannelCmdGain_6         = '3';
+const OBCIChannelCmdGain_8         = '4';
+const OBCIChannelCmdGain_12        = '5';
+const OBCIChannelCmdGain_24        = '6';
+const OBCIChannelCmdLatch          = 'X';
+const OBCIChannelCmdPowerOff       = '1';
+const OBCIChannelCmdPowerOn        = '0';
+const OBCIChannelCmdSet            = 'x';
+const OBCIChannelCmdSRB1Connect    = '1';
+const OBCIChannelCmdSRB1Diconnect  = '0';
+const OBCIChannelCmdSRB2Connect    = '1';
+const OBCIChannelCmdSRB2Diconnect  = '0';
 
 /** Channel Setting Helper Strings */
-const kOBCIStringADCNormal      = 'normal';
-const kOBCIStringADCShorted     = 'shorted';
-const kOBCIStringADCBiasMethod  = 'biasMethod';
-const kOBCIStringADCMvdd        = 'mvdd';
-const kOBCIStringADCTemp        = 'temp';
-const kOBCIStringADCTestSig     = 'testSig';
-const kOBCIStringADCBiasDrp     = 'biasDrp';
-const kOBCIStringADCBiasDrn     = 'biasDrn';
+const OBCIStringADCNormal      = 'normal';
+const OBCIStringADCShorted     = 'shorted';
+const OBCIStringADCBiasMethod  = 'biasMethod';
+const OBCIStringADCMvdd        = 'mvdd';
+const OBCIStringADCTemp        = 'temp';
+const OBCIStringADCTestSig     = 'testSig';
+const OBCIStringADCBiasDrp     = 'biasDrp';
+const OBCIStringADCBiasDrn     = 'biasDrn';
 
 /** Default Channel Settings */
-const kOBCIChannelDefaultAllSet = 'd';
-const kOBCIChannelDefaultAllGet = 'D';
+const OBCIChannelDefaultAllSet = 'd';
+const OBCIChannelDefaultAllGet = 'D';
 
 /** LeadOff Impedance Commands */
-const kOBCIChannelImpedanceLatch                = 'Z';
-const kOBCIChannelImpedanceSet                  = 'z';
-const kOBCIChannelImpedanceTestSignalApplied    = '1';
-const kOBCIChannelImpedanceTestSignalAppliedNot = '0';
+const OBCIChannelImpedanceLatch                = 'Z';
+const OBCIChannelImpedanceSet                  = 'z';
+const OBCIChannelImpedanceTestSignalApplied    = '1';
+const OBCIChannelImpedanceTestSignalAppliedNot = '0';
 
 /** SD card Commands */
-const kOBCISDLogForHour1    = 'G';
-const kOBCISDLogForHour2    = 'H';
-const kOBCISDLogForHour4    = 'J';
-const kOBCISDLogForHour12   = 'K';
-const kOBCISDLogForHour24   = 'L';
-const kOBCISDLogForMin5     = 'A';
-const kOBCISDLogForMin15    = 'S';
-const kOBCISDLogForMin30    = 'F';
-const kOBCISDLogForSec14    = 'a';
-const kOBCISDLogStop        = 'j';
+const OBCISDLogForHour1    = 'G';
+const OBCISDLogForHour2    = 'H';
+const OBCISDLogForHour4    = 'J';
+const OBCISDLogForHour12   = 'K';
+const OBCISDLogForHour24   = 'L';
+const OBCISDLogForMin5     = 'A';
+const OBCISDLogForMin15    = 'S';
+const OBCISDLogForMin30    = 'F';
+const OBCISDLogForSec14    = 'a';
+const OBCISDLogStop        = 'j';
 
 /** SD Card String Commands */
-const kOBCIStringSDHour1    = '1hour';
-const kOBCIStringSDHour2    = '2hour';
-const kOBCIStringSDHour4    = '4hour';
-const kOBCIStringSDHour12   = '12hour';
-const kOBCIStringSDHour24   = '24hour';
-const kOBCIStringSDMin5     = '5min';
-const kOBCIStringSDMin15    = '15min';
-const kOBCIStringSDMin30    = '30min';
-const kOBCIStringSDSec14    = '14sec';
+const OBCIStringSDHour1    = '1hour';
+const OBCIStringSDHour2    = '2hour';
+const OBCIStringSDHour4    = '4hour';
+const OBCIStringSDHour12   = '12hour';
+const OBCIStringSDHour24   = '24hour';
+const OBCIStringSDMin5     = '5min';
+const OBCIStringSDMin15    = '15min';
+const OBCIStringSDMin30    = '30min';
+const OBCIStringSDSec14    = '14sec';
 
 /** Stream Data Commands */
-const kOBCIStreamStart  = 'b';
-const kOBCIStreamStop   = 's';
+const OBCIStreamStart  = 'b';
+const OBCIStreamStop   = 's';
 
 /** Miscellaneous */
-const kOBCIMiscQueryRegisterSettings            = '?';
-const kOBCIMiscQueryRegisterSettingsChannel1    = 'CH1SET';
-const kOBCIMiscQueryRegisterSettingsChannel2    = 'CH2SET';
-const kOBCIMiscQueryRegisterSettingsChannel3    = 'CH3SET';
-const kOBCIMiscQueryRegisterSettingsChannel4    = 'CH4SET';
-const kOBCIMiscQueryRegisterSettingsChannel5    = 'CH5SET';
-const kOBCIMiscQueryRegisterSettingsChannel6    = 'CH6SET';
-const kOBCIMiscQueryRegisterSettingsChannel7    = 'CH7SET';
-const kOBCIMiscQueryRegisterSettingsChannel8    = 'CH8SET';
-const kOBCIMiscSoftReset                        = 'v';
+const OBCIMiscQueryRegisterSettings            = '?';
+const OBCIMiscQueryRegisterSettingsChannel1    = 'CH1SET';
+const OBCIMiscQueryRegisterSettingsChannel2    = 'CH2SET';
+const OBCIMiscQueryRegisterSettingsChannel3    = 'CH3SET';
+const OBCIMiscQueryRegisterSettingsChannel4    = 'CH4SET';
+const OBCIMiscQueryRegisterSettingsChannel5    = 'CH5SET';
+const OBCIMiscQueryRegisterSettingsChannel6    = 'CH6SET';
+const OBCIMiscQueryRegisterSettingsChannel7    = 'CH7SET';
+const OBCIMiscQueryRegisterSettingsChannel8    = 'CH8SET';
+const OBCIMiscSoftReset                        = 'v';
 
 /** 16 Channel Commands */
-const kOBCIChannelMaxNumber8    = 'c';
-const kOBCIChannelMaxNumber16   = 'C';
+const OBCIChannelMaxNumber8    = 'c';
+const OBCIChannelMaxNumber16   = 'C';
 
 /** 60Hz line filter */
-const kOBCIFilterDisable ='g';
-const kOBCIFilterEnable = 'f';
+const OBCIFilterDisable ='g';
+const OBCIFilterEnable = 'f';
 
 /** Triggers */
-const kOBCITrigger = '`';
+const OBCITrigger = '`';
 
 /** Sync Clocks */
-const kOBCISyncTimeSet = '<';
-const kOBCISyncTimeSent = ',';
+const OBCISyncTimeSet = '<';
+const OBCISyncTimeSent = ',';
 
 /** Possible number of channels */
-const kOBCINumberOfChannelsDaisy = 16;
-const kOBCINumberOfChannelsDefault = 8;
-const kOBCINumberOfChannelsGanglion = 4;
+const OBCINumberOfChannelsDaisy = 16;
+const OBCINumberOfChannelsDefault = 8;
+const OBCINumberOfChannelsGanglion = 4;
 
 /** Possible OpenBCI board types */
-const kOBCIBoardDaisy = 'daisy';
-const kOBCIBoardDefault = 'default';
-const kOBCIBoardGanglion = 'ganglion';
+const OBCIBoardDaisy = 'daisy';
+const OBCIBoardDefault = 'default';
+const OBCIBoardGanglion = 'ganglion';
 
 /** Possible Simulator Line Noise injections */
-const kOBCISimulatorLineNoiseHz60 = '60Hz';
-const kOBCISimulatorLineNoiseHz50 = '50Hz';
-const kOBCISimulatorLineNoiseNone = 'None';
+const OBCISimulatorLineNoiseHz60 = '60Hz';
+const OBCISimulatorLineNoiseHz50 = '50Hz';
+const OBCISimulatorLineNoiseNone = 'None';
 /** Possible Sample Rates*/
-const kOBCISampleRate125 = 125;
-const kOBCISampleRate250 = 250;
+const OBCISampleRate125 = 125;
+const OBCISampleRate250 = 250;
 
 /** Packet Size */
-const kOBCIPacketSize = 33;
+const OBCIPacketSize = 33;
 
 /** OpenBCI V3 Standard Packet Positions */
 /**
  * 0:[startByte] | 1:[sampleNumber] | 2:[Channel-1.1] | 3:[Channel-1.2] | 4:[Channel-1.3] | 5:[Channel-2.1] | 6:[Channel-2.2] | 7:[Channel-2.3] | 8:[Channel-3.1] | 9:[Channel-3.2] | 10:[Channel-3.3] | 11:[Channel-4.1] | 12:[Channel-4.2] | 13:[Channel-4.3] | 14:[Channel-5.1] | 15:[Channel-5.2] | 16:[Channel-5.3] | 17:[Channel-6.1] | 18:[Channel-6.2] | 19:[Channel-6.3] | 20:[Channel-7.1] | 21:[Channel-7.2] | 22:[Channel-7.3] | 23:[Channel-8.1] | 24:[Channel-8.2] | 25:[Channel-8.3] | 26:[Aux-1.1] | 27:[Aux-1.2] | 28:[Aux-2.1] | 29:[Aux-2.2] | 30:[Aux-3.1] | 31:[Aux-3.2] | 32:StopByte
  */
-const kOBCIPacketPositionChannelDataStart   = 2;  // 0:startByte | 1:sampleNumber | [2:4] | [5:7] | [8:10] | [11:13] | [14:16] | [17:19] | [21:23] | [24:26]
-const kOBCIPacketPositionChannelDataStop    = 25; // 24 bytes for channel data
-const kOBCIPacketPositionSampleNumber       = 1;
-const kOBCIPacketPositionStartByte          = 0;  // first byte
-const kOBCIPacketPositionStopByte           = 32; // [32]
-const kOBCIPacketPositionStartAux           = 26; // [26,27]:Aux 1 | [28,29]:Aux 2 | [30,31]:Aux 3
-const kOBCIPacketPositionStopAux            = 31; // - - - [30,31]:Aux 3 | 32: Stop byte
-const kOBCIPacketPositionTimeSyncAuxStart   = 26;
-const kOBCIPacketPositionTimeSyncAuxStop    = 28;
-const kOBCIPacketPositionTimeSyncTimeStart  = 28;
-const kOBCIPacketPositionTimeSyncTimeStop   = 32;
+const OBCIPacketPositionChannelDataStart   = 2;  // 0:startByte | 1:sampleNumber | [2:4] | [5:7] | [8:10] | [11:13] | [14:16] | [17:19] | [21:23] | [24:26]
+const OBCIPacketPositionChannelDataStop    = 25; // 24 bytes for channel data
+const OBCIPacketPositionSampleNumber       = 1;
+const OBCIPacketPositionStartByte          = 0;  // first byte
+const OBCIPacketPositionStopByte           = 32; // [32]
+const OBCIPacketPositionStartAux           = 26; // [26,27]:Aux 1 | [28,29]:Aux 2 | [30,31]:Aux 3
+const OBCIPacketPositionStopAux            = 31; // - - - [30,31]:Aux 3 | 32: Stop byte
+const OBCIPacketPositionTimeSyncAuxStart   = 26;
+const OBCIPacketPositionTimeSyncAuxStop    = 28;
+const OBCIPacketPositionTimeSyncTimeStart  = 28;
+const OBCIPacketPositionTimeSyncTimeStop   = 32;
 
 
 /** Notable Bytes */
-const kOBCIByteStart = 0xA0;
-const kOBCIByteStop = 0xC0;
+const OBCIByteStart = 0xA0;
+const OBCIByteStop = 0xC0;
 
 /** Errors */
-const kErrorInvalidByteLength = "Invalid Packet Byte Length";
-const kErrorInvalidByteStart = "Invalid Start Byte";
-const kErrorInvalidByteStop = "Invalid Stop Byte";
-const kErrorUndefinedOrNullInput = "Undefined or Null Input";
+const ErrorInvalidByteLength = "Invalid Packet Byte Length";
+const ErrorInvalidByteStart = "Invalid Start Byte";
+const ErrorInvalidByteStop = "Invalid Stop Byte";
+const ErrorUndefinedOrNullInput = "Undefined or Null Input";
 
 /** Max Master Buffer Size */
-const kOBCIMasterBufferSize = 4096;
+const OBCIMasterBufferSize = 4096;
 
 /** Impedance Calculation Variables */
-const kOBCILeadOffDriveInAmps = 0.000000006;
-const kOBCILeadOffFrequencyHz = 31.5;
+const OBCILeadOffDriveInAmps = 0.000000006;
+const OBCILeadOffFrequencyHz = 31.5;
 
 /** Command send delay */
-const kOBCIWriteIntervalDelayMSLong = 50;
-const kOBCIWriteIntervalDelayMSNone = 0;
-const kOBCIWriteIntervalDelayMSShort = 10;
+const OBCIWriteIntervalDelayMSLong = 50;
+const OBCIWriteIntervalDelayMSNone = 0;
+const OBCIWriteIntervalDelayMSShort = 10;
 
 /** Impedance */
-const kOBCIImpedanceTextBad = 'bad';
-const kOBCIImpedanceTextNone = 'none';
-const kOBCIImpedanceTextGood = 'good';
-const kOBCIImpedanceTextInit = 'init';
-const kOBCIImpedanceTextOk = 'ok';
+const OBCIImpedanceTextBad = 'bad';
+const OBCIImpedanceTextNone = 'none';
+const OBCIImpedanceTextGood = 'good';
+const OBCIImpedanceTextInit = 'init';
+const OBCIImpedanceTextOk = 'ok';
 
-const kOBCIImpedanceThresholdGoodMin = 0;
-const kOBCIImpedanceThresholdGoodMax = 5000;
-const kOBCIImpedanceThresholdOkMin = 5001;
-const kOBCIImpedanceThresholdOkMax = 10000;
-const kOBCIImpedanceThresholdBadMin = 10001;
-const kOBCIImpedanceThresholdBadMax = 1000000;
+const OBCIImpedanceThresholdGoodMin = 0;
+const OBCIImpedanceThresholdGoodMax = 5000;
+const OBCIImpedanceThresholdOkMin = 5001;
+const OBCIImpedanceThresholdOkMax = 10000;
+const OBCIImpedanceThresholdBadMin = 10001;
+const OBCIImpedanceThresholdBadMax = 1000000;
 
-const kOBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resistor that must be subtracted
+const OBCIImpedanceSeriesResistor = 2200; // There is a 2.2 k Ohm series resistor that must be subtracted
 
 /** Simulator */
-const kOBCISimulatorPortName = 'OpenBCISimulator';
+const OBCISimulatorPortName = 'OpenBCISimulator';
 
 /**
  * Stream packet types/codes
  */
-const kOBCIStreamPacketStandardAccel      = 0; // 0000
-const kOBCIStreamPacketStandardRawAux     = 1; // 0001
-const kOBCIStreamPacketUserDefinedType    = 2; // 0010
-const kOBCIStreamPacketTimeSyncSet        = 3; // 0011
-const kOBCIStreamPacketTimeSyncedAccel    = 4; // 0100
-const kOBCIStreamPacketTimeSyncedRawAux   = 5; // 0101
+const OBCIStreamPacketStandardAccel      = 0; // 0000
+const OBCIStreamPacketStandardRawAux     = 1; // 0001
+const OBCIStreamPacketUserDefinedType    = 2; // 0010
+const OBCIStreamPacketTimeSyncSet        = 3; // 0011
+const OBCIStreamPacketTimeSyncedAccel    = 4; // 0100
+const OBCIStreamPacketTimeSyncedRawAux   = 5; // 0101
 
 /** Time from board */
-const kOBCIStreamPacketTimeByteSize = 4;
+const OBCIStreamPacketTimeByteSize = 4;
 
 /** Time synced with accel packet */
-const kOBCIAccelAxisX = 0;
-const kOBCIAccelAxisY = 1;
-const kOBCIAccelAxisZ = 2;
+const OBCIAccelAxisX = 0;
+const OBCIAccelAxisY = 1;
+const OBCIAccelAxisZ = 2;
 
 /** Firmware version indicator */
-const kOBCIFirmwareV1 = 'v1';
-const kOBCIFirmwareV2 = 'v2';
+const OBCIFirmwareV1 = 'v1';
+const OBCIFirmwareV2 = 'v2';
+
+/** Used in parsing incoming serial data*/
+const OBCIStreamStateInit      = 0;
+const OBCIStreamStateStoring   = 1;
+const OBCIStreamStateReady     = 2;
+const OBCIStreamStateTail      = 3;
 
 module.exports = {
     /** Turning channels off */
-    OBCIChannelOff_1:kOBCIChannelOff_1,
-    OBCIChannelOff_2:kOBCIChannelOff_2,
-    OBCIChannelOff_3:kOBCIChannelOff_3,
-    OBCIChannelOff_4:kOBCIChannelOff_4,
-    OBCIChannelOff_5:kOBCIChannelOff_5,
-    OBCIChannelOff_6:kOBCIChannelOff_6,
-    OBCIChannelOff_7:kOBCIChannelOff_7,
-    OBCIChannelOff_8:kOBCIChannelOff_8,
-    OBCIChannelOff_9:kOBCIChannelOff_9,
-    OBCIChannelOff_10:kOBCIChannelOff_10,
-    OBCIChannelOff_11:kOBCIChannelOff_11,
-    OBCIChannelOff_12:kOBCIChannelOff_12,
-    OBCIChannelOff_13:kOBCIChannelOff_13,
-    OBCIChannelOff_14:kOBCIChannelOff_14,
-    OBCIChannelOff_15:kOBCIChannelOff_15,
-    OBCIChannelOff_16:kOBCIChannelOff_16,
+    OBCIChannelOff_1,
+    OBCIChannelOff_2,
+    OBCIChannelOff_3,
+    OBCIChannelOff_4,
+    OBCIChannelOff_5,
+    OBCIChannelOff_6,
+    OBCIChannelOff_7,
+    OBCIChannelOff_8,
+    OBCIChannelOff_9,
+    OBCIChannelOff_10,
+    OBCIChannelOff_11,
+    OBCIChannelOff_12,
+    OBCIChannelOff_13,
+    OBCIChannelOff_14,
+    OBCIChannelOff_15,
+    OBCIChannelOff_16,
     /**
      * Purpose: To get the proper command to turn a channel off
      * @param channelNumber - A number (1-16) of the desired channel
@@ -296,52 +302,52 @@ module.exports = {
         return new Promise(function(resolve,reject) {
             switch (channelNumber) {
                 case 1:
-                    resolve(kOBCIChannelOff_1);
+                    resolve(OBCIChannelOff_1);
                     break;
                 case 2:
-                    resolve(kOBCIChannelOff_2);
+                    resolve(OBCIChannelOff_2);
                     break;
                 case 3:
-                    resolve(kOBCIChannelOff_3);
+                    resolve(OBCIChannelOff_3);
                     break;
                 case 4:
-                    resolve(kOBCIChannelOff_4);
+                    resolve(OBCIChannelOff_4);
                     break;
                 case 5:
-                    resolve(kOBCIChannelOff_5);
+                    resolve(OBCIChannelOff_5);
                     break;
                 case 6:
-                    resolve(kOBCIChannelOff_6);
+                    resolve(OBCIChannelOff_6);
                     break;
                 case 7:
-                    resolve(kOBCIChannelOff_7);
+                    resolve(OBCIChannelOff_7);
                     break;
                 case 8:
-                    resolve(kOBCIChannelOff_8);
+                    resolve(OBCIChannelOff_8);
                     break;
                 case 9:
-                    resolve(kOBCIChannelOff_9);
+                    resolve(OBCIChannelOff_9);
                     break;
                 case 10:
-                    resolve(kOBCIChannelOff_10);
+                    resolve(OBCIChannelOff_10);
                     break;
                 case 11:
-                    resolve(kOBCIChannelOff_11);
+                    resolve(OBCIChannelOff_11);
                     break;
                 case 12:
-                    resolve(kOBCIChannelOff_12);
+                    resolve(OBCIChannelOff_12);
                     break;
                 case 13:
-                    resolve(kOBCIChannelOff_13);
+                    resolve(OBCIChannelOff_13);
                     break;
                 case 14:
-                    resolve(kOBCIChannelOff_14);
+                    resolve(OBCIChannelOff_14);
                     break;
                 case 15:
-                    resolve(kOBCIChannelOff_15);
+                    resolve(OBCIChannelOff_15);
                     break;
                 case 16:
-                    resolve(kOBCIChannelOff_16);
+                    resolve(OBCIChannelOff_16);
                     break;
                 default:
                     reject('Error [commandChannelOff]: Invalid Channel Number');
@@ -350,72 +356,72 @@ module.exports = {
         });
     },
     /** Turning channels on */
-    OBCIChannelOn_1:kOBCIChannelOn_1,
-    OBCIChannelOn_2:kOBCIChannelOn_2,
-    OBCIChannelOn_3:kOBCIChannelOn_3,
-    OBCIChannelOn_4:kOBCIChannelOn_4,
-    OBCIChannelOn_5:kOBCIChannelOn_5,
-    OBCIChannelOn_6:kOBCIChannelOn_6,
-    OBCIChannelOn_7:kOBCIChannelOn_7,
-    OBCIChannelOn_8:kOBCIChannelOn_8,
-    OBCIChannelOn_9:kOBCIChannelOn_9,
-    OBCIChannelOn_10:kOBCIChannelOn_10,
-    OBCIChannelOn_11:kOBCIChannelOn_11,
-    OBCIChannelOn_12:kOBCIChannelOn_12,
-    OBCIChannelOn_13:kOBCIChannelOn_13,
-    OBCIChannelOn_14:kOBCIChannelOn_14,
-    OBCIChannelOn_15:kOBCIChannelOn_15,
-    OBCIChannelOn_16:kOBCIChannelOn_16,
+    OBCIChannelOn_1,
+    OBCIChannelOn_2,
+    OBCIChannelOn_3,
+    OBCIChannelOn_4,
+    OBCIChannelOn_5,
+    OBCIChannelOn_6,
+    OBCIChannelOn_7,
+    OBCIChannelOn_8,
+    OBCIChannelOn_9,
+    OBCIChannelOn_10,
+    OBCIChannelOn_11,
+    OBCIChannelOn_12,
+    OBCIChannelOn_13,
+    OBCIChannelOn_14,
+    OBCIChannelOn_15,
+    OBCIChannelOn_16,
     commandChannelOn: function(channelNumber) {
         return new Promise(function(resolve,reject) {
             switch (channelNumber) {
                 case 1:
-                    resolve(kOBCIChannelOn_1);
+                    resolve(OBCIChannelOn_1);
                     break;
                 case 2:
-                    resolve(kOBCIChannelOn_2);
+                    resolve(OBCIChannelOn_2);
                     break;
                 case 3:
-                    resolve(kOBCIChannelOn_3);
+                    resolve(OBCIChannelOn_3);
                     break;
                 case 4:
-                    resolve(kOBCIChannelOn_4);
+                    resolve(OBCIChannelOn_4);
                     break;
                 case 5:
-                    resolve(kOBCIChannelOn_5);
+                    resolve(OBCIChannelOn_5);
                     break;
                 case 6:
-                    resolve(kOBCIChannelOn_6);
+                    resolve(OBCIChannelOn_6);
                     break;
                 case 7:
-                    resolve(kOBCIChannelOn_7);
+                    resolve(OBCIChannelOn_7);
                     break;
                 case 8:
-                    resolve(kOBCIChannelOn_8);
+                    resolve(OBCIChannelOn_8);
                     break;
                 case 9:
-                    resolve(kOBCIChannelOn_9);
+                    resolve(OBCIChannelOn_9);
                     break;
                 case 10:
-                    resolve(kOBCIChannelOn_10);
+                    resolve(OBCIChannelOn_10);
                     break;
                 case 11:
-                    resolve(kOBCIChannelOn_11);
+                    resolve(OBCIChannelOn_11);
                     break;
                 case 12:
-                    resolve(kOBCIChannelOn_12);
+                    resolve(OBCIChannelOn_12);
                     break;
                 case 13:
-                    resolve(kOBCIChannelOn_13);
+                    resolve(OBCIChannelOn_13);
                     break;
                 case 14:
-                    resolve(kOBCIChannelOn_14);
+                    resolve(OBCIChannelOn_14);
                     break;
                 case 15:
-                    resolve(kOBCIChannelOn_15);
+                    resolve(OBCIChannelOn_15);
                     break;
                 case 16:
-                    resolve(kOBCIChannelOn_16);
+                    resolve(OBCIChannelOn_16);
                     break;
                 default:
                     reject('Error [commandChannelOn]: Invalid Channel Number');
@@ -424,35 +430,35 @@ module.exports = {
         });
     },
     /** Test Signal Control Commands */
-    OBCITestSignalConnectToDC:kOBCITestSignalConnectToDC,
-    OBCITestSignalConnectToGround:kOBCITestSignalConnectToGround,
-    OBCITestSignalConnectToPulse1xFast:kOBCITestSignalConnectToPulse1xFast,
-    OBCITestSignalConnectToPulse1xSlow:kOBCITestSignalConnectToPulse1xSlow,
-    OBCITestSignalConnectToPulse2xFast:kOBCITestSignalConnectToPulse2xFast,
-    OBCITestSignalConnectToPulse2xSlow:kOBCITestSignalConnectToPulse2xSlow,
+    OBCITestSignalConnectToDC,
+    OBCITestSignalConnectToGround,
+    OBCITestSignalConnectToPulse1xFast,
+    OBCITestSignalConnectToPulse1xSlow,
+    OBCITestSignalConnectToPulse2xFast,
+    OBCITestSignalConnectToPulse2xSlow,
     getTestSignalCommand: (signal) => {
         return new Promise((resolve,reject) => {
             switch (signal) {
                 case 'dc':
-                    resolve(kOBCITestSignalConnectToDC);
+                    resolve(OBCITestSignalConnectToDC);
                     break;
                 case 'ground':
-                    resolve(kOBCITestSignalConnectToGround);
+                    resolve(OBCITestSignalConnectToGround);
                     break;
                 case 'pulse1xFast':
-                    resolve(kOBCITestSignalConnectToPulse1xFast);
+                    resolve(OBCITestSignalConnectToPulse1xFast);
                     break;
                 case 'pulse1xSlow':
-                    resolve(kOBCITestSignalConnectToPulse1xSlow);
+                    resolve(OBCITestSignalConnectToPulse1xSlow);
                     break;
                 case 'pulse2xFast':
-                    resolve(kOBCITestSignalConnectToPulse2xFast);
+                    resolve(OBCITestSignalConnectToPulse2xFast);
                     break;
                 case 'pulse2xSlow':
-                    resolve(kOBCITestSignalConnectToPulse2xSlow);
+                    resolve(OBCITestSignalConnectToPulse2xSlow);
                     break;
                 case 'none':
-                    resolve(kOBCIChannelDefaultAllSet);
+                    resolve(OBCIChannelDefaultAllSet);
                     break;
                 default:
                     reject('Invalid selection! Check your spelling.');
@@ -461,51 +467,51 @@ module.exports = {
         })
     },
     /** Channel Setting Commands */
-    OBCIChannelCmdADCNormal:kOBCIChannelCmdADCNormal,
-    OBCIChannelCmdADCShorted:kOBCIChannelCmdADCShorted,
-    OBCIChannelCmdADCBiasDRP:kOBCIChannelCmdADCBiasDRP,
-    OBCIChannelCmdADCBiasDRN:kOBCIChannelCmdADCBiasDRN,
-    OBCIChannelCmdADCBiasMethod:kOBCIChannelCmdADCBiasMethod,
-    OBCIChannelCmdADCMVDD:kOBCIChannelCmdADCMVDD,
-    OBCIChannelCmdADCTemp:kOBCIChannelCmdADCTemp,
-    OBCIChannelCmdADCTestSig:kOBCIChannelCmdADCTestSig,
-    OBCIChannelCmdBiasInclude:kOBCIChannelCmdBiasInclude,
-    OBCIChannelCmdBiasRemove:kOBCIChannelCmdBiasRemove,
-    OBCIChannelCmdChannel_1:kOBCIChannelCmdChannel_1,
-    OBCIChannelCmdChannel_2:kOBCIChannelCmdChannel_2,
-    OBCIChannelCmdChannel_3:kOBCIChannelCmdChannel_3,
-    OBCIChannelCmdChannel_4:kOBCIChannelCmdChannel_4,
-    OBCIChannelCmdChannel_5:kOBCIChannelCmdChannel_5,
-    OBCIChannelCmdChannel_6:kOBCIChannelCmdChannel_6,
-    OBCIChannelCmdChannel_7:kOBCIChannelCmdChannel_7,
-    OBCIChannelCmdChannel_8:kOBCIChannelCmdChannel_8,
-    OBCIChannelCmdChannel_9:kOBCIChannelCmdChannel_9,
-    OBCIChannelCmdChannel_10:kOBCIChannelCmdChannel_10,
-    OBCIChannelCmdChannel_11:kOBCIChannelCmdChannel_11,
-    OBCIChannelCmdChannel_12:kOBCIChannelCmdChannel_12,
-    OBCIChannelCmdChannel_13:kOBCIChannelCmdChannel_13,
-    OBCIChannelCmdChannel_14:kOBCIChannelCmdChannel_14,
-    OBCIChannelCmdChannel_15:kOBCIChannelCmdChannel_15,
-    OBCIChannelCmdChannel_16:kOBCIChannelCmdChannel_16,
-    commandChannelForCmd:commandChannelForCmd,
-    OBCIChannelCmdGain_1:kOBCIChannelCmdGain_1,
-    OBCIChannelCmdGain_2:kOBCIChannelCmdGain_2,
-    OBCIChannelCmdGain_4:kOBCIChannelCmdGain_4,
-    OBCIChannelCmdGain_6:kOBCIChannelCmdGain_6,
-    OBCIChannelCmdGain_8:kOBCIChannelCmdGain_8,
-    OBCIChannelCmdGain_12:kOBCIChannelCmdGain_12,
-    OBCIChannelCmdGain_24:kOBCIChannelCmdGain_24,
-    commandForGain:commandForGain,
-    OBCIChannelCmdLatch:kOBCIChannelCmdLatch,
-    OBCIChannelCmdPowerOff:kOBCIChannelCmdPowerOff,
-    OBCIChannelCmdPowerOn:kOBCIChannelCmdPowerOn,
-    OBCIChannelCmdSet:kOBCIChannelCmdSet,
-    OBCIChannelCmdSRB1Connect:kOBCIChannelCmdSRB1Connect,
-    OBCIChannelCmdSRB1Diconnect:kOBCIChannelCmdSRB1Diconnect,
-    OBCIChannelCmdSRB2Connect:kOBCIChannelCmdSRB2Connect,
-    OBCIChannelCmdSRB2Diconnect:kOBCIChannelCmdSRB2Diconnect,
+    OBCIChannelCmdADCNormal,
+    OBCIChannelCmdADCShorted,
+    OBCIChannelCmdADCBiasDRP,
+    OBCIChannelCmdADCBiasDRN,
+    OBCIChannelCmdADCBiasMethod,
+    OBCIChannelCmdADCMVDD,
+    OBCIChannelCmdADCTemp,
+    OBCIChannelCmdADCTestSig,
+    OBCIChannelCmdBiasInclude,
+    OBCIChannelCmdBiasRemove,
+    OBCIChannelCmdChannel_1,
+    OBCIChannelCmdChannel_2,
+    OBCIChannelCmdChannel_3,
+    OBCIChannelCmdChannel_4,
+    OBCIChannelCmdChannel_5,
+    OBCIChannelCmdChannel_6,
+    OBCIChannelCmdChannel_7,
+    OBCIChannelCmdChannel_8,
+    OBCIChannelCmdChannel_9,
+    OBCIChannelCmdChannel_10,
+    OBCIChannelCmdChannel_11,
+    OBCIChannelCmdChannel_12,
+    OBCIChannelCmdChannel_13,
+    OBCIChannelCmdChannel_14,
+    OBCIChannelCmdChannel_15,
+    OBCIChannelCmdChannel_16,
+    commandChannelForCmd,
+    OBCIChannelCmdGain_1,
+    OBCIChannelCmdGain_2,
+    OBCIChannelCmdGain_4,
+    OBCIChannelCmdGain_6,
+    OBCIChannelCmdGain_8,
+    OBCIChannelCmdGain_12,
+    OBCIChannelCmdGain_24,
+    commandForGain,
+    OBCIChannelCmdLatch,
+    OBCIChannelCmdPowerOff,
+    OBCIChannelCmdPowerOn,
+    OBCIChannelCmdSet,
+    OBCIChannelCmdSRB1Connect,
+    OBCIChannelCmdSRB1Diconnect,
+    OBCIChannelCmdSRB2Connect,
+    OBCIChannelCmdSRB2Diconnect,
     /** Channel Settings Object */
-    channelSettingsObjectDefault: channelSettingsObjectDefault,
+    channelSettingsObjectDefault,
     channelSettingsArrayInit: (numberOfChannels) => {
         var newChannelSettingsArray = [];
         for (var i = 0; i < numberOfChannels; i++) {
@@ -514,50 +520,50 @@ module.exports = {
         return newChannelSettingsArray;
     },
     /** Channel Setting Helper Strings */
-    OBCIStringADCNormal:kOBCIStringADCNormal,
-    OBCIStringADCShorted:kOBCIStringADCShorted,
-    OBCIStringADCBiasMethod:kOBCIStringADCBiasMethod,
-    OBCIStringADCMvdd:kOBCIStringADCMvdd,
-    OBCIStringADCTemp:kOBCIStringADCTemp,
-    OBCIStringADCTestSig:kOBCIStringADCTestSig,
-    OBCIStringADCBiasDrp:kOBCIStringADCBiasDrp,
-    OBCIStringADCBiasDrn:kOBCIStringADCBiasDrn,
+    OBCIStringADCNormal,
+    OBCIStringADCShorted,
+    OBCIStringADCBiasMethod,
+    OBCIStringADCMvdd,
+    OBCIStringADCTemp,
+    OBCIStringADCTestSig,
+    OBCIStringADCBiasDrp,
+    OBCIStringADCBiasDrn,
     /**
      * @description To convert a string like 'normal' to the correct command (i.e. '1')
      * @param adcString
      * @returns {Promise}
      * @author AJ Keller (@pushtheworldllc)
      */
-    commandForADCString:commandForADCString,
+    commandForADCString,
     /** Default Channel Settings */
-    OBCIChannelDefaultAllSet:kOBCIChannelDefaultAllSet,
-    OBCIChannelDefaultAllGet:kOBCIChannelDefaultAllGet,
+    OBCIChannelDefaultAllSet,
+    OBCIChannelDefaultAllGet,
     /** LeadOff Impedance Commands */
-    OBCIChannelImpedanceLatch:kOBCIChannelImpedanceLatch,
-    OBCIChannelImpedanceSet:kOBCIChannelImpedanceSet,
-    OBCIChannelImpedanceTestSignalApplied:kOBCIChannelImpedanceTestSignalApplied,
-    OBCIChannelImpedanceTestSignalAppliedNot:kOBCIChannelImpedanceTestSignalAppliedNot,
+    OBCIChannelImpedanceLatch,
+    OBCIChannelImpedanceSet,
+    OBCIChannelImpedanceTestSignalApplied,
+    OBCIChannelImpedanceTestSignalAppliedNot,
     /** SD card Commands */
-    OBCISDLogForHour1:kOBCISDLogForHour1,
-    OBCISDLogForHour2:kOBCISDLogForHour2,
-    OBCISDLogForHour4:kOBCISDLogForHour4,
-    OBCISDLogForHour12:kOBCISDLogForHour12,
-    OBCISDLogForHour24:kOBCISDLogForHour24,
-    OBCISDLogForMin5:kOBCISDLogForMin5,
-    OBCISDLogForMin15:kOBCISDLogForMin15,
-    OBCISDLogForMin30:kOBCISDLogForMin30,
-    OBCISDLogForSec14:kOBCISDLogForSec14,
-    OBCISDLogStop:kOBCISDLogStop,
+    OBCISDLogForHour1,
+    OBCISDLogForHour2,
+    OBCISDLogForHour4,
+    OBCISDLogForHour12,
+    OBCISDLogForHour24,
+    OBCISDLogForMin5,
+    OBCISDLogForMin15,
+    OBCISDLogForMin30,
+    OBCISDLogForSec14,
+    OBCISDLogStop,
     /** SD Card String Commands */
-    OBCIStringSDHour1:kOBCIStringSDHour1,
-    OBCIStringSDHour2:kOBCIStringSDHour2,
-    OBCIStringSDHour4:kOBCIStringSDHour4,
-    OBCIStringSDHour12:kOBCIStringSDHour12,
-    OBCIStringSDHour24:kOBCIStringSDHour24,
-    OBCIStringSDMin5:kOBCIStringSDMin5,
-    OBCIStringSDMin15:kOBCIStringSDMin15,
-    OBCIStringSDMin30:kOBCIStringSDMin30,
-    OBCIStringSDSec14:kOBCIStringSDSec14,
+    OBCIStringSDHour1,
+    OBCIStringSDHour2,
+    OBCIStringSDHour4,
+    OBCIStringSDHour12,
+    OBCIStringSDHour24,
+    OBCIStringSDMin5,
+    OBCIStringSDMin15,
+    OBCIStringSDMin30,
+    OBCIStringSDSec14,
     /**
      * @description Converts a sd string into the proper setting.
      * @param stringCommand {String} - The length of time you want to record to the SD for.
@@ -566,32 +572,32 @@ module.exports = {
     sdSettingForString: (stringCommand) => {
         return new Promise((resolve,reject) => {
             switch (stringCommand) {
-                case kOBCIStringSDHour1:
-                    resolve(kOBCISDLogForHour1);
+                case OBCIStringSDHour1:
+                    resolve(OBCISDLogForHour1);
                     break;
-                case kOBCIStringSDHour2:
-                    resolve(kOBCISDLogForHour2);
+                case OBCIStringSDHour2:
+                    resolve(OBCISDLogForHour2);
                     break;
-                case kOBCIStringSDHour4:
-                    resolve(kOBCISDLogForHour4);
+                case OBCIStringSDHour4:
+                    resolve(OBCISDLogForHour4);
                     break;
-                case kOBCIStringSDHour12:
-                    resolve(kOBCISDLogForHour12);
+                case OBCIStringSDHour12:
+                    resolve(OBCISDLogForHour12);
                     break;
-                case kOBCIStringSDHour24:
-                    resolve(kOBCISDLogForHour24);
+                case OBCIStringSDHour24:
+                    resolve(OBCISDLogForHour24);
                     break;
-                case kOBCIStringSDMin5:
-                    resolve(kOBCISDLogForMin5);
+                case OBCIStringSDMin5:
+                    resolve(OBCISDLogForMin5);
                     break;
-                case kOBCIStringSDMin15:
-                    resolve(kOBCISDLogForMin15);
+                case OBCIStringSDMin15:
+                    resolve(OBCISDLogForMin15);
                     break;
-                case kOBCIStringSDMin30:
-                    resolve(kOBCISDLogForMin30);
+                case OBCIStringSDMin30:
+                    resolve(OBCISDLogForMin30);
                     break;
-                case kOBCIStringSDSec14:
-                    resolve(kOBCISDLogForSec14);
+                case OBCIStringSDSec14:
+                    resolve(OBCISDLogForSec14);
                     break;
                 default:
                     reject(new Error(TypeError));
@@ -601,44 +607,44 @@ module.exports = {
         });
     },
     /** Stream Data Commands */
-    OBCIStreamStart:kOBCIStreamStart,
-    OBCIStreamStop:kOBCIStreamStop,
+    OBCIStreamStart,
+    OBCIStreamStop,
     /** Miscellaneous */
-    OBCIMiscQueryRegisterSettings:kOBCIMiscQueryRegisterSettings,
-    OBCIMiscQueryRegisterSettingsChannel1:kOBCIMiscQueryRegisterSettingsChannel1,
-    OBCIMiscQueryRegisterSettingsChannel2:kOBCIMiscQueryRegisterSettingsChannel2,
-    OBCIMiscQueryRegisterSettingsChannel3:kOBCIMiscQueryRegisterSettingsChannel3,
-    OBCIMiscQueryRegisterSettingsChannel4:kOBCIMiscQueryRegisterSettingsChannel4,
-    OBCIMiscQueryRegisterSettingsChannel5:kOBCIMiscQueryRegisterSettingsChannel5,
-    OBCIMiscQueryRegisterSettingsChannel6:kOBCIMiscQueryRegisterSettingsChannel6,
-    OBCIMiscQueryRegisterSettingsChannel7:kOBCIMiscQueryRegisterSettingsChannel7,
-    OBCIMiscQueryRegisterSettingsChannel8:kOBCIMiscQueryRegisterSettingsChannel8,
-    channelSettingsKeyForChannel: function(channelNumber) {
-        return new Promise(function(resolve,reject) {
+    OBCIMiscQueryRegisterSettings,
+    OBCIMiscQueryRegisterSettingsChannel1,
+    OBCIMiscQueryRegisterSettingsChannel2,
+    OBCIMiscQueryRegisterSettingsChannel3,
+    OBCIMiscQueryRegisterSettingsChannel4,
+    OBCIMiscQueryRegisterSettingsChannel5,
+    OBCIMiscQueryRegisterSettingsChannel6,
+    OBCIMiscQueryRegisterSettingsChannel7,
+    OBCIMiscQueryRegisterSettingsChannel8,
+    channelSettingsKeyForChannel: channelNumber =>{
+        return new Promise((resolve,reject) => {
             switch (channelNumber) {
                 case 1:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel1));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel1));
                     break;
                 case 2:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel2));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel2));
                     break;
                 case 3:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel3));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel3));
                     break;
                 case 4:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel4));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel4));
                     break;
                 case 5:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel5));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel5));
                     break;
                 case 6:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel6));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel6));
                     break;
                 case 7:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel7));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel7));
                     break;
                 case 8:
-                    resolve(new Buffer(kOBCIMiscQueryRegisterSettingsChannel8));
+                    resolve(new Buffer(OBCIMiscQueryRegisterSettingsChannel8));
                     break;
                 default:
                     reject('Invalid channel number');
@@ -646,122 +652,126 @@ module.exports = {
             }
         });
     },
-    OBCIMiscSoftReset:kOBCIMiscSoftReset,
+    OBCIMiscSoftReset,
     /** 16 Channel Commands */
-    OBCIChannelMaxNumber8:kOBCIChannelMaxNumber8,
-    OBCIChannelMaxNumber16:kOBCIChannelMaxNumber16,
+    OBCIChannelMaxNumber8,
+    OBCIChannelMaxNumber16,
     /** Filters */
-    OBCIFilterDisable:kOBCIFilterDisable,
-    OBCIFilterEnable:kOBCIFilterEnable,
+    OBCIFilterDisable,
+    OBCIFilterEnable,
     /** Triggers */
-    OBCITrigger:kOBCITrigger,
+    OBCITrigger,
     /** Possible number of channels */
-    OBCINumberOfChannelsDaisy:kOBCINumberOfChannelsDaisy,
-    OBCINumberOfChannelsDefault:kOBCINumberOfChannelsDefault,
-    OBCINumberOfChannelsGanglion:kOBCINumberOfChannelsGanglion,
+    OBCINumberOfChannelsDaisy,
+    OBCINumberOfChannelsDefault,
+    OBCINumberOfChannelsGanglion,
     /** Possible OpenBCI board types */
-    OBCIBoardDaisy:kOBCIBoardDaisy,
-    OBCIBoardDefault:kOBCIBoardDefault,
-    OBCIBoardGanglion:kOBCIBoardGanglion,
+    OBCIBoardDaisy,
+    OBCIBoardDefault,
+    OBCIBoardGanglion,
     numberOfChannelsForBoardType: boardType => {
         switch (boardType) {
-            case kOBCIBoardDaisy:
-                return kOBCINumberOfChannelsDaisy;
-            case kOBCIBoardGanglion:
-                return kOBCINumberOfChannelsGanglion;
+            case OBCIBoardDaisy:
+                return OBCINumberOfChannelsDaisy;
+            case OBCIBoardGanglion:
+                return OBCINumberOfChannelsGanglion;
             default:
-                return kOBCINumberOfChannelsDefault;
+                return OBCINumberOfChannelsDefault;
         }
     },
     /** Possible Sample Rates */
-    OBCISampleRate125:kOBCISampleRate125,
-    OBCISampleRate250:kOBCISampleRate250,
+    OBCISampleRate125,
+    OBCISampleRate250,
     /** Packet Size */
-    OBCIPacketSize:kOBCIPacketSize,
+    OBCIPacketSize,
     /** Notable Bytes */
-    OBCIByteStart:kOBCIByteStart,
-    OBCIByteStop:kOBCIByteStop,
+    OBCIByteStart,
+    OBCIByteStop,
     /** Errors */
-    ErrorInvalidByteLength:kErrorInvalidByteLength,
-    ErrorInvalidByteStart:kErrorInvalidByteStart,
-    ErrorInvalidByteStop:kErrorInvalidByteStop,
-    ErrorUndefinedOrNullInput:kErrorUndefinedOrNullInput,
+    ErrorInvalidByteLength,
+    ErrorInvalidByteStart,
+    ErrorInvalidByteStop,
+    ErrorUndefinedOrNullInput,
     /** Max Master Buffer Size */
-    OBCIMasterBufferSize:kOBCIMasterBufferSize,
+    OBCIMasterBufferSize,
     /** Impedance Calculation Variables */
-    OBCILeadOffDriveInAmps:kOBCILeadOffDriveInAmps,
-    OBCILeadOffFrequencyHz:kOBCILeadOffFrequencyHz,
+    OBCILeadOffDriveInAmps,
+    OBCILeadOffFrequencyHz,
     /** Channel Setter Maker */
     getChannelSetter:channelSetter,
     /** Impedance Setter Maker */
     getImpedanceSetter:impedanceSetter,
     /** Command send delay */
-    OBCIWriteIntervalDelayMSLong:kOBCIWriteIntervalDelayMSLong,
-    OBCIWriteIntervalDelayMSNone:kOBCIWriteIntervalDelayMSNone,
-    OBCIWriteIntervalDelayMSShort:kOBCIWriteIntervalDelayMSShort,
+    OBCIWriteIntervalDelayMSLong,
+    OBCIWriteIntervalDelayMSNone,
+    OBCIWriteIntervalDelayMSShort,
     /** Sync Clocks */
-    OBCISyncTimeSent:kOBCISyncTimeSent,
-    OBCISyncTimeSet:kOBCISyncTimeSet,
+    OBCISyncTimeSent,
+    OBCISyncTimeSet,
     /** Impedance */
-    OBCIImpedanceTextBad:kOBCIImpedanceTextBad,
-    OBCIImpedanceTextGood:kOBCIImpedanceTextGood,
-    OBCIImpedanceTextInit:kOBCIImpedanceTextInit,
-    OBCIImpedanceTextOk:kOBCIImpedanceTextOk,
-    OBCIImpedanceTextNone:kOBCIImpedanceTextNone,
-    OBCIImpedanceThresholdBadMax:kOBCIImpedanceThresholdBadMax,
-    OBCIImpedanceSeriesResistor:kOBCIImpedanceSeriesResistor,
+    OBCIImpedanceTextBad,
+    OBCIImpedanceTextGood,
+    OBCIImpedanceTextInit,
+    OBCIImpedanceTextOk,
+    OBCIImpedanceTextNone,
+    OBCIImpedanceThresholdBadMax,
+    OBCIImpedanceSeriesResistor,
     getTextForRawImpedance: (value) => {
-        if (value > kOBCIImpedanceThresholdGoodMin && value < kOBCIImpedanceThresholdGoodMax) {
-            return kOBCIImpedanceTextGood;
-        } else if (value > kOBCIImpedanceThresholdOkMin && value < kOBCIImpedanceThresholdOkMax) {
-            return kOBCIImpedanceTextOk;
-        } else if (value > kOBCIImpedanceThresholdBadMin && value < kOBCIImpedanceThresholdBadMax) {
-            return kOBCIImpedanceTextBad;
+        if (value > OBCIImpedanceThresholdGoodMin && value < OBCIImpedanceThresholdGoodMax) {
+            return OBCIImpedanceTextGood;
+        } else if (value > OBCIImpedanceThresholdOkMin && value < OBCIImpedanceThresholdOkMax) {
+            return OBCIImpedanceTextOk;
+        } else if (value > OBCIImpedanceThresholdBadMin && value < OBCIImpedanceThresholdBadMax) {
+            return OBCIImpedanceTextBad;
         } else {
-            return kOBCIImpedanceTextNone;
+            return OBCIImpedanceTextNone;
         }
     },
     /** Simulator */
-    OBCISimulatorPortName:kOBCISimulatorPortName,
+    OBCISimulatorPortName,
     /**
      * Stream packet types/codes
      */
-    OBCIStreamPacketStandardAccel:kOBCIStreamPacketStandardAccel,
-    OBCIStreamPacketStandardRawAux:kOBCIStreamPacketStandardRawAux,
-    OBCIStreamPacketUserDefinedType:kOBCIStreamPacketUserDefinedType,
-    OBCIStreamPacketTimeSyncSet:kOBCIStreamPacketTimeSyncSet,
-    OBCIStreamPacketTimeSyncedAccel:kOBCIStreamPacketTimeSyncedAccel,
-    OBCIStreamPacketTimeSyncedRawAux:kOBCIStreamPacketTimeSyncedRawAux,
-
+    OBCIStreamPacketStandardAccel,
+    OBCIStreamPacketStandardRawAux,
+    OBCIStreamPacketUserDefinedType,
+    OBCIStreamPacketTimeSyncSet,
+    OBCIStreamPacketTimeSyncedAccel,
+    OBCIStreamPacketTimeSyncedRawAux,
     /** fun funcs */
-    isNumber:isNumber,
-    isBoolean:isBoolean,
-    isString:isString,
+    isNumber,
+    isBoolean,
+    isString,
     /** OpenBCI V3 Standard Packet Positions */
-    OBCIPacketPositionStartByte:kOBCIPacketPositionStartByte,
-    OBCIPacketPositionStopByte:kOBCIPacketPositionStopByte,
-    OBCIPacketPositionStartAux:kOBCIPacketPositionStartAux,
-    OBCIPacketPositionStopAux:kOBCIPacketPositionStopAux,
-    OBCIPacketPositionChannelDataStart:kOBCIPacketPositionChannelDataStart,
-    OBCIPacketPositionChannelDataStop:kOBCIPacketPositionChannelDataStop,
-    OBCIPacketPositionSampleNumber:kOBCIPacketPositionSampleNumber,
-    OBCIPacketPositionTimeSyncAuxStart:kOBCIPacketPositionTimeSyncAuxStart,
-    OBCIPacketPositionTimeSyncAuxStop:kOBCIPacketPositionTimeSyncAuxStop,
-    OBCIPacketPositionTimeSyncTimeStart:kOBCIPacketPositionTimeSyncTimeStart,
-    OBCIPacketPositionTimeSyncTimeStop:kOBCIPacketPositionTimeSyncTimeStop,
+    OBCIPacketPositionStartByte,
+    OBCIPacketPositionStopByte,
+    OBCIPacketPositionStartAux,
+    OBCIPacketPositionStopAux,
+    OBCIPacketPositionChannelDataStart,
+    OBCIPacketPositionChannelDataStop,
+    OBCIPacketPositionSampleNumber,
+    OBCIPacketPositionTimeSyncAuxStart,
+    OBCIPacketPositionTimeSyncAuxStop,
+    OBCIPacketPositionTimeSyncTimeStart,
+    OBCIPacketPositionTimeSyncTimeStop,
 /** Possible Simulator Line Noise injections */
-    OBCISimulatorLineNoiseHz60:kOBCISimulatorLineNoiseHz60,
-    OBCISimulatorLineNoiseHz50:kOBCISimulatorLineNoiseHz50,
-    OBCISimulatorLineNoiseNone:kOBCISimulatorLineNoiseNone,
+    OBCISimulatorLineNoiseHz60,
+    OBCISimulatorLineNoiseHz50,
+    OBCISimulatorLineNoiseNone,
     /** Firmware version indicator */
-    OBCIFirmwareV1:kOBCIFirmwareV1,
-    OBCIFirmwareV2:kOBCIFirmwareV2,
+    OBCIFirmwareV1,
+    OBCIFirmwareV2,
     /** Time synced accel packet */
-    OBCIAccelAxisX:kOBCIAccelAxisX,
-    OBCIAccelAxisY:kOBCIAccelAxisY,
-    OBCIAccelAxisZ:kOBCIAccelAxisZ,
+    OBCIAccelAxisX,
+    OBCIAccelAxisY,
+    OBCIAccelAxisZ,
     /** Time from board */
-    OBCIStreamPacketTimeByteSize:kOBCIStreamPacketTimeByteSize
+    OBCIStreamPacketTimeByteSize,
+    /** Used in parsing incoming serial data*/
+    OBCIStreamStateInit,
+    OBCIStreamStateStoring,
+    OBCIStreamStateReady,
+    OBCIStreamStateTail
 };
 
 /**
@@ -812,7 +822,7 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
             .catch(err => reject(err));
 
         // Set POWER_DOWN
-        cmdPowerDown = powerDown ? kOBCIChannelCmdPowerOff : kOBCIChannelCmdPowerOn;
+        cmdPowerDown = powerDown ? OBCIChannelCmdPowerOff : OBCIChannelCmdPowerOn;
 
         // Set Gain
         var p2 = commandForGain(gain)
@@ -823,13 +833,13 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
             .catch(err => reject(err));
 
         // Set BIAS
-        cmdBias = bias ? kOBCIChannelCmdBiasInclude : kOBCIChannelCmdBiasRemove;
+        cmdBias = bias ? OBCIChannelCmdBiasInclude : OBCIChannelCmdBiasRemove;
 
         // Set SRB2
-        cmdSrb2 = srb2 ? kOBCIChannelCmdSRB2Connect : kOBCIChannelCmdSRB2Diconnect;
+        cmdSrb2 = srb2 ? OBCIChannelCmdSRB2Connect : OBCIChannelCmdSRB2Diconnect;
 
         // Set SRB1
-        cmdSrb1 = srb1 ? kOBCIChannelCmdSRB1Connect : kOBCIChannelCmdSRB1Diconnect;
+        cmdSrb1 = srb1 ? OBCIChannelCmdSRB1Connect : OBCIChannelCmdSRB1Diconnect;
 
         var newChannelSettingsObject = {
             channelNumber:channelNumber,
@@ -843,7 +853,7 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
 
         Promise.all([p1,p2,p3]).then(function(values) {
             var outputArray = [
-                kOBCIChannelCmdSet,
+                OBCIChannelCmdSet,
                 values[0],
                 cmdPowerDown,
                 values[1],
@@ -851,7 +861,7 @@ function channelSetter(channelNumber,powerDown,gain,inputType,bias,srb2,srb1) {
                 cmdBias,
                 cmdSrb2,
                 cmdSrb1,
-                kOBCIChannelCmdLatch
+                OBCIChannelCmdLatch
             ];
             //console.log(outputArray);
             resolve(outputArray,newChannelSettingsObject);
@@ -878,19 +888,19 @@ function impedanceSetter(channelNumber,pInputApplied,nInputApplied) {
         if (!isBoolean(nInputApplied)) reject('nInputApplied must be of type \'boolean\' ');
 
         // Set pInputApplied
-        cmdPInputApplied = pInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
+        cmdPInputApplied = pInputApplied ? OBCIChannelImpedanceTestSignalApplied : OBCIChannelImpedanceTestSignalAppliedNot;
 
         // Set nInputApplied
-        cmdNInputApplied = nInputApplied ? kOBCIChannelImpedanceTestSignalApplied : kOBCIChannelImpedanceTestSignalAppliedNot;
+        cmdNInputApplied = nInputApplied ? OBCIChannelImpedanceTestSignalApplied : OBCIChannelImpedanceTestSignalAppliedNot;
 
         // Set Channel Number
         commandChannelForCmd(channelNumber).then(command => {
             var outputArray = [
-                kOBCIChannelImpedanceSet,
+                OBCIChannelImpedanceSet,
                 command,
                 cmdPInputApplied,
                 cmdNInputApplied,
-                kOBCIChannelImpedanceLatch
+                OBCIChannelImpedanceLatch
             ];
             //console.log(outputArray);
             resolve(outputArray);
@@ -911,29 +921,29 @@ function isString(input) {
 function commandForADCString(adcString) {
     return new Promise(function(resolve,reject) {
         switch (adcString) {
-            case kOBCIStringADCNormal:
-                resolve(kOBCIChannelCmdADCNormal);
+            case OBCIStringADCNormal:
+                resolve(OBCIChannelCmdADCNormal);
                 break;
-            case kOBCIStringADCShorted:
-                resolve(kOBCIChannelCmdADCShorted);
+            case OBCIStringADCShorted:
+                resolve(OBCIChannelCmdADCShorted);
                 break;
-            case kOBCIStringADCBiasMethod:
-                resolve(kOBCIChannelCmdADCBiasMethod);
+            case OBCIStringADCBiasMethod:
+                resolve(OBCIChannelCmdADCBiasMethod);
                 break;
-            case kOBCIStringADCMvdd:
-                resolve(kOBCIChannelCmdADCMVDD);
+            case OBCIStringADCMvdd:
+                resolve(OBCIChannelCmdADCMVDD);
                 break;
-            case kOBCIStringADCTemp:
-                resolve(kOBCIChannelCmdADCTemp);
+            case OBCIStringADCTemp:
+                resolve(OBCIChannelCmdADCTemp);
                 break;
-            case kOBCIStringADCTestSig:
-                resolve(kOBCIChannelCmdADCTestSig);
+            case OBCIStringADCTestSig:
+                resolve(OBCIChannelCmdADCTestSig);
                 break;
-            case kOBCIStringADCBiasDrp:
-                resolve(kOBCIChannelCmdADCBiasDRP);
+            case OBCIStringADCBiasDrp:
+                resolve(OBCIChannelCmdADCBiasDRP);
                 break;
-            case kOBCIStringADCBiasDrn:
-                resolve(kOBCIChannelCmdADCBiasDRN);
+            case OBCIStringADCBiasDrn:
+                resolve(OBCIChannelCmdADCBiasDRN);
                 break;
             default:
                 reject('Invalid ADC string');
@@ -946,25 +956,25 @@ function commandForGain(gainSetting) {
     return new Promise(function(resolve,reject) {
         switch (gainSetting) {
             case 1:
-                resolve(kOBCIChannelCmdGain_1);
+                resolve(OBCIChannelCmdGain_1);
                 break;
             case 2:
-                resolve(kOBCIChannelCmdGain_2);
+                resolve(OBCIChannelCmdGain_2);
                 break;
             case 4:
-                resolve(kOBCIChannelCmdGain_4);
+                resolve(OBCIChannelCmdGain_4);
                 break;
             case 6:
-                resolve(kOBCIChannelCmdGain_6);
+                resolve(OBCIChannelCmdGain_6);
                 break;
             case 8:
-                resolve(kOBCIChannelCmdGain_8);
+                resolve(OBCIChannelCmdGain_8);
                 break;
             case 12:
-                resolve(kOBCIChannelCmdGain_12);
+                resolve(OBCIChannelCmdGain_12);
                 break;
             case 24:
-                resolve(kOBCIChannelCmdGain_24);
+                resolve(OBCIChannelCmdGain_24);
                 break;
             default:
                 reject('Invalid gain setting of ' + gainSetting + ' tisk tisk, gain must be (1,2,4,6,8,12,24)');
@@ -977,52 +987,52 @@ function commandChannelForCmd(channelNumber) {
     return new Promise(function(resolve,reject) {
         switch (channelNumber) {
             case 1:
-                resolve(kOBCIChannelCmdChannel_1);
+                resolve(OBCIChannelCmdChannel_1);
                 break;
             case 2:
-                resolve(kOBCIChannelCmdChannel_2);
+                resolve(OBCIChannelCmdChannel_2);
                 break;
             case 3:
-                resolve(kOBCIChannelCmdChannel_3);
+                resolve(OBCIChannelCmdChannel_3);
                 break;
             case 4:
-                resolve(kOBCIChannelCmdChannel_4);
+                resolve(OBCIChannelCmdChannel_4);
                 break;
             case 5:
-                resolve(kOBCIChannelCmdChannel_5);
+                resolve(OBCIChannelCmdChannel_5);
                 break;
             case 6:
-                resolve(kOBCIChannelCmdChannel_6);
+                resolve(OBCIChannelCmdChannel_6);
                 break;
             case 7:
-                resolve(kOBCIChannelCmdChannel_7);
+                resolve(OBCIChannelCmdChannel_7);
                 break;
             case 8:
-                resolve(kOBCIChannelCmdChannel_8);
+                resolve(OBCIChannelCmdChannel_8);
                 break;
             case 9:
-                resolve(kOBCIChannelCmdChannel_9);
+                resolve(OBCIChannelCmdChannel_9);
                 break;
             case 10:
-                resolve(kOBCIChannelCmdChannel_10);
+                resolve(OBCIChannelCmdChannel_10);
                 break;
             case 11:
-                resolve(kOBCIChannelCmdChannel_11);
+                resolve(OBCIChannelCmdChannel_11);
                 break;
             case 12:
-                resolve(kOBCIChannelCmdChannel_12);
+                resolve(OBCIChannelCmdChannel_12);
                 break;
             case 13:
-                resolve(kOBCIChannelCmdChannel_13);
+                resolve(OBCIChannelCmdChannel_13);
                 break;
             case 14:
-                resolve(kOBCIChannelCmdChannel_14);
+                resolve(OBCIChannelCmdChannel_14);
                 break;
             case 15:
-                resolve(kOBCIChannelCmdChannel_15);
+                resolve(OBCIChannelCmdChannel_15);
                 break;
             case 16:
-                resolve(kOBCIChannelCmdChannel_16);
+                resolve(OBCIChannelCmdChannel_16);
                 break;
             default:
                 reject('Invalid channel number');
@@ -1035,7 +1045,7 @@ function channelSettingsObjectDefault(channelNumber) {
         channelNumber:channelNumber,
         powerDown: false,
         gain: 24,
-        inputType: kOBCIStringADCNormal,
+        inputType: OBCIStringADCNormal,
         bias: true,
         srb2: true,
         srb1: false
