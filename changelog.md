@@ -2,7 +2,7 @@
 
 ### New Features
 
-* Firmware version 2.0 support
+* Firmware version 2.0 support.
 * Clock synchronization between OpenBCI board and this driver
 
 ### Breaking Changes
@@ -58,7 +58,6 @@
 ### Github Issues Addressed
 
 * [https://github.com/OpenBCI/openbci-js-sdk/issues/44](#44)
-
 
 # 0.3.3
 

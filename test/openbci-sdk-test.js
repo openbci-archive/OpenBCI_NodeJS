@@ -3,8 +3,8 @@ var chai = require('chai'),
     should = chai.should(),
     expect = chai.expect,
     openBCIBoard = require('../openBCIBoard'),
-    OpenBCISample = openBCIBoard.OpenBCISample,
-    k = OpenBCISample.k;
+    openBCISample = openBCIBoard.OpenBCISample,
+    k = openBCISample.k;
 
 var chaiAsPromised = require("chai-as-promised");
 var sinonChai = require("sinon-chai");
@@ -553,17 +553,6 @@ describe('openbci-sdk',function() {
 
     });
 
-    var samplePacketReal = function (sampleNumber) {
-        if (sampleNumber || sampleNumber === 0) {
-            if (sampleNumber > 255) {
-                sampleNumber = 255;
-            }
-        } else {
-            sampleNumber = 0x45;
-        }
-        return new Buffer([0xA0,sampleNumber,0x8F,0xF2,0x40,0x8F,0xDF,0xF4,0x90,0x2B,0xB6,0x8F,0xBF,0xBF,0x7F,0xFF,0xFF,0x7F,0xFF,0xFF,0x94,0x25,0x34,0x20,0xB6,0x7D,0,0xE0,0,0xE0,0x0F,0x70, 0xC0]);
-    };
-
     /**
      * Test the function that parses an incoming data buffer for packets
      */
@@ -589,9 +578,8 @@ describe('openbci-sdk',function() {
             // Make sure that the spy was not infact called.
             _processQualifiedPacketSpy.should.not.have.been.called;
         });
-
         it('should identify a packet',() => {
-            var buffer = samplePacketReal(0);
+            var buffer = openBCISample.samplePacketReal(0);
 
             // Reset the spy if it exists
             if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
@@ -605,7 +593,6 @@ describe('openbci-sdk',function() {
             // The buffer should not have anything in it any more
             buffer.length.should.equal(0);
         });
-
         it('should extract a buffer and preseve the remaining data in the buffer',() => {
             var expectedString = "AJ";
             var extraBuffer = new Buffer(expectedString);
@@ -668,6 +655,108 @@ describe('openbci-sdk',function() {
         });
     });
 
+    /**
+     * Test the function that routes raw packets for processing
+     */
+    describes('#_processQualifiedPacket', function() {
+        var ourBoard;
+        var funcSpyTimeSyncSet, funcSpyTimeSyncedAccel, funcSpyTimeSyncedRawAux, funcSpyStandardRawAux, funcSpyStandardAccel;
+
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+            // Put watchers on all functions
+            funcSpyStandardAccel = sinon.spy(ourBoard,"_processPacketStandardAccel");
+            funcSpyStandardRawAux = sinon.spy(ourBoard,"_processPacketStandardRawAux");
+            funcSpyTimeSyncSet = sinon.spy(ourBoard,"_processPacketTimeSyncSet");
+            funcSpyTimeSyncedAccel = sinon.spy(ourBoard,"_processPacketTimeSyncedAccel");
+            funcSpyTimeSyncedRawAux = sinon.spy(ourBoard,"_processPacketTimeSyncedRawAux");
+        });
+        beforeEach(() => {
+            funcSpyStandardAccel.reset();
+            funcSpyStandardRawAux.reset();
+            funcSpyTimeSyncSet.reset();
+            funcSpyTimeSyncedAccel.reset();
+            funcSpyTimeSyncedRawAux.reset();
+        });
+
+
+        it('should process a standard packet',() => {
+            var buffer = openBCISample.samplePacket(0);
+
+            // Call the function under test
+            ourBoard._processQualifiedPacket(buffer);
+
+            // Ensure that we extracted only one buffer
+            funcSpyStandardAccel.should.have.been.calledOnce;
+        });
+        it('should process a standard packet with raw aux',() => {
+            var buffer = openBCISample.samplePacketStandardRawAux(0);
+
+            // Call the function under test
+            ourBoard._processQualifiedPacket(buffer);
+
+            // Ensure that we extracted only one buffer
+            funcSpyStandardRawAux.should.have.been.calledOnce;
+        });
+        it('should call nothing for a user defined packet type ',() => {
+            var buffer = openBCISample.samplePacketUserDefined();
+
+            // Call the function under test
+            ourBoard._processQualifiedPacket(buffer);
+
+            // Nothing should be called
+            funcSpyStandardAccel.should.not.have.been.called;
+            funcSpyStandardRawAux.should.not.have.been.called;
+            funcSpyTimeSyncSet.should.not.have.been.called;
+            funcSpyTimeSyncedAccel.should.not.have.been.called;
+            funcSpyTimeSyncedRawAux.should.not.have.been.called;
+        });
+        it('should process a time sync set packet',() => {
+            var buffer = openBCISample.samplePacketTimeSyncSet();
+
+            // Call the function under test
+            ourBoard._processQualifiedPacket(buffer);
+
+            // Ensure that we extracted only one buffer
+            funcSpyTimeSyncSet.should.have.been.calledOnce;
+        });
+        it('should process a time synced packed with accel',() => {
+            var buffer = openBCISample.samplePacketTimeSyncedAccel(0);
+
+            // Call the function under test
+            ourBoard._processQualifiedPacket(buffer);
+
+            // Ensure that we extracted only one buffer
+            funcSpyTimeSyncedAccel.should.have.been.calledOnce;
+        });
+        it('should process a time synced packed with raw aux',() => {
+            var buffer = openBCISample.samplePacketTimeSyncedRawAux(0);
+
+            // Call the function under test
+            ourBoard._processQualifiedPacket(buffer);
+
+            // Ensure that we extracted only one buffer
+            funcSpyTimeSyncedRawAux.should.have.been.calledOnce;
+        });
+        it('should not identify any packet',() => {
+            var buffer = openBCISample.samplePacket(0);
+
+            // Set the stop byte to some number not yet defined
+            buffer[k.OBCIPacketPositionStopByte] = 0xCF;
+
+            // Call the function under test
+            ourBoard._processDataBuffer(buffer);
+
+            // Nothing should be called
+            funcSpyStandardAccel.should.not.have.been.called;
+            funcSpyStandardRawAux.should.not.have.been.called;
+            funcSpyTimeSyncSet.should.not.have.been.called;
+            funcSpyTimeSyncedAccel.should.not.have.been.called;
+            funcSpyTimeSyncedRawAux.should.not.have.been.called;
+        });
+    });
 
     xdescribe('#hardwareValidation', function() {
         this.timeout(20000); // long timeout for pleanty of stream time :)
@@ -739,7 +828,7 @@ describe('openbci-sdk',function() {
 
 
                 ourBoard.on('sample', sample => {
-                    OpenBCISample.samplePrintLine(sample)
+                    openBCISample.samplePrintLine(sample)
                         .then(line => {
                             wstream.write(line);
                         });
@@ -1003,7 +1092,7 @@ describe('#impedanceTesting', function() {
                 impedanceArray = arr;
                 done();
             });
-            ourBoard.impedanceArray[0] = openBCIBoard.OpenBCISample.impedanceObject(1);
+            ourBoard.impedanceArray[0] = openBCISample.impedanceObject(1);
             ourBoard.impedanceTestChannels(['-','N','n','p','P','p','b','B']).catch(err => done(err));
         });
         describe('#channel1',function() {

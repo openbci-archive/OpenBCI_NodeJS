@@ -1258,6 +1258,15 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype._processQualifiedPacket = function(rawDataPacketBuffer) {
         var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
         switch (packetType) {
+            case k.OBCIStreamPacketStandardAccel:
+                this._processPacketStandardAccel(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketStandardRawAux:
+                this._processPacketStandardRawAux(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketUserDefinedType:
+                // Do nothing for User Defined Packets
+                break;
             case k.OBCIStreamPacketTimeSyncSet:
                 this.sync.timeGotSetPacket = this.sntpNow();
                 this._processPacketTimeSyncSet(rawDataPacketBuffer);
@@ -1268,13 +1277,8 @@ function OpenBCIFactory() {
             case k.OBCIStreamPacketTimeSyncedRawAux:
                 this._processPacketTimeSyncedRawAux(rawDataPacketBuffer);
                 break;
-            case k.OBCIStreamPacketStandardRawAux:
-                this._processPacketStandardRawAux(rawDataPacketBuffer);
-                break;
-            case k.OBCIStreamPacketStandardAccel:
-                this._processPacketStandardAccel(rawDataPacketBuffer);
-                break;
-            default: // Don't do anything if the packet is not good
+            default:
+                // Don't do anything if the packet is not defined
                 break;
         }
     };
