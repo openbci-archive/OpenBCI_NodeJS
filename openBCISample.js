@@ -485,7 +485,12 @@ function parsePacketStandardAccel(dataBuf, channelSettingsArray) {
             .then(channelSettingArray => {
                 sampleObject.channelData = channelSettingArray;
                 // Get the raw aux values
-                sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
+                if (process.version > 6) {
+                    // From introduced in node version 6.x.x
+                    sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
+                } else {
+                    sampleObject.auxData = new Buffer(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
+                }
                 // Get the sample number
                 sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
                 // Get the start byte
@@ -524,7 +529,12 @@ function parsePacketStandardRawAux(dataBuf, channelSettingsArray) {
         getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray)
             .then(channelSettingArray => {
                 // Slice the buffer for the aux data
-                sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
+                if (process.version > 6) {
+                    // From introduced in node version 6.x.x
+                    sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
+                } else {
+                    sampleObject.auxData = new Buffer(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
+                }
                 // Store the channel data
                 sampleObject.channelData = channelSettingArray;
                 // Get the sample number
