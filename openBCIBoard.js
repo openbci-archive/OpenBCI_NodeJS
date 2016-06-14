@@ -996,7 +996,8 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Start logging to the SD card.
+     * @description Start logging to the SD card. If not streaming then `eot` event will be emitted with request
+     *      response from the board.
      * @param recordingDuration {String} - The duration you want to log SD information for. Limited to:
      *      '14sec', '5min', '15min', '30min', '1hour', '2hour', '4hour', '12hour', '24hour'
      * @returns {Promise} - Resolves if the command was added to write queue.
@@ -1009,9 +1010,7 @@ function OpenBCIFactory() {
                 .then(command => {
                     // If we are not streaming, then expect a confirmation message back from the board
                     if (!this.streaming) {
-                        // TODO: Do we need to parse the incoming data? I think we can just eject it
-                        // this.isLookingForKeyInBuffer = true;
-                        // this.searchingBuf = this.searchBuffers.miscStop;
+                        this.curParsingMode = k.OBCIParsingEOT;
                     }
                     this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
                     return this.write(command);
@@ -1022,7 +1021,8 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Sends the stop SD logging command to the board.
+     * @description Sends the stop SD logging command to the board. If not streaming then `eot` event will be emitted
+     *      with request response from the board.
      * @returns {Promise}
      */
     OpenBCIBoard.prototype.sdStop = function() {
@@ -1030,9 +1030,7 @@ function OpenBCIFactory() {
             if (!this.connected) reject('Must be connected to the device');
             // If we are not streaming, then expect a confirmation message back from the board
             if (!this.streaming) {
-                // TODO: Do we need to parse the incoming data? I think we can just eject it
-                // this.isLookingForKeyInBuffer = true;
-                // this.searchingBuf = this.searchBuffers.miscStop;
+                this.curParsingMode = k.OBCIParsingEOT;
             }
             this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
             return this.write(k.OBCISDLogStop);
@@ -1239,8 +1237,10 @@ function OpenBCIFactory() {
             case k.OBCIParsingEOT:
                 if (this._doesBufferHaveEOT(data)) {
                     this.curParsingMode = k.OBCIParsingNormal;
+                    this.emit('eot',data);
                     this.buffer = null;
-                    this.emit('ready');
+                } else {
+                    this.buffer = data;
                 }
                 break;
             case k.OBCIParsingReset:

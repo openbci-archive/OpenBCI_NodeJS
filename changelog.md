@@ -5,13 +5,15 @@
 * Firmware version 2.0 support.
 * Clock synchronization between OpenBCI board and this driver
 * `.info` property which contains verified board information parsed from the OpenBCI's `softReset()` response.
-* `log` event that is emitted for data send from the board that is not a stream packet
+* `log` event that is emitted for data sent from the board that is not a stream packet
+* `eot` event that is emitted when a user sends a command that results in an EOT ("$$$") being sent from the board
 
 ### Breaking Changes
 
 * Accelerometer data now goes into `.accelData` array instead of `.auxData` array.
 * In openBCISample.js 
   * `parseRawPacket()` is now called `parseRawPacketStandard()`
+* `ready` event only triggered after soft reset. `eot` event emitted in all other conditions resulting in the board sending EOT ("$$$")
 
 # 0.3.9
 

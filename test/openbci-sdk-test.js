@@ -347,8 +347,9 @@ describe('openbci-sdk',function() {
             afterEach(function(done) {
                 ourBoard.sdStop()
                     .catch(done);
-                ourBoard.once('ready',done);
-
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             after(function(done) {
                 ourBoard.disconnect()
@@ -358,47 +359,65 @@ describe('openbci-sdk',function() {
             it('can start 14 seconds of logging with sd',function(done) {
                 ourBoard.sdStart('14sec')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 5 minutes of logging with sd',function(done) {
                 ourBoard.sdStart('5min')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 15 minutes of logging with sd',function(done) {
                 ourBoard.sdStart('15min')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 30 minutes of logging with sd',function(done) {
                 ourBoard.sdStart('30min')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 1 hour of logging with sd',function(done) {
                 ourBoard.sdStart('1hour')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 2 hours of logging with sd',function(done) {
                 ourBoard.sdStart('2hour')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 4 hours of logging with sd',function(done) {
                 ourBoard.sdStart('4hour')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 12 hours of logging with sd',function(done) {
                 ourBoard.sdStart('12hour')
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
             it('can start 24 hours of logging with sd',function(done) {
                 ourBoard.sdStart('24hour')
                     .catch(done);
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
         });
         describe('#sdStop',function() {
@@ -407,14 +426,16 @@ describe('openbci-sdk',function() {
                 ourBoard.once('ready',done);
             });
             it('can stop logging with sd',function(done) {
-                console.log('yoyoyo');
+                // console.log('yoyoyo');
                 ourBoard.sdStop()
                     .then(() => {
-                        console.log('taco');
+                        // console.log('taco');
                         spy.should.have.been.calledWith('j');
                     })
                     .catch(err => done(err));
-                ourBoard.once('ready',done);
+                ourBoard.once('eot', () => {
+                    done();
+                });
             });
         });
         // bad
@@ -1023,11 +1044,46 @@ describe('openbci-sdk',function() {
 
                     expect(ourBoard.buffer.byteLength).to.be.equal(0);
 
+
                     done();
                 });
 
                 // Now call the function which should call the "sample" event
                 ourBoard._processBytes(buf1);
+            });
+        });
+
+        describe("#OBCIParsingEOT",function() {
+            beforeEach(() => {
+                ourBoard.curParsingMode = k.OBCIParsingEOT;
+            });
+            it("should emit the 'eot' event",done => {
+                var buf = new Buffer("Tacos are amazing af$$$");
+
+                var eotEvent = data => {
+                    expect(bufferEqual(data,buf)).to.be.true;
+                    ourBoard.curParsingMode.should.be.equal(k.OBCIParsingNormal);
+                    done();
+                };
+
+                ourBoard.once('eot',eotEvent);
+
+                ourBoard._processBytes(buf);
+            });
+            it("should emit the 'eot' event even if stuff comes in two serial flushes",done => {
+                var buf1 = new Buffer("Tacos are ");
+                var buf2 = new Buffer("amazing af$$$");
+
+                var eotEvent = data => {
+                    bufferEqual(data,Buffer.concat([buf1,buf2],buf1.length + buf2.length)).should.be.true;
+                    ourBoard.curParsingMode.should.be.equal(k.OBCIParsingNormal);
+                    done();
+                };
+
+                ourBoard.once('eot',eotEvent);
+
+                ourBoard._processBytes(buf1);
+                ourBoard._processBytes(buf2);
             });
         });
 
