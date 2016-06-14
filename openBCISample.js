@@ -21,7 +21,7 @@ const GOERTZEL_K_250 = Math.floor(0.5 + ((GOERTZEL_BLOCK_SIZE * k.OBCILeadOffFre
 const GOERTZEL_W_250 = ((2 * Math.PI) / GOERTZEL_BLOCK_SIZE) * GOERTZEL_K_250;
 const GOERTZEL_COEFF_250 = 2 * Math.cos(GOERTZEL_W_250);
 // TODO: Add support for 16 channel Daisy board
-
+var oddSample = {};
 
 var sampleModule = {
 
@@ -49,6 +49,9 @@ var sampleModule = {
 
             if (convertAuxToAccel) {
                 parsePacketStandardAccel(dataBuf,channelSettingsArray).then(sampleObject => {
+                    if (channelSettingsArray.length === k.OBCINumberOfChannelsDaisy) {
+
+                    }
                     resolve(sampleObject);
                 }).catch(err => reject(err));
             } else {
@@ -438,7 +441,8 @@ var sampleModule = {
     },
     samplePacketUserDefined: () => {
         return new Buffer([0xA0, 0x00, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0xC2]);
-    }
+    },
+    makeDaisySampleObject
 };
 
 module.exports = sampleModule;
@@ -473,7 +477,7 @@ function newImpedanceObject(channelNumber) {
  */
 function parsePacketStandardAccel(dataBuf, channelSettingsArray) {
     return new Promise((resolve, reject) => {
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketStandardAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        if (dataBuf.byteLength != k.OBCIPacketSize) reject(`Error [parsePacketStandardAccel]: input buffer must be ${k.OBCIPacketSize} bytes!`);
 
         var sampleObject = {};
         // Need build the standard sample object
@@ -794,13 +798,21 @@ function sampleNumberNormalize(sampleNumber) {
     return sampleNumber;
 }
 
-function newSample() {
+function newSample(sampleNumber) {
+    if (sampleNumber || sampleNumber === 0) {
+        if (sampleNumber > 255) {
+            sampleNumber = 255;
+        }
+    } else {
+        sampleNumber = 0;
+    }
     return {
         startByte: k.OBCIByteStart,
-        sampleNumber:0,
+        sampleNumber:sampleNumber,
         channelData: [],
         auxData: [],
-        stopByte: k.OBCIByteStop
+        stopByte: k.OBCIByteStop,
+        timestamp: 0
     }
 }
 
@@ -845,4 +857,18 @@ function floatTo2ByteBuffer(float) {
     intBuf[0] = (temp & (255 << 8)) >> 8;
 
     return intBuf;
+}
+
+/**
+ * @description Used to make one sample object from two sample objects
+ * @param lowerSampleObject {Object} - Lower 8 channels with odd sample number
+ * @param upperSampleObject {Object} - Upper 8 channels with even sample number
+ * @returns {{}}
+ */
+function makeDaisySampleObject(lowerSampleObject,upperSampleObject) {
+    var daisySampleObject = {};
+
+    
+
+    return daisySampleObject;
 }

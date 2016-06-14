@@ -102,7 +102,6 @@ function OpenBCIFactory() {
         this.masterBuffer = masterBufferMaker();
         // Objects
         this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
-        this.writer = null;
         this.impedanceTest = {
             active: false,
             isTestingPInput: false,
@@ -118,7 +117,7 @@ function OpenBCIFactory() {
             firmware:k.OBCIFirmwareV1,
             numberOfChannels:k.OBCINumberOfChannelsDefault
         };
-        this.processBytesTimeout = null;
+        this.lastSampleObject = null;
         this.sync = {
             active: false,
             timeSent: 0,
@@ -135,6 +134,7 @@ function OpenBCIFactory() {
             resolveReference: true,         // Default to false (not resolving)
             timeout: 1000                   // Defaults to zero (no timeout)
         };
+        this.writer = null;
         // Numbers
         this.badPackets = 0;
         this.commandsToWrite = 0;

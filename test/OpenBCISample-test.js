@@ -7,6 +7,7 @@ var sinon = require('sinon');
 var chai = require('chai'),
     expect = chai.expect,
     should = chai.should(),
+    expect = chai.expect,
     openBCIBoard = require('../openBCIBoard');
 
 var chaiAsPromised = require("chai-as-promised");
@@ -743,6 +744,49 @@ describe('openBCISample',function() {
             openBCISample.impedanceSummarize(impedanceArray[0].N);
 
             impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextNone); // Check the text
+        });
+    });
+    describe.only('#makeDaisySampleObject', function() {
+        var lowerSampleObject, upperSampleObject, daisySampleObject;
+        before(() => {
+            // Make the lower sample (channels 1-8)
+            lowerSampleObject = openBCISample.newSample(1);
+            lowerSampleObject.channelData = [1,2,3,4,5,6,7,8];
+            lowerSampleObject.auxData = [0,1,2];
+            lowerSampleObject.timestamp = 4;
+            // Make the upper sample (channels 9-16)
+            upperSampleObject = openBCISample.newSample(2);
+            upperSampleObject.channelData = [9,10,11,12,13,14,15,16];
+            upperSampleObject.auxData = [3,4,5];
+            upperSampleObject.timestamp = 8;
+
+            // Call the function under test
+            daisySampleObject = openBCISample.makeDaisySampleObject(lowerSampleObject,upperSampleObject);
+        });
+        it("should make a channelData array 16 elements long",function() {
+            daisySampleObject.channelData.length.should.equal(k.OBCINumberOfChannelsDaisy);
+        });
+        it("should make a channelData array with lower array in front of upper array",function() {
+            for (var i = 0; i < 16; i++) {
+                expect(daisySampleObject.channelData[i]).to.equal(i+1);
+            }
+        });
+        it("should make the sample number equal to the second packet divided by two",function() {
+            daisySampleObject.sampleNumber.should.equal(upperSampleObject.sampleNumber / 2);
+        });
+        it("should put the aux packets in an object", function() {
+            daisySampleObject.auxData.hasOwnProperty('lower').should.be.true;
+            daisySampleObject.auxData.hasOwnProperty('upper').should.be.true;
+        });
+        it("should put the aux packets in an object in the right order", function() {
+            for (var i = 0; i < 3; i++) {
+                expect(daisySampleObject.auxData["lower"][i]).to.equal(i);
+                expect(daisySampleObject.auxData["upper"][i]).to.equal(i + 3);
+            }
+        });
+        it("should average the two timestamps together",function() {
+            var expectedAverage = (upperSampleObject.timestamp + lowerSampleObject.timestamp)/2;
+            daisySampleObject.timestamp.should.equal(expectedAverage);
         });
     });
 });
