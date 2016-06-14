@@ -1258,7 +1258,7 @@ function OpenBCIFactory() {
         }
 
         setTimeout(() => {
-            console.log("buffer",this.buffer);
+            // console.log("buffer",this.buffer);
             if (this.buffer) {
                 if (process.version > 6) {
                     // From introduced in node version 6.x.x
@@ -1302,6 +1302,7 @@ function OpenBCIFactory() {
 
                     // Emit that buffer
                     this.emit('rawDataPacket',rawPacket);
+                    console.log('rawDataPacket',rawPacket);
                     // Submit the packet for processing
                     this._processQualifiedPacket(rawPacket);
                     // Overwrite the dataBuffer with a new buffer
@@ -1317,6 +1318,7 @@ function OpenBCIFactory() {
             }
             parsePosition++;
         }
+        console.log('dataBuffer',dataBuffer);
         return dataBuffer;
     };
 

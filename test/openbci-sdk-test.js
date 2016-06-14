@@ -556,7 +556,7 @@ describe('openbci-sdk',function() {
     /**
      * Test the function that parses an incoming data buffer for packets
      */
-    describe('#_processDataBuffer', function() {
+    describe.only('#_processDataBuffer', function() {
         var ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose: true
         });
@@ -608,7 +608,7 @@ describe('openbci-sdk',function() {
             // declare the big buffer
             var buffer = new Buffer(k.OBCIPacketSize + extraBuffer.length);
             // Fill that new big buffer with buffers
-            samplePacketReal(0).copy(buffer,0);
+            openBCISample.samplePacketReal(0).copy(buffer,0);
             extraBuffer.copy(buffer,k.OBCIPacketSize);
             // Reset the spy if it exists
             if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
@@ -628,9 +628,9 @@ describe('openbci-sdk',function() {
             // declare the big buffer
             var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers);
             // Fill that new big buffer with buffers
-            samplePacketReal(0).copy(buffer,0);
-            samplePacketReal(1).copy(buffer,k.OBCIPacketSize);
-            samplePacketReal(2).copy(buffer,k.OBCIPacketSize * 2);
+            openBCISample.samplePacketReal(0).copy(buffer,0);
+            openBCISample.samplePacketReal(1).copy(buffer,k.OBCIPacketSize);
+            openBCISample.samplePacketReal(2).copy(buffer,k.OBCIPacketSize * 2);
             // Reset the spy if it exists
             if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
             // Call the function under test
@@ -649,8 +649,8 @@ describe('openbci-sdk',function() {
             // declare the big buffer
             var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers + extraBuffer.length);
             // Fill that new big buffer with buffers
-            samplePacketReal(0).copy(buffer,0);
-            samplePacketReal(1).copy(buffer,k.OBCIPacketSize);
+            openBCISample.samplePacketReal(0).copy(buffer,0);
+            openBCISample.samplePacketReal(1).copy(buffer,k.OBCIPacketSize);
             extraBuffer.copy(buffer,k.OBCIPacketSize * 2);
             // Reset the spy if it exists
             if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
@@ -659,6 +659,29 @@ describe('openbci-sdk',function() {
             // Ensure that we extracted only one buffer
             _processQualifiedPacketSpy.should.have.been.calledTwice;
             // The buffer should not have anything in it any more
+            buffer.length.should.equal(extraBuffer.length);
+        });
+
+        it('should be able to get multiple packets with junk in the middle', () => {
+            var expectedString = ",";
+            var extraBuffer = new Buffer(expectedString);
+            // We are going to extract multiple buffers
+            var expectedNumberOfBuffers = 2;
+            // declare the big buffer
+            var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers + extraBuffer.length);
+            // Fill that new big buffer with buffers
+            openBCISample.samplePacketReal(0).copy(buffer,0);
+            extraBuffer.copy(buffer,k.OBCIPacketSize);
+            openBCISample.samplePacketReal(1).copy(buffer,k.OBCIPacketSize + extraBuffer.byteLength);
+
+            // Reset the spy if it exists
+            if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
+            // Call the function under test
+            buffer = ourBoard._processDataBuffer(buffer);
+            // Ensure that we extracted only one buffer
+            _processQualifiedPacketSpy.should.have.been.calledTwice;
+            // The buffer should not have anything in it any more
+            bufferEqual(extraBuffer,buffer).should.be.true;
             buffer.length.should.equal(extraBuffer.length);
         });
     });
@@ -879,7 +902,7 @@ describe('openbci-sdk',function() {
         });
 
 
-        describe.only("#OBCIParsingTimeSyncSent",function() {
+        describe("#OBCIParsingTimeSyncSent",function() {
             var spy;
             before(() => {
                 spy = sinon.spy(ourBoard,"_isTimeSyncSetConfirmationInBuffer");
