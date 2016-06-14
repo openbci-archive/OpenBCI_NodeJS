@@ -1236,12 +1236,20 @@ function OpenBCIFactory() {
         }
 
         switch (this.curParsingMode) {
+            case k.OBCIParsingEOT:
+                if (this._doesBufferHaveEOT(data)) {
+                    this.curParsingMode = k.OBCIParsingNormal;
+                    this.buffer = null;
+                    this.emit('ready');
+                }
+                break;
             case k.OBCIParsingReset:
                 // Does the buffer have an EOT in it?
                 if (this._doesBufferHaveEOT(data)) {
                     this._processParseBufferForReset(data);
                     this.curParsingMode = k.OBCIParsingNormal;
                     this.buffer = null;
+                    this.emit('ready');
                 }
                 break;
             case k.OBCIParsingTimeSyncSent:
@@ -1258,7 +1266,6 @@ function OpenBCIFactory() {
         }
 
         setTimeout(() => {
-            // console.log("buffer",this.buffer);
             if (this.buffer) {
                 if (process.version > 6) {
                     // From introduced in node version 6.x.x
@@ -1302,15 +1309,24 @@ function OpenBCIFactory() {
 
                     // Emit that buffer
                     this.emit('rawDataPacket',rawPacket);
-                    console.log('rawDataPacket',rawPacket);
+                    // console.log('rawDataPacket',rawPacket);
                     // Submit the packet for processing
                     this._processQualifiedPacket(rawPacket);
                     // Overwrite the dataBuffer with a new buffer
-                    if (process.version > 6) {
-                        dataBuffer = Buffer.from(dataBuffer.slice(k.OBCIPacketSize));
+                    // console.log("parsePosition",parsePosition);
+                    var tempBuf;
+                    if (parsePosition > 0) {
+                        // console.log("-->",dataBuffer.slice(0,parsePosition));
+                        tempBuf = Buffer.concat([dataBuffer.slice(0,parsePosition),dataBuffer.slice(parsePosition + k.OBCIPacketSize)],dataBuffer.byteLength - k.OBCIPacketSize);
                     } else {
-                        dataBuffer = new Buffer(dataBuffer.slice(k.OBCIPacketSize));
+                        tempBuf = dataBuffer.slice(k.OBCIPacketSize);
                     }
+                    if (process.version > 6) {
+                        dataBuffer = Buffer.from(tempBuf);
+                    } else {
+                        dataBuffer = new Buffer(tempBuf);
+                    }
+                    // console.log('dataBuffer',dataBuffer);
                     // Move the parse position up one packet
                     parsePosition = -1;
                     bytesToParse -= k.OBCIPacketSize;
@@ -1318,7 +1334,7 @@ function OpenBCIFactory() {
             }
             parsePosition++;
         }
-        console.log('dataBuffer',dataBuffer);
+
         return dataBuffer;
     };
 
@@ -1602,7 +1618,7 @@ function OpenBCIFactory() {
         if(this.impedanceTest.active) {
             this._processImpedanceTest(sampleObject);
         } else {
-            // console.log('sample',sampleObject);
+            // console.log('buffer',this.buffer);
             this.emit('sample', sampleObject);
         }
     };

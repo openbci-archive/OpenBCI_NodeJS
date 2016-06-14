@@ -556,7 +556,7 @@ describe('openbci-sdk',function() {
     /**
      * Test the function that parses an incoming data buffer for packets
      */
-    describe.only('#_processDataBuffer', function() {
+    describe('#_processDataBuffer', function() {
         var ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose: true
         });
@@ -604,7 +604,6 @@ describe('openbci-sdk',function() {
         it('should extract a buffer and preseve the remaining data in the buffer',() => {
             var expectedString = "AJ";
             var extraBuffer = new Buffer(expectedString);
-            console.log('extraBuffer',extraBuffer);
             // declare the big buffer
             var buffer = new Buffer(k.OBCIPacketSize + extraBuffer.length);
             // Fill that new big buffer with buffers
@@ -683,6 +682,29 @@ describe('openbci-sdk',function() {
             // The buffer should not have anything in it any more
             bufferEqual(extraBuffer,buffer).should.be.true;
             buffer.length.should.equal(extraBuffer.length);
+        });
+
+        it('should be able to get multiple packets with junk in the middle and end', () => {
+            var expectedString = ",";
+            var extraBuffer = new Buffer(expectedString);
+            // We are going to extract multiple buffers
+            var expectedNumberOfBuffers = 2;
+            // declare the big buffer
+            var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers + extraBuffer.length * 2);
+            // Fill that new big buffer with buffers
+            openBCISample.samplePacketReal(0).copy(buffer,0);
+            extraBuffer.copy(buffer,k.OBCIPacketSize);
+            openBCISample.samplePacketReal(1).copy(buffer,k.OBCIPacketSize + extraBuffer.byteLength);
+            extraBuffer.copy(buffer,k.OBCIPacketSize * 2 + extraBuffer.byteLength);
+            // Reset the spy if it exists
+            if(_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
+            // Call the function under test
+            buffer = ourBoard._processDataBuffer(buffer);
+            // Ensure that we extracted only one buffer
+            _processQualifiedPacketSpy.should.have.been.calledTwice;
+            // The buffer should not have anything in it any more
+            bufferEqual(Buffer.concat([extraBuffer,extraBuffer],2),buffer).should.be.true;
+            buffer.length.should.equal(extraBuffer.length * 2);
         });
     });
 
@@ -917,23 +939,26 @@ describe('openbci-sdk',function() {
             // after(() => {
             //     spy = null;
             // });
-            it("should call to find the time sync set character in the buffer", function() {
+            it("should call to find the time sync set character in the buffer", done => {
                 var buf = new Buffer(",");
                 // Verify the log event is called
-                // ourBoard.once("log",(data) => {
-                //     bufferEqual(data,buf).should.be.true;
-                //
-                //     setTimeout(() => {
-                //         console.log(`done`);
-                //         // expect(ourBoard.buffer).to.be.null;
-                //         done();
-                //     },1); // tiny timeout
-                // })
+
+                var logEvent = data => {
+                    // bufferEqual(data,buf).should.be.true;
+                    //
+                    // setTimeout(() => {
+                    //     console.log(`done`);
+                    //     // expect(ourBoard.buffer).to.be.null;
+                    //
+                    // },1); // tiny timeout
+                    done();
+                };
+                ourBoard.once("log",logEvent);
                 // Call the processBytes function
                 ourBoard._processBytes(buf);
                 // Verify the function was called
                 spy.should.have.been.calledOnce;
-                // Verify the buffer is empty
+                // Verify the buffer is not empty
                 ourBoard.buffer.byteLength.should.equal(1);
             });
             it("should call to find the time sync set character in the buffer after packet", function() {
@@ -958,15 +983,21 @@ describe('openbci-sdk',function() {
 
                 var sampleCounter = 0;
 
-                var newSample = sample => {
-                    console.log(`ourBoard buffer @ ${sampleCounter}`,ourBoard.buffer);
-                    sampleCounter++;
-                    if (sampleCounter >= 2) {
+                ourBoard.sync.timeSent = 0;
 
-                        expect(ourBoard.buffer).to.be.null;
-                        ourBoard.removeListener("sample",newSample);
+                var newSample = sample => {
+                    if (sampleCounter == 0) {
+                        sample.sampleNumber.should.equal(250);
+                    } else if (sampleCounter == 1) {
+                        sample.sampleNumber.should.equal(251);
+                        // bufferEqual(buf1, buffer).should.be.true;
+                        // ourBoard.buffer.length.should.equal(buf1.length);
+                        ourBoard.removeListener("sample", newSample);
+                        ourBoard.curParsingMode.should.equal(k.OBCIParsingNormal);
+                        ourBoard.sync.timeSent.should.be.greaterThan(0);
                         done();
                     }
+                    sampleCounter++;
                 };
 
                 ourBoard.on("sample",newSample);
@@ -990,7 +1021,7 @@ describe('openbci-sdk',function() {
                 ourBoard.once("sample",sample => {
                     sample.sampleNumber.should.equal(expectedSampleNumber);
 
-                    expect(ourBoard.buffer).to.be.null;
+                    expect(ourBoard.buffer.byteLength).to.be.equal(0);
 
                     done();
                 });

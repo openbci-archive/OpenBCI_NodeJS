@@ -275,13 +275,14 @@ const OBCIParseFirmware     = "v2";
 const OBCIParseEOT          = "$$$";
 
 /** Used in parsing incoming serial data*/
+const OBCIParsingChannelSettings  = 2;
+const OBCIParsingEOT              = 4;
 const OBCIParsingNormal           = 3;
 const OBCIParsingReset            = 0;
-const OBCIParsingChannelSettings  = 2;
 const OBCIParsingTimeSyncSent     = 1;
 
 /** Timeouts */
-const OBCITimeoutProcessBytes = 2000; // 2 seconds
+const OBCITimeoutProcessBytes = 500; // 0.5 seconds
 
 
 module.exports = {
@@ -781,10 +782,11 @@ module.exports = {
     OBCIParseFirmware,
     OBCIParseEOT,
     /** Used in parsing incoming serial data*/
+    OBCIParsingChannelSettings,
+    OBCIParsingEOT,
     OBCIParsingNormal,
     OBCIParsingReset,
     OBCIParsingTimeSyncSent,
-    OBCIParsingChannelSettings,
     /** Timeouts */
     OBCITimeoutProcessBytes
 };
