@@ -166,7 +166,7 @@ const OBCITrigger = '`';
 
 /** Sync Clocks */
 const OBCISyncTimeSet = '<';
-const OBCISyncTimeSent = ',';
+const OBCISyncTimeSent = ",";
 
 /** Possible number of channels */
 const OBCINumberOfChannelsDaisy = 16;
@@ -272,10 +272,10 @@ const OBCIFirmwareV2 = 'v2';
 /** Parse */
 const OBCIParseDaisy        = "Daisy";
 const OBCIParseFirmware     = "v2";
-const OBCIParseEndOfFile    = "$$$";
+const OBCIParseEOT          = "$$$";
 
 /** Used in parsing incoming serial data*/
-const OBCIParsingNone             = 3;
+const OBCIParsingNormal           = 3;
 const OBCIParsingReset            = 0;
 const OBCIParsingTimeSyncSent     = 1;
 const OBCIParsingChannelSettings  = 2;
@@ -776,9 +776,9 @@ module.exports = {
     /** Parse */
     OBCIParseDaisy,
     OBCIParseFirmware,
-    OBCIParseEndOfFile,
+    OBCIParseEOT,
     /** Used in parsing incoming serial data*/
-    OBCIParsingNone,
+    OBCIParsingNormal,
     OBCIParsingReset,
     OBCIParsingTimeSyncSent,
     OBCIParsingChannelSettings

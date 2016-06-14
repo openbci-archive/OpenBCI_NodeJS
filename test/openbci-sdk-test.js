@@ -10,7 +10,7 @@ var chaiAsPromised = require("chai-as-promised");
 var sinonChai = require("sinon-chai");
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
-
+var bufferEqual = require('buffer-equal');
 var fs = require('fs');
 //var wstream = fs.createWriteStream('myOutput.txt');
 
@@ -758,7 +758,7 @@ describe('openbci-sdk',function() {
         });
     });
 
-    describe.only("#_processParseBufferForReset",function() {
+    describe("#_processParseBufferForReset",function() {
         var ourBoard;
 
 
@@ -819,6 +819,279 @@ describe('openbci-sdk',function() {
             ourBoard.info.sampleRate.should.equal(k.OBCISampleRate125);
             ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDaisy);
 
+        });
+    });
+
+    describe.only("#_processBytes",function() {
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+
+        describe("#OBCIParsingReset",function() {
+            var _processParseBufferForResetSpy;
+            before(() => {
+                _processParseBufferForResetSpy = sinon.spy(ourBoard,"_processParseBufferForReset");
+            });
+            beforeEach(() => {
+                _processParseBufferForResetSpy.reset();
+            });
+            it("should wait till EOT ($$$) before starting parse",function() {
+                var buf1 = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\n`);
+                var buf2 = new Buffer(`On Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: `);
+                var buf3 = new Buffer(`0x38422\n$$$`);
+
+                // Fake a soft reset send
+                ourBoard.curParsingMode = k.OBCIParsingReset;
+
+                // Send the first buffer
+                ourBoard._processBytes(buf1);
+                // Verify the parse function was not called
+                _processParseBufferForResetSpy.should.not.have.been.called;
+                // Verify the global buffer has the first buf in it
+                bufferEqual(ourBoard.buffer,buf1);
+                // Send another buffer without EOT
+                ourBoard._processBytes(buf2);
+                // Verify the parse function was not called
+                _processParseBufferForResetSpy.should.not.have.been.called;
+                // Verify the global buffer has the first and second buf in it
+                bufferEqual(ourBoard.buffer,Buffer.concat([buf1,buf2]));
+                // Send another buffer without EOT
+                ourBoard._processBytes(buf3);
+                // Verify the parse function was called
+                _processParseBufferForResetSpy.should.have.been.calledOnce;
+                // Verify the global buffer is empty
+                ourBoard.buffer.length.should.equal(0);
+
+            });
+        });
+
+
+        describe("#OBCIParsingTimeSyncSent",function() {
+            var spy;
+            before(() => {
+                spy = sinon.spy(ourBoard,"_isTimeSyncSetConfirmationInBuffer");
+            });
+            beforeEach(() => {
+                ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+            });
+            afterEach(() => {
+                spy.reset();
+            });
+            after(() => {
+                spy = null;
+            });
+            it("should call to find the time sync set character in the buffer", function() {
+                // Call the processBytes function
+                ourBoard._processBytes(new Buffer(","));
+                // Verify the function was called
+                spy.should.have.been.calledOnce;
+                // Verify the buffer is empty
+                ourBoard.buffer.length.should.equal(0);
+            });
+            it("should call to find the time sync set character in the buffer", function() {
+                var buf1 = openBCISample.samplePacket();
+                var buf2 = new Buffer(",");
+
+                // Call the processBytes function
+                ourBoard._processBytes(Buffer.concat([buf1,buf2],buf1.length + 1));
+                // Verify the function was called
+                spy.should.have.been.calledOnce;
+                // Verify the buffer is empty
+                ourBoard.buffer.length.should.equal(0);
+            });
+
+        });
+        
+        describe("#OBCIParsingNormal",function() {
+            before(() => {
+                ourBoard.curParsingMode = k.OBCIParsingNormal;
+            });
+            it("should emit a sample when inserted",function(done) {
+                var expectedSampleNumber = 0;
+                var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
+
+                // Declare the event emitter prior to calling function
+                ourBoard.once("sample",sample => {
+                    sample.sampleNumber.should.equal(expectedSampleNumber);
+
+                    expect(ourBoard.buffer).to.be.null;
+
+                    done();
+                });
+
+                // Now call the function which should call the "sample" event
+                ourBoard._processBytes(buf1);
+            });
+        });
+
+        /** For later use */
+        // this.timeout(2000);
+        // var _processParseBufferForResetSpy;
+        // before(function() {
+        //     ourBoard = new openBCIBoard.OpenBCIBoard({
+        //         simulate: !realBoard,
+        //         verbose: true
+        //     });
+        //     _processParseBufferForResetSpy = sinon.spy(ourBoard,"_processParseBufferForReset");
+        // });
+        // after(function(done) {
+        //     if (ourBoard.connected) {
+        //         ourBoard.disconnect().then(() => {
+        //             done();
+        //         });
+        //     } else {
+        //         done()
+        //     }
+        // });
+        // afterEach(function() {
+        //     if (_processParseBufferForResetSpy) _processParseBufferForResetSpy.reset();
+        // });
+        //
+        // it("should send a soft reset and set the firmware",function() {
+        //     // Reset the info object
+        //     ourBoard.info = {
+        //         boardType:"burrito",
+        //         sampleRate:60,
+        //         firmware:'taco',
+        //         numberOfChannels:200
+        //     };
+        //
+        //     // Call a soft reset
+        //     ourBoard.softReset();
+        //
+        //     // Wait till
+        //
+        // });
+
+    });
+
+    describe('#_countADSPresent',function() {
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            ourBoard._countADSPresent(buf).should.equal(0);
+        });
+        it("should not find any ADS1299 present",function() {
+            var buf = new Buffer("AJ Keller is an awesome programmer!\n I know right!");
+
+            ourBoard._countADSPresent(buf).should.equal(0);
+        });
+        it("should find one ads present",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422$$$`);
+
+            ourBoard._countADSPresent(buf).should.equal(1);
+        });
+        it("should find two ads1299 present",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\n$$$`);
+
+            ourBoard._countADSPresent(buf).should.equal(2);
+        });
+    });
+
+    describe('#_findV2Firmware',function() {
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            ourBoard._findV2Firmware(buf).should.equal(false);
+        });
+        it("should not find any v2",function() {
+            var buf = new Buffer("AJ Keller is an awesome programmer!\n I know right!");
+
+            ourBoard._findV2Firmware(buf).should.equal(false);
+        });
+        it("should not find a v2",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422$$$`);
+
+            ourBoard._findV2Firmware(buf).should.equal(false);
+        });
+        it("should find a v2",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
+
+            ourBoard._findV2Firmware(buf).should.equal(true);
+        });
+    });
+
+    describe("#_isTimeSyncSetConfirmationInBuffer", function() {
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        it("should find the character in a buffer with only the character", function() {
+            ourBoard._isTimeSyncSetConfirmationInBuffer(new Buffer(",")).should.equal(true);
+        });
+        it("should not find the character in a buffer without the character", function() {
+            ourBoard._isTimeSyncSetConfirmationInBuffer(openBCISample.samplePacket()).should.equal(false);
+        });
+        // it("should find the time sync set character in the buffer", function() {
+        //     var buf1 = openBCISample.samplePacket();
+        //     var buf2 = new Buffer(",");
+        //
+        //     var inputBuf = Buffer.concat([buf1,buf2],buf1.length + 1);
+        //
+        //     // Call the processBytes function
+        //     var result = ourBoard._isTimeSyncSetConfirmationInBuffer(inputBuf);
+        //
+        //     result.should.be.true;
+        //     // Verify the buffer is not empty
+        //     inputBuf.length.should.equal(buf1.byteLength);
+        // });
+        // it("should find the time sync set character wedged in the buffer", function() {
+        //     var buf1 = openBCISample.samplePacket(250);
+        //     var buf2 = new Buffer(",");
+        //     var buf3 = openBCISample.samplePacket(251);
+        //
+        //     var inputBuf = Buffer.concat([buf1,buf2,buf3],buf1.byteLength + 1 + buf3.byteLength);
+        //
+        //     // Call the processBytes function
+        //     var result = ourBoard._isTimeSyncSetConfirmationInBuffer(inputBuf);
+        //
+        //     result.should.be.true;
+        //     // Verify the buffer is not empty
+        //     inputBuf.length.should.equal(buf1.byteLength + buf3.byteLength);
+        // });
+    });
+
+    describe('#_doesBufferHaveEOT',function() {
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            ourBoard._doesBufferHaveEOT(buf).should.equal(false);
+        });
+        it("should not find any $$$",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n`);
+
+            ourBoard._doesBufferHaveEOT(buf).should.equal(false);
+
+            buf = Buffer.concat([buf, new Buffer(k.OBCIParseEOT)],buf.length + 3);
+
+            ourBoard._doesBufferHaveEOT(buf).should.equal(true);
+        });
+        it("should find a $$$",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
+
+            ourBoard._doesBufferHaveEOT(buf).should.equal(true);
         });
     });
 

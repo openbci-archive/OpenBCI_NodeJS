@@ -9,6 +9,7 @@ var k = openBCISample.k;
 var openBCISimulator = require('./openBCISimulator');
 var now = require('performance-now');
 var Sntp = require('sntp');
+var StreamSearch = require('streamsearch');
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -1097,7 +1098,7 @@ function OpenBCIFactory() {
      * @param data - a buffer of unknown size
      * @author AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype._processBytes = function(data) {
+    OpenBCIBoard.prototype._processBytes_vak = function(data) {
         //console.log(data.toString());
         var sizeOfData = data.byteLength;
         this.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
@@ -1216,6 +1217,40 @@ function OpenBCIFactory() {
     };
 
     /**
+     * @description Consider the '_processBytes' method to be the work horse of this
+     *              entire framework. This method gets called any time there is new
+     *              data coming in on the serial port. If you are familiar with the
+     *              'serialport' package, then every time data is emitted, this function
+     *              gets sent the input data. The data comes in very fragmented, sometimes
+     *              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
+     *              we will need to store what we don't read for next time.
+     * @param data - a buffer of unknown size
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processBytes = function(data) {
+        // Concat old buffer
+        // if (this.buffer) {
+        //     data = Buffer.concat([this.buffer,data],data.length + this.buffer.length);
+        // } 
+        //
+        // this.buffer = this._processDataBuffer(data);
+        //
+        // switch (this.curParsingMode) {
+        //     case k.OBCIParsingReset:
+        //         // Does the buffer have an EOT in it? 
+        //         if (this._doesBufferHaveEOT(this.buffer)) {
+        //             this._processParseBufferForReset(this.buffer);
+        //         }
+        //         break;
+        //     case k.OBCIParsingTimeSyncSent:
+        //         break;
+        //     default:
+        //         break;
+        //
+        // }
+    };
+
+    /**
      * @description Used to extract samples out of a buffer of unknown length
      * @param dataBuffer {Buffer} - A buffer to parse for samples
      * @returns {Buffer} - Any data that was not pulled out of the buffer
@@ -1264,6 +1299,124 @@ function OpenBCIFactory() {
     };
 
     /**
+     * @description Searchs the buffer for a "$$$" or as we call an EOT
+     * @param dataBuffer - The buffer of some length to parse
+     * @returns {boolean} - True if the `$$$` was found.
+     */
+    OpenBCIBoard.prototype._doesBufferHaveEOT = function(dataBuffer) {
+        const s = new StreamSearch(new Buffer(k.OBCIParseEOT));
+
+        // Clear the buffer
+        s.reset();
+
+        // Push the new data buffer. This runs the search.
+        s.push(dataBuffer);
+
+        // Check and see if there is a match
+        return s.matches === 1;
+    };
+
+    /**
+     * @description Alters the global info object by parseing an incoming soft reset key
+     * @param dataBuffer {Buffer} - The soft reset data buffer
+     * @private
+     */
+    OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
+        if (this._countADSPresent(dataBuffer) === 2) {
+            this.info.boardType = k.OBCIBoardDaisy;
+            this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
+            this.info.sampleRate = k.OBCISampleRate125;
+        } else {
+            this.info.boardType = k.OBCIBoardDefault;
+            this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
+            this.info.sampleRate = k.OBCISampleRate250;
+        }
+
+        if (this._findV2Firmware(dataBuffer)) {
+            this.info.firmware = k.OBCIFirmwareV2;
+        } else {
+            this.info.firmware = k.OBCIFirmwareV1;
+        }
+    };
+
+    /**
+     * @description Since we know exactly what this input will look like (See the hardware firmware) we can program this
+     *      function with proior knowledge.
+     * @param dataBuffer - The buffer you want to parse.
+     * @return {Number} - The number of "ADS1299" present in the `dataBuffer`
+     * @private
+     */
+    OpenBCIBoard.prototype._countADSPresent = function(dataBuffer) {
+        const s = new StreamSearch(new Buffer("ADS1299"));
+
+        // Clear the buffer
+        s.reset();
+
+        // Push the new data buffer. This runs the search.
+        s.push(dataBuffer);
+
+        // Check and see if there is a match
+        return s.matches;
+    };
+
+
+    /**
+     * @description Used to parse a soft reset response to determine if the board is running the v2 firmware
+     * @param dataBuffer {Buffer} - The data to parse
+     * @returns {boolean} - True if `v2`is indeed found in the `dataBuffer`
+     * @private
+     */
+    OpenBCIBoard.prototype._findV2Firmware = function(dataBuffer) {
+        const s = new StreamSearch(new Buffer(k.OBCIParseFirmware));
+
+        // Clear the buffer
+        s.reset();
+
+        // Push the new data buffer. This runs the search.
+        s.push(dataBuffer);
+
+        // Check and see if there is a match
+        return s.matches === 1;
+    };
+
+
+    /**
+     * @description Used to parse a buffer for the `,` character that is acked back after a time sync request is sent
+     * @param dataBuffer - The buffer of some length to parse
+     * @returns {boolean} - True if the `,` was found.
+     */
+    OpenBCIBoard.prototype._isTimeSyncSetConfirmationInBuffer = function(dataBuffer) {
+        const s = new StreamSearch(new Buffer(k.OBCISyncTimeSent));
+
+        // Clear the buffer
+        s.reset();
+
+        // Push the new data buffer. This runs the search.
+        s.push(dataBuffer);
+
+        // Check and see if there is a match
+        return s.matches === 1;
+    };
+
+    // OpenBCIBoard.prototype._extractTimeSyncSent = function(dataBuffer) {
+    //     const s = new StreamSearch(new Buffer(k.OBCISyncTimeSent));
+    //
+    //     // Clear the buffer
+    //     s.reset();
+    //
+    //     var tempBuf;
+    //     s.on('info', function(isMatch, data, start, end) {
+    //         tempBuf = Buffer.concat([tempBuf,dataBuffer.slice(start,end)],tempBuf.byteLength + (end - start));
+    //         console.log(`data:${data} | start:${start} | end:${end}`);
+    //
+    //     });
+    //
+    //     // Push the new data buffer. This runs the search.
+    //     s.push(dataBuffer);
+    //    
+    // };
+
+    /**
      * @description Used to route qualified packets to their proper parsers
      * @param rawDataPacketBuffer
      */
@@ -1294,7 +1447,31 @@ function OpenBCIFactory() {
                 break;
         }
     };
-    
+
+    /**
+     * @description A method used to compute impedances.
+     * @param sampleObject - A sample object that follows the normal standards.
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processImpedanceTest = function(sampleObject) {
+        var impedanceArray;
+        if (this.impedanceTest.continuousMode) {
+            //console.log('running in continuous mode...');
+            //openBCISample.debugPrettyPrint(sampleObject);
+            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+            if (impedanceArray) {
+                this.emit('impedanceArray',impedanceArray);
+            }
+        } else if (this.impedanceTest.onChannel != 0) {
+            // Only calculate impedance for one channel
+            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+            if (impedanceArray) {
+                this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
+            }
+        }
+    };
+
     /**
      * @description A method to parse a stream packet that has channel data and data in the aux channels that contains accel data.
      * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
@@ -1397,82 +1574,6 @@ function OpenBCIFactory() {
         } else {
             // console.log('sample',sampleObject);
             this.emit('sample', sampleObject);
-        }
-    };
-
-    /**
-     * @description A method used to compute impedances.
-     * @param sampleObject - A sample object that follows the normal standards.
-     * @private
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype._processImpedanceTest = function(sampleObject) {
-        var impedanceArray;
-        if (this.impedanceTest.continuousMode) {
-            //console.log('running in continuous mode...');
-            //openBCISample.debugPrettyPrint(sampleObject);
-            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
-            if (impedanceArray) {
-                this.emit('impedanceArray',impedanceArray);
-            }
-        } else if (this.impedanceTest.onChannel != 0) {
-            // Only calculate impedance for one channel
-            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
-            if (impedanceArray) {
-                this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
-            }
-        }
-    };
-
-    OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
-        var sizeOfSearchBuf = this.searchingBuf.byteLength; // then size in bytes of the buffer we are searching for
-        for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
-            if (this.parsingForFirmwareVersion) {
-                if (this.searchBuffers.firmwareVersion.equals(data.slice(i, i+2))) {
-                    this.firmwareVersion = k.OBCIFirmwareV2;
-                    if (this.options.verbose) console.log('Using Firmware Version 2');
-                    this.parsingForFirmwareVersion = false;
-                    // If we are using the v2 firmware, no need for a delay
-                    this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
-                }
-            }
-            if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
-                if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
-                    if (this.options.verbose) console.log('Money!');
-                    if (this.options.verbose) console.log(data.toString());
-                    this.parsingForFirmwareVersion = false; // because we didnt find it
-                    this.isLookingForKeyInBuffer = false; // critical!!!
-                    this.emit('ready'); // tell user they are ready to stream, etc...
-                } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncSent)) {
-                    this.sync.timeSent = this.sntpNow();
-                    if(this.options.verbose) console.log('Sent time sync');
-
-                    this.searchingBuf = this.searchBuffers.miscStop;
-                    this.isLookingForKeyInBuffer = false;
-
-                } else {
-                    getChannelSettingsObj(data.slice(i)).then((channelSettingsObject) => {
-                        this.emit('query',channelSettingsObject);
-                    }, (err) => {
-                        console.log('Error: ' + err);
-                    });
-                    this.searchingBuf = this.searchBuffers.miscStop;
-                    break;
-                }
-            }
-        }
-    };
-
-    OpenBCIBoard.prototype._isDaisyPresentFromBuffer = function(dataBuffer) {
-        // We are going to count how many of these buffers are contained in the response message.
-        //  if there is only one then no daisy, but if there are two then there is a daisy board.
-        const ads1299 = new Buffer("ADS1299");
-
-        var sizeOfSearchBuf = ads1299.byteLength;
-        var sizeOfData = dataBuffer.byteLength;
-
-        for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
-            
         }
     };
 
