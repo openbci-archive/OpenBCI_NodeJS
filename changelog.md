@@ -5,6 +5,7 @@
 * Firmware version 2.0 support.
 * Clock synchronization between OpenBCI board and this driver
 * `.info` property which contains verified board information parsed from the OpenBCI's `softReset()` response.
+* `log` event that is emitted for data send from the board that is not a stream packet
 
 ### Breaking Changes
 

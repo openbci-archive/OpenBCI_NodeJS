@@ -98,6 +98,7 @@ function OpenBCIFactory() {
         this.writeOutArray = new Array(100);
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
         // Buffers
+        this.buffer = null;
         this.masterBuffer = masterBufferMaker();
         // Objects
         this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
@@ -117,6 +118,7 @@ function OpenBCIFactory() {
             firmware:k.OBCIFirmwareV1,
             numberOfChannels:k.OBCINumberOfChannelsDefault
         };
+        this.processBytesTimeout = null;
         this.sync = {
             active: false,
             timeSent: 0,
@@ -1229,25 +1231,44 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
         // Concat old buffer
-        // if (this.buffer) {
-        //     data = Buffer.concat([this.buffer,data],data.length + this.buffer.length);
-        // } 
-        //
-        // this.buffer = this._processDataBuffer(data);
-        //
-        // switch (this.curParsingMode) {
-        //     case k.OBCIParsingReset:
-        //         // Does the buffer have an EOT in it? 
-        //         if (this._doesBufferHaveEOT(this.buffer)) {
-        //             this._processParseBufferForReset(this.buffer);
-        //         }
-        //         break;
-        //     case k.OBCIParsingTimeSyncSent:
-        //         break;
-        //     default:
-        //         break;
-        //
-        // }
+        if (this.buffer) {
+            data = Buffer.concat([this.buffer,data],data.length + this.buffer.length);
+        }
+
+        switch (this.curParsingMode) {
+            case k.OBCIParsingReset:
+                // Does the buffer have an EOT in it?
+                if (this._doesBufferHaveEOT(data)) {
+                    this._processParseBufferForReset(data);
+                    this.curParsingMode = k.OBCIParsingNormal;
+                    this.buffer = null;
+                }
+                break;
+            case k.OBCIParsingTimeSyncSent:
+                if (this._isTimeSyncSetConfirmationInBuffer(data)) {
+                    this.sync.timeSent = this.sntpNow();
+                    this.curParsingMode = k.OBCIParsingNormal;
+                }
+                this.buffer = this._processDataBuffer(data);
+                break;
+            case k.OBCIParsingNormal:
+            default:
+                this.buffer = this._processDataBuffer(data);
+                break;
+        }
+
+        setTimeout(() => {
+            console.log("buffer",this.buffer);
+            if (this.buffer) {
+                if (process.version > 6) {
+                    // From introduced in node version 6.x.x
+                    this.emit("log",Buffer.from(this.buffer));
+                } else {
+                    this.emit("log",new Buffer(this.buffer));
+                }
+                this.buffer = null;
+            }
+        },k.OBCITimeoutProcessBytes);
     };
 
     /**
@@ -1256,6 +1277,7 @@ function OpenBCIFactory() {
      * @returns {Buffer} - Any data that was not pulled out of the buffer
      */
     OpenBCIBoard.prototype._processDataBuffer = function(dataBuffer) {
+        if (!dataBuffer) return null;
         var bytesToParse = dataBuffer.byteLength;
         // Exit if we have a buffer with less data than a packet
         if (bytesToParse < k.OBCIPacketSize) return dataBuffer;
@@ -1272,7 +1294,7 @@ function OpenBCIFactory() {
                     // Grab the raw packet, make a copy of it.
                     var rawPacket;
                     if (process.version > 6) {
-                        // From introcuded in node version 6.x.x
+                        // From introduced in node version 6.x.x
                         rawPacket = Buffer.from(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
                     } else {
                         rawPacket = new Buffer(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
@@ -1421,6 +1443,8 @@ function OpenBCIFactory() {
      * @param rawDataPacketBuffer
      */
     OpenBCIBoard.prototype._processQualifiedPacket = function(rawDataPacketBuffer) {
+        if (!rawDataPacketBuffer) return;
+        if (rawDataPacketBuffer.byteLength !== k.OBCIPacketSize) return;
         var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
         switch (packetType) {
             case k.OBCIStreamPacketStandardAccel:
@@ -1483,7 +1507,7 @@ function OpenBCIFactory() {
             .then(sampleObject => {
                 //openBCISample.debugPrettyPrint(sampleObject);
                 sampleObject.rawPacket = rawPacket;
-                this._finalizeNewSample(sampleObject);
+                this._finalizeNewSample.call(this,sampleObject);
             })
             .catch(err => console.log('Error in _processPacketStandardAccel',err));
     };
@@ -1496,7 +1520,9 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._processPacketStandardRawAux = function(rawPacket) {
         openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray,false)
-            .then(this._finalizeNewSample)
+            .then(sampleObject => {
+                this._finalizeNewSample.call(this,sampleObject);
+            })
             .catch(err => console.log('Error in _processPacketStandardRawAux',err));
     };
 
@@ -1541,7 +1567,7 @@ function OpenBCIFactory() {
         openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
             .then((sampleObject) => {
                 sampleObject.rawPacket = rawPacket;
-                this._finalizeNewSample(sampleObject);
+                this._finalizeNewSample.call(this,sampleObject);
             })
             .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
     };
@@ -1556,7 +1582,9 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype._processPacketTimeSyncedRawAux = function(rawPacket) {
         if (this.sync.active === false) console.log('Need to sync with board...');
         openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
-            .then(this._finalizeNewSample)
+            .then(sampleObject => {
+                this._finalizeNewSample.call(this,sampleObject);
+            })
             .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
     };
 

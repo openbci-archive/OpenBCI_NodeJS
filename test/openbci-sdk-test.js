@@ -562,6 +562,14 @@ describe('openbci-sdk',function() {
         });
         var _processQualifiedPacketSpy = sinon.spy(ourBoard,"_processQualifiedPacket");
 
+        it('should do nothing when empty buffer inserted', () => {
+            var buffer = null;
+
+            // Test the function
+            buffer = ourBoard._processDataBuffer(buffer);
+
+            expect(buffer).to.be.null;
+        });
         it('should return an unaltered buffer if there is less than a packets worth of data in it', () => {
             var expectedString = "AJ";
             var buffer = new Buffer(expectedString);
@@ -822,11 +830,14 @@ describe('openbci-sdk',function() {
         });
     });
 
-    describe.only("#_processBytes",function() {
+    describe("#_processBytes",function() {
         before(() => {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true
             });
+        });
+        afterEach(() => {
+            ourBoard.buffer = null;
         });
 
         describe("#OBCIParsingReset",function() {
@@ -862,35 +873,47 @@ describe('openbci-sdk',function() {
                 // Verify the parse function was called
                 _processParseBufferForResetSpy.should.have.been.calledOnce;
                 // Verify the global buffer is empty
-                ourBoard.buffer.length.should.equal(0);
+                expect(ourBoard.buffer).to.be.null;
 
             });
         });
 
 
-        describe("#OBCIParsingTimeSyncSent",function() {
+        describe.only("#OBCIParsingTimeSyncSent",function() {
             var spy;
             before(() => {
                 spy = sinon.spy(ourBoard,"_isTimeSyncSetConfirmationInBuffer");
             });
             beforeEach(() => {
                 ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-            });
-            afterEach(() => {
                 spy.reset();
             });
-            after(() => {
-                spy = null;
-            });
+            // afterEach(() => {
+            //     spy.reset();
+            // });
+            // after(() => {
+            //     spy = null;
+            // });
             it("should call to find the time sync set character in the buffer", function() {
+                var buf = new Buffer(",");
+                // Verify the log event is called
+                // ourBoard.once("log",(data) => {
+                //     bufferEqual(data,buf).should.be.true;
+                //
+                //     setTimeout(() => {
+                //         console.log(`done`);
+                //         // expect(ourBoard.buffer).to.be.null;
+                //         done();
+                //     },1); // tiny timeout
+                // })
                 // Call the processBytes function
-                ourBoard._processBytes(new Buffer(","));
+                ourBoard._processBytes(buf);
                 // Verify the function was called
                 spy.should.have.been.calledOnce;
                 // Verify the buffer is empty
-                ourBoard.buffer.length.should.equal(0);
+                ourBoard.buffer.byteLength.should.equal(1);
             });
-            it("should call to find the time sync set character in the buffer", function() {
+            it("should call to find the time sync set character in the buffer after packet", function() {
                 var buf1 = openBCISample.samplePacket();
                 var buf2 = new Buffer(",");
 
@@ -899,7 +922,35 @@ describe('openbci-sdk',function() {
                 // Verify the function was called
                 spy.should.have.been.calledOnce;
                 // Verify the buffer is empty
-                ourBoard.buffer.length.should.equal(0);
+                // expect(ourBoard.buffer).to.be.null;
+                // ourBoard.buffer.length.should.equal(0);
+            });
+            it("should find time sync and emit two samples", done => {
+
+                var buf1 = openBCISample.samplePacket(250);
+                var buf2 = new Buffer(",");
+                var buf3 = openBCISample.samplePacket(251);
+
+                var inputBuf = Buffer.concat([buf1,buf2,buf3],buf1.byteLength + 1 + buf3.byteLength);
+
+                var sampleCounter = 0;
+
+                var newSample = sample => {
+                    console.log(`ourBoard buffer @ ${sampleCounter}`,ourBoard.buffer);
+                    sampleCounter++;
+                    if (sampleCounter >= 2) {
+
+                        expect(ourBoard.buffer).to.be.null;
+                        ourBoard.removeListener("sample",newSample);
+                        done();
+                    }
+                };
+
+                ourBoard.on("sample",newSample);
+
+                // Call the processBytes function
+                ourBoard._processBytes(inputBuf);
+
             });
 
         });
@@ -908,7 +959,7 @@ describe('openbci-sdk',function() {
             before(() => {
                 ourBoard.curParsingMode = k.OBCIParsingNormal;
             });
-            it("should emit a sample when inserted",function(done) {
+            it("should emit a sample when inserted",done => {
                 var expectedSampleNumber = 0;
                 var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
 
@@ -1038,33 +1089,6 @@ describe('openbci-sdk',function() {
         it("should not find the character in a buffer without the character", function() {
             ourBoard._isTimeSyncSetConfirmationInBuffer(openBCISample.samplePacket()).should.equal(false);
         });
-        // it("should find the time sync set character in the buffer", function() {
-        //     var buf1 = openBCISample.samplePacket();
-        //     var buf2 = new Buffer(",");
-        //
-        //     var inputBuf = Buffer.concat([buf1,buf2],buf1.length + 1);
-        //
-        //     // Call the processBytes function
-        //     var result = ourBoard._isTimeSyncSetConfirmationInBuffer(inputBuf);
-        //
-        //     result.should.be.true;
-        //     // Verify the buffer is not empty
-        //     inputBuf.length.should.equal(buf1.byteLength);
-        // });
-        // it("should find the time sync set character wedged in the buffer", function() {
-        //     var buf1 = openBCISample.samplePacket(250);
-        //     var buf2 = new Buffer(",");
-        //     var buf3 = openBCISample.samplePacket(251);
-        //
-        //     var inputBuf = Buffer.concat([buf1,buf2,buf3],buf1.byteLength + 1 + buf3.byteLength);
-        //
-        //     // Call the processBytes function
-        //     var result = ourBoard._isTimeSyncSetConfirmationInBuffer(inputBuf);
-        //
-        //     result.should.be.true;
-        //     // Verify the buffer is not empty
-        //     inputBuf.length.should.equal(buf1.byteLength + buf3.byteLength);
-        // });
     });
 
     describe('#_doesBufferHaveEOT',function() {
