@@ -112,11 +112,11 @@ function OpenBCIFactory() {
             impedanceForChannel: 0
         };
         this.info = {
-            boardType:k.OBCIBoardDefault,
-            sampleRate:k.OBCISampleRate250,
-            firmware:k.OBCIFirmwareV1,
-            numberOfChannels:k.OBCINumberOfChannelsDefault,
-            missedPackets:0
+            boardType : this.options.boardType,
+            sampleRate : this.options.boardType === k.OBCIBoardDaisy ? k.OBCISampleRate125 : k.OBCISampleRate125,
+            firmware : k.OBCIFirmwareV1,
+            numberOfChannels : k.OBCINumberOfChannelsDefault,
+            missedPackets : 0
         };
         this._lowerChannelsSampleObject = null;
         this.sync = {
@@ -1048,10 +1048,16 @@ function OpenBCIFactory() {
         if (this.options.simulate) {
             return this.options.simulatorSampleRate;
         } else {
-            if(this.options.boardType === k.OBCIBoardDaisy) {
-                return k.OBCISampleRate125;
+            if (this.info) {
+                return this.info.sampleRate;
             } else {
-                return k.OBCISampleRate250;
+                switch (this.boardType) {
+                    case k.OBCIBoardDaisy:
+                        return k.OBCISampleRate125;
+                    case k.OBCIBoardDefault:
+                    default:
+                        return k.OBCISampleRate250;
+                }
             }
         }
     };
@@ -1064,10 +1070,16 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.numberOfChannels = function() {
-        if(this.options.boardType === k.OBCIBoardDaisy) {
-            return k.OBCINumberOfChannelsDaisy;
+        if (this.info) {
+            return this.info.numberOfChannels;
         } else {
-            return k.OBCINumberOfChannelsDefault;
+            switch (this.boardType) {
+                case k.OBCIBoardDaisy:
+                    return k.OBCINumberOfChannelsDaisy;
+                case k.OBCIBoardDefault:
+                default:
+                    return k.OBCINumberOfChannelsDefault;
+            }
         }
     };
 
@@ -1086,135 +1098,6 @@ function OpenBCIFactory() {
             this.write(k.OBCISyncTimeSet);
             resolve();
         });
-    };
-
-    /**
-     * @description Consider the '_processBytes' method to be the work horse of this
-     *              entire framework. This method gets called any time there is new
-     *              data coming in on the serial port. If you are familiar with the
-     *              'serialport' package, then every time data is emitted, this function
-     *              gets sent the input data. The data comes in very fragmented, sometimes
-     *              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
-     *              we will need to store what we don't read for next time.
-     * @param data - a buffer of unknown size
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype._processBytes_vak = function(data) {
-        //console.log(data.toString());
-        var sizeOfData = data.byteLength;
-        this.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
-        if(this.isLookingForKeyInBuffer) { //in a reset state
-            var sizeOfSearchBuf = this.searchingBuf.byteLength; // then size in bytes of the buffer we are searching for
-            for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
-                if (this.parsingForFirmwareVersion) {
-                    if (this.searchBuffers.firmwareVersion.equals(data.slice(i, i+2))) {
-                        this.firmwareVersion = k.OBCIFirmwareV2;
-                        if (this.options.verbose) console.log('Using Firmware Version 2');
-                        this.parsingForFirmwareVersion = false;
-                        // If we are using the v2 firmware, no need for a delay
-                        this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
-                    }
-                }
-                if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
-                    if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
-                        if (this.options.verbose) console.log('Money!');
-                        if (this.options.verbose) console.log(data.toString());
-                        this.parsingForFirmwareVersion = false; // because we didnt find it
-                        this.isLookingForKeyInBuffer = false; // critical!!!
-                        this.emit('ready'); // tell user they are ready to stream, etc...
-                    } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncSent)) {
-                        this.sync.timeSent = this.sntpNow();
-                        if(this.options.verbose) console.log('Sent time sync');
-
-                        this.searchingBuf = this.searchBuffers.miscStop;
-                        this.isLookingForKeyInBuffer = false;
-
-                    } else {
-                        getChannelSettingsObj(data.slice(i)).then((channelSettingsObject) => {
-                            this.emit('query',channelSettingsObject);
-                        }, (err) => {
-                            console.log('Error: ' + err);
-                        });
-                        this.searchingBuf = this.searchBuffers.miscStop;
-                        break;
-                    }
-                }
-            }
-        } else { // steaming operation should lead here...
-
-            var bytesToRead = sizeOfData;
-
-            // Is there old data? If there was saved data in the buffer from last time, let's post-fix the new data
-            //  buffer with the old data.
-            if (this.buffer) {
-                // Get size of old buffer
-                var oldBufferSize = this.buffer.byteLength;
-
-                // Make a new buffer
-                var newDataBuffer = new Buffer(bytesToRead + oldBufferSize);
-
-                // Put old buffer in the front of the new buffer
-                var oldBytesWritten = this.buffer.copy(newDataBuffer);
-
-                // Move the incoming data into the end of the new buffer
-                data.copy(newDataBuffer,oldBytesWritten);
-
-                // Over write data
-                data = newDataBuffer;
-
-                // Update the number of bytes to read
-                bytesToRead += oldBytesWritten;
-            }
-
-            var readingPosition = 0;
-
-            // 45 < (200 - 33) --> 45 < 167 (good) | 189 < 167 (bad) | 0 < (28 - 33) --> 0 < -5 (bad)
-            while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
-                if (data[readingPosition] === k.OBCIByteStart) {
-                    var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
-                    this.emit('rawDataPacket',rawPacket);
-                    if ((data[readingPosition + k.OBCIPacketSize - 1] & 0xF0) === k.OBCIByteStop) {
-                        var packetType = openBCISample.getRawPacketType(rawPacket[k.OBCIPacketPositionStopByte]);
-                        switch (packetType) {
-                            case k.OBCIStreamPacketTimeSyncSet:
-                                this.sync.timeGotSetPacket = this.sntpNow();
-                                this._processPacketTimeSyncSet(rawPacket);
-                                break;
-                            case k.OBCIStreamPacketTimeSyncedAccel:
-                                this._processPacketTimeSyncedAccel(rawPacket);
-                                break;
-                            case k.OBCIStreamPacketTimeSyncedRawAux:
-                                this._processPacketTimeSyncedRawAux(rawPacket);
-                                break;
-                            case k.OBCIStreamPacketStandardRawAux:
-                                this._processPacketStandardRawAux(rawPacket);
-                                break;
-                            case k.OBCIStreamPacketStandardAccel:
-                            default: // Normally route here
-                                this._processPacketStandardAccel(rawPacket);
-                                break;
-
-                        }
-                    }
-                }
-
-                // increment reading position
-                readingPosition++;
-            }
-
-            // Are there any bytes to move into the buffer?
-            if (readingPosition < bytesToRead) {
-                //we are creating a new Buffer the size of how many bytes are left in the data buffer
-                // so we can move and store that into this.buffer for the next time this function is ran.
-                this.buffer = new Buffer(bytesToRead - readingPosition);
-
-                // copy data from data into this.buffer.
-                data.copy(this.buffer);
-
-            } else {
-                this.buffer = null;
-            }
-        }
     };
 
     /**
@@ -1630,6 +1513,15 @@ function OpenBCIFactory() {
         }
     };
 
+    /**
+     * @description This function is called every sample if the boardType is Daisy. The function stores odd sampleNumber
+     *      sample objects to a private global variable called `._lowerChannelsSampleObject`. The method will emit a
+     *      sample object only when the upper channels arrive in an even sampleNumber sample object. No sample will be
+     *      emitted on an even sampleNumber if _lowerChannelsSampleObject is null and one will be added to the
+     *      missedPacket counter. Further missedPacket will increase if two odd sampleNumber packets arrive in a row.
+     * @param sampleObject
+     * @private
+     */
     OpenBCIBoard.prototype._finalizeNewSampleForDaisy = function(sampleObject) {
         if(openBCISample.isOdd(sampleObject.sampleNumber)) {
             // Check for the skipped packet condition

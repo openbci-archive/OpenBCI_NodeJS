@@ -1229,7 +1229,7 @@ describe('openbci-sdk',function() {
         });
     });
 
-    describe.only("#_finalizeNewSampleForDaisy", function() {
+    describe("#_finalizeNewSampleForDaisy", function() {
         var ourBoard, randomSampleGenerator, sampleEvent, failTimeout;
         before(() => {
             ourBoard = new openBCIBoard.OpenBCIBoard({

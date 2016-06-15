@@ -7,6 +7,7 @@
 * `.info` property which contains verified board information parsed from the OpenBCI's `softReset()` response.
 * `log` event that is emitted for data sent from the board that is not a stream packet
 * `eot` event that is emitted when a user sends a command that results in an EOT ("$$$") being sent from the board
+* Daisy (16 channel) support
 
 ### Breaking Changes
 
@@ -34,8 +35,14 @@
 # 0.3.7
 
 ### New Features
+
 * Upgrade dependencies
 * Update Travis
+
+### Bug Fixes
+
+* `.numberOfChannels()` now uses the info object, which is set in the constructor and on the return message from `.softReset()`
+* `.sampleRate()` now uses the info object, which is set in the constructor and on the return message from `.softReset()`
 
 # 0.3.6
 
