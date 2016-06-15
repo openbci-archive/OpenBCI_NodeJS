@@ -49,9 +49,6 @@ var sampleModule = {
 
             if (convertAuxToAccel) {
                 parsePacketStandardAccel(dataBuf,channelSettingsArray).then(sampleObject => {
-                    if (channelSettingsArray.length === k.OBCINumberOfChannelsDaisy) {
-
-                    }
                     resolve(sampleObject);
                 }).catch(err => reject(err));
             } else {
@@ -242,10 +239,13 @@ var sampleModule = {
     newSample,
     /**
      * @description Create a configurable function to return samples for a simulator. This implements 1/f filtering injection to create more brain like data.
-     * @param numberOfChannels
-     * @param sampleRateHz
-     * @param injectAlpha
-     * @param lineNoise
+     * @param numberOfChannels {Number} - The number of channels in the sample... either 8 or 16
+     * @param sampleRateHz {Number} - The sample rate
+     * @param injectAlpha {Boolean} - True if you want to inject noise
+     * @param lineNoise {String} - A string that can be either:
+     *              `60Hz` - 60Hz line noise (Default) (ex. __United States__)
+     *              `50Hz` - 50Hz line noise (ex. __Europe__)
+     *              `None` - Do not inject line noise.
      * @returns {Function}
      */
     randomSample: (numberOfChannels,sampleRateHz, injectAlpha,lineNoise) => {
@@ -271,7 +271,10 @@ var sampleModule = {
         var b1 = new Array(numberOfChannels).fill(0);
         var b2 = new Array(numberOfChannels).fill(0);
 
-
+        /**
+         * @description Use a 1/f filter 
+         * @param previousSampleNumber {Number} - The previous sample number
+         */
         return previousSampleNumber => {
             var sample = newSample();
             var whiteNoise;
@@ -767,7 +770,6 @@ function getChannelDataArray(dataBuf, channelSettingsArray) {
         var channelData = [];
         // Grab the sample number from the buffer
         var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-        // console.log(`sample number ${sampleNumber}`);
         var daisy = channelSettingsArray.length > k.OBCINumberOfChannelsDefault;
 
         // Channel data arrays are always 8 long
@@ -782,11 +784,8 @@ function getChannelDataArray(dataBuf, channelSettingsArray) {
                 scaleFactor = ADS1299_VREF / channelSettingsArray[i].gain / (Math.pow(2,23) - 1);
             }
             // Convert the three byte signed integer and convert it
-            // console.log('three bytes:', dataBuf.slice((i * 3) + k.OBCIPacketPositionChannelDataStart, (i * 3) + k.OBCIPacketPositionChannelDataStart + 3));
-            // console.log(`start position ${k.OBCIPacketPositionChannelDataStart}`);
             channelData.push(scaleFactor * sampleModule.interpret24bitAsInt32(dataBuf.slice((i * 3) + k.OBCIPacketPositionChannelDataStart, (i * 3) + k.OBCIPacketPositionChannelDataStart + 3)));
         }
-        console.log(`Channel data ${channelData}`);
         resolve(channelData);
     });
 }

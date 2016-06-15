@@ -1229,6 +1229,117 @@ describe('openbci-sdk',function() {
         });
     });
 
+    describe.only("#_finalizeNewSampleForDaisy", function() {
+        var ourBoard, randomSampleGenerator, sampleEvent, failTimeout;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+            randomSampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'None');
+        });
+        beforeEach(() => {
+            // Clear the global var
+            ourBoard._lowerChannelsSampleObject = null;
+            ourBoard.info.missedPackets = 0;
+        });
+        afterEach(() => {
+            if (sampleEvent) {
+                console.log("removed");
+                ourBoard.removeListener("sample",sampleEvent);
+                sampleEvent = null;
+            }
+            if (failTimeout) {
+                clearTimeout(failTimeout);
+                failTimeout = null;
+            }
+        });
+        it("should store the sample to a global variable for next time",() => {
+            var oddSample = randomSampleGenerator(0); // Previous was 0, so the next one will be 1 (odd)
+
+            // Call the function under test
+            ourBoard._finalizeNewSampleForDaisy(oddSample);
+
+            // Check to make sure the variable is stored
+            expect(ourBoard._lowerChannelsSampleObject).to.equal(oddSample);
+        });
+        it("should emit a sample on even sample if odd was before", done => {
+            var oddSample = randomSampleGenerator(0); // Previous was 0, so the next one will be 1 (odd)
+            var evenSample = randomSampleGenerator(1); // Previous was 1, so the next one will be 2 (even)
+
+            // The function to be called when sample event is fired
+            var sampleEvent = (sample) => {
+                // test pass here
+                done();
+            };
+
+            // Subscribe to the sample event
+            ourBoard.once("sample",sampleEvent);
+
+            // Call the function under test twice
+            ourBoard._finalizeNewSampleForDaisy(oddSample);
+            ourBoard._finalizeNewSampleForDaisy(evenSample);
+
+            // Set a timeout to end the function, after giving enough time for the sample to be emitted if were going to
+            //  be
+            failTimeout = setTimeout(() => {
+                // Fail condition
+                done("didn't emit a sample");
+            }, 5); // 5ms should be plenty of time
+        });
+        it("should not emit a sample if there is no lower sample object and this is an even sample number", done => {
+            var evenSample = randomSampleGenerator(1); // Previous was 1, so the next one will be 2 (even)
+
+            // The function to be called when sample event is fired
+            sampleEvent = (sample) => {
+                // test fail condition
+                done("emitted a sample");
+            };
+
+            console.log("_lowerChannelsSampleObject",ourBoard._lowerChannelsSampleObject);
+
+            // Subscribe to the sample event
+            ourBoard.once("sample",sampleEvent);
+
+            // Call the function under test
+            ourBoard._finalizeNewSampleForDaisy(evenSample);
+
+            // Set a timeout to end the function, after giving enough time for the sample to be emitted if were going to
+            //  be
+            failTimeout = setTimeout(() => {
+                // This is the condition where an odd was skipped so need to keep track of this as a missed packet
+                expect(ourBoard.info.missedPackets).to.equal(1);
+                done(); // Test pass here
+            }, 5); // 5ms should be plenty of time
+        });
+        it("should not emit a sample if back to back odd samples", done => {
+            var oddSample1 = randomSampleGenerator(0); // Previous was 0, so the next one will be 1 (odd)
+            var oddSample2 = randomSampleGenerator(2); // Previous was 0, so the next one will be 1 (odd)
+
+            // The function to be called when sample event is fired
+            sampleEvent = (sample) => {
+                // test fail condition
+                done("emitted a sample");
+            };
+
+            // Subscribe to the sample event
+            ourBoard.once("sample",sampleEvent);
+
+            // Call the function under test twice
+            ourBoard._finalizeNewSampleForDaisy(oddSample1);
+            ourBoard._finalizeNewSampleForDaisy(oddSample2);
+
+            // Set a timeout to end the function, after giving enough time for the sample to be emitted if were going to
+            //  be
+            failTimeout = setTimeout(() => {
+                // This is the condition where an even was skipped so need to keep track of this as a missed packet
+                expect(ourBoard.info.missedPackets).to.equal(1);
+                ourBoard.removeListener("sample",sampleEvent);
+                done(); // Test pass here
+            }, 5); // 5ms should be plenty of time
+        });
+
+    });
+
     xdescribe('#hardwareValidation', function() {
         this.timeout(20000); // long timeout for pleanty of stream time :)
         var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;

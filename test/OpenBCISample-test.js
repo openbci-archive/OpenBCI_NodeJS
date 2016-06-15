@@ -866,7 +866,7 @@ describe('openBCISample',function() {
             // Call the function under test
             openBCISample.getChannelDataArray(sampleBuf,chanArr).then(valueArray => {
                 for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
-                    console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`);
+                    // console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`);
                     expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1),0.0001);
                 }
                 done();

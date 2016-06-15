@@ -53,7 +53,7 @@ function OpenBCIFactory() {
      *     - `simulatorAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
      *
      *     - `simulatorLineNoise` - Injects line noise on channels.
-     *          3 Possible Boards:
+     *          3 Possible Options:
      *              `60Hz` - 60Hz line noise (Default) [America]
      *              `50Hz` - 50Hz line noise [Europe]
      *              `None` - Do not inject line noise.
@@ -115,9 +115,10 @@ function OpenBCIFactory() {
             boardType:k.OBCIBoardDefault,
             sampleRate:k.OBCISampleRate250,
             firmware:k.OBCIFirmwareV1,
-            numberOfChannels:k.OBCINumberOfChannelsDefault
+            numberOfChannels:k.OBCINumberOfChannelsDefault,
+            missedPackets:0
         };
-        this.lastSampleObject = null;
+        this._lowerChannelsSampleObject = null;
         this.sync = {
             active: false,
             timeSent: 0,
@@ -1618,8 +1619,38 @@ function OpenBCIFactory() {
         if(this.impedanceTest.active) {
             this._processImpedanceTest(sampleObject);
         } else {
-            // console.log('buffer',this.buffer);
-            this.emit('sample', sampleObject);
+            // With the daisy board attached, lower channels (1-8) come in packets with odd sample numbers and upper
+            //  channels (9-16) come in packets with even sample numbers
+            if (this.info.boardType === k.OBCIBoardDaisy) {
+                // Send the sample for downstream sample compaction
+                this._finalizeNewSampleForDaisy(sampleObject);
+            } else {
+                this.emit('sample', sampleObject);
+            }
+        }
+    };
+
+    OpenBCIBoard.prototype._finalizeNewSampleForDaisy = function(sampleObject) {
+        if(openBCISample.isOdd(sampleObject.sampleNumber)) {
+            // Check for the skipped packet condition
+            if (this._lowerChannelsSampleObject) {
+                // The last packet was odd... missed the even packet
+                this.info.missedPackets++;
+            }
+            this._lowerChannelsSampleObject = sampleObject;
+        } else {
+            // Make sure there is an odd packet waiting to get merged with this packet
+            if (this._lowerChannelsSampleObject) {
+                // Merge these two samples
+                var mergedSample = openBCISample.makeDaisySampleObject(this._lowerChannelsSampleObject,sampleObject);
+                // Set the _lowerChannelsSampleObject object to null
+                this._lowerChannelsSampleObject = null;
+                // Emite the new merged sample
+                this.emit('sample', mergedSample);
+            } else {
+                // Missed the odd packet, i.e. two evens in a row
+                this.info.missedPackets++;
+            }
         }
     };
 
