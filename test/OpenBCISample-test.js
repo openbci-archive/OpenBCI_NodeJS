@@ -754,6 +754,7 @@ describe('openBCISample',function() {
             lowerSampleObject.channelData = [1,2,3,4,5,6,7,8];
             lowerSampleObject.auxData = [0,1,2];
             lowerSampleObject.timestamp = 4;
+            lowerSampleObject.accelData = [0.5,-0.5,1];
             // Make the upper sample (channels 9-16)
             upperSampleObject = openBCISample.newSample(2);
             upperSampleObject.channelData = [9,10,11,12,13,14,15,16];
@@ -787,6 +788,13 @@ describe('openBCISample',function() {
         it("should average the two timestamps together",function() {
             var expectedAverage = (upperSampleObject.timestamp + lowerSampleObject.timestamp)/2;
             daisySampleObject.timestamp.should.equal(expectedAverage);
+        });
+        it("should place the old timestamps in an object",function() {
+            daisySampleObject._timestamps.lower.should.equal(lowerSampleObject.timestamp);
+            daisySampleObject._timestamps.upper.should.equal(upperSampleObject.timestamp);
+        });
+        it("should store an accelerometer value if present",function() {
+            daisySampleObject.should.have.property("accelData");
         });
     });
 });
