@@ -746,7 +746,7 @@ describe('openBCISample',function() {
             impedanceArray[0].N.text.should.equal(k.OBCIImpedanceTextNone); // Check the text
         });
     });
-    describe.only('#makeDaisySampleObject', function() {
+    describe('#makeDaisySampleObject', function() {
         var lowerSampleObject, upperSampleObject, daisySampleObject;
         before(() => {
             // Make the lower sample (channels 1-8)
@@ -795,6 +795,111 @@ describe('openBCISample',function() {
         });
         it("should store an accelerometer value if present",function() {
             daisySampleObject.should.have.property("accelData");
+        });
+    });
+    describe("#isEven", function () {
+        it("should return true for even number",function(){
+            openBCISample.isEven(2).should.be.true;
+        });
+        it("should return false for odd number",function(){
+            openBCISample.isEven(1).should.be.false;
+        });
+    });
+    describe("#isOdd", function () {
+        it("should return true for odd number",function(){
+            openBCISample.isOdd(1).should.be.true;
+        });
+        it("should return false for even number",function(){
+            openBCISample.isOdd(2).should.be.false;
+        });
+    });
+    describe("#getChannelDataArray", function() {
+        var sampleBuf, badChanArray;
+        beforeEach(() => {
+            sampleBuf = openBCISample.samplePacket(0);
+        });
+        it("should multiply each channel by the proper scale value", done => {
+            var chanArr = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault); // Not in daisy mode
+            var scaleFactor = 4.5 / 24 / (Math.pow(2,23) - 1);
+            // Call the function under test
+            openBCISample.getChannelDataArray(sampleBuf,chanArr).then(valueArray => {
+                console.log("hey");
+                for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
+                    console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`);
+                    expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1),0.0001);
+                }
+                done();
+            }).catch(err => done);
+        });
+        it("in daisy mode, on odd samples should use gains from index 0-7 of channel settings array", done => {
+            // Overwrite the default
+            sampleBuf = openBCISample.samplePacket(1); // even's are the daisy channels
+            // Make a 16 element long channel settings array
+            var chanArr = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
+            // Set the upper (8-15) of channel settings array. If the function under test uses the 1 gain, then the test
+            //  will fail.
+            for (var i = k.OBCINumberOfChannelsDefault; i < k.OBCINumberOfChannelsDaisy; i++) {
+                chanArr[i].gain = 1;
+            }
+            var scaleFactor = 4.5 / 24 / (Math.pow(2,23) - 1);
+            // Call the function under test
+            openBCISample.getChannelDataArray(sampleBuf,chanArr).then(valueArray => {
+                for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
+                    // console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`);
+                    expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1),0.0001);
+                }
+                done();
+            }).catch(err => done);
+        });
+        it("in daisy mode, on even samples should use gains from index 8-15 of channel settings array", done => {
+            // Overwrite the default
+            sampleBuf = openBCISample.samplePacket(2); // even's are the daisy channels
+            // Make a 16 element long channel settings array
+            var chanArr = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
+            // Set the lower (0-7) of channel settings array. If the function under test uses the 1 gain, then the test
+            //  will fail.
+            for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+                chanArr[i].gain = 1;
+            }
+            // gain here is 24, the same as in the channel settings array
+            var scaleFactor = 4.5 / 24 / (Math.pow(2,23) - 1);
+            // Call the function under test
+            openBCISample.getChannelDataArray(sampleBuf,chanArr).then(valueArray => {
+                for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
+                    console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`);
+                    expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1),0.0001);
+                }
+                done();
+            }).catch(err => done);
+        });
+        it("in default mode, should reject when empty channel setting array", done => {
+            badChanArray = new Array(k.OBCINumberOfChannelsDefault).fill(0);
+            openBCISample.getChannelDataArray(sampleBuf,badChanArray).should.be.rejected.and.notify(done);
+        });
+        it("in daisy mode, should reject when empty channel setting array", done => {
+            badChanArray = new Array(k.OBCINumberOfChannelsDaisy).fill(0);
+            openBCISample.getChannelDataArray(sampleBuf,badChanArray).should.be.rejected.and.notify(done);
+        });
+        it("in default mode, should reject if not numbers in gain position", done => {
+            badChanArray = [];
+            for(var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+                badChanArray.push({
+                    gain : "taco"
+                });
+            }
+            openBCISample.getChannelDataArray(sampleBuf,badChanArray).should.be.rejected.and.notify(done);
+        });
+        it("in daisy mode, should reject if not numbers in gain position", done => {
+            badChanArray = [];
+            for(var i = 0; i < k.OBCINumberOfChannelsDaisy; i++) {
+                badChanArray.push({
+                    gain : "taco"
+                });
+            }
+            openBCISample.getChannelDataArray(sampleBuf,badChanArray).should.be.rejected.and.notify(done);
+        });
+        it("should reject when channelSettingsArray is not in fact an array", done => {
+            openBCISample.getChannelDataArray(sampleBuf,{}).should.be.rejected.and.notify(done);
         });
     });
 });

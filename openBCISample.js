@@ -442,7 +442,10 @@ var sampleModule = {
     samplePacketUserDefined: () => {
         return new Buffer([0xA0, 0x00, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0xC2]);
     },
-    makeDaisySampleObject
+    makeDaisySampleObject,
+    getChannelDataArray,
+    isEven,
+    isOdd
 };
 
 module.exports = sampleModule;
@@ -484,7 +487,7 @@ function parsePacketStandardAccel(dataBuf, channelSettingsArray) {
         getDataArrayAccel(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1))
             .then(accelData => {
                 sampleObject.accelData = accelData;
-                return getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray);
+                return getChannelDataArray(dataBuf, channelSettingsArray);
             })
             .then(channelSettingArray => {
                 sampleObject.channelData = channelSettingArray;
@@ -530,7 +533,7 @@ function parsePacketStandardRawAux(dataBuf, channelSettingsArray) {
 
         var sampleObject = {};
         // Need build the standard sample object
-        getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray)
+        getChannelDataArray(dataBuf, channelSettingsArray)
             .then(channelSettingArray => {
                 // Slice the buffer for the aux data
                 if (process.version > 6) {
@@ -600,7 +603,7 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
                 if (accelArrayFilled) {
                     sampleObject.accelData = accelArray;
                 }
-                return getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray);
+                return getChannelDataArray(dataBuf, channelSettingsArray);
             })
             .then(channelDataArray => {
                 sampleObject.channelData = channelDataArray;
@@ -648,7 +651,7 @@ function parsePacketTimeSyncedRawAux(dataBuf,channelSettingsArray,boardOffsetTim
             })
             .then(auxDataBuffer => {
                 sampleObject.auxData = auxDataBuffer;
-                return getChannelDataArray(dataBuf.slice(k.OBCIPacketPositionChannelDataStart,k.OBCIPacketPositionChannelDataStop+1), channelSettingsArray);
+                return getChannelDataArray(dataBuf, channelSettingsArray);
             })
             .then(channelDataArray => {
                 sampleObject.channelData = channelDataArray;
@@ -753,8 +756,8 @@ function getDataArrayAccel(dataBuf) {
  * @description Takes a buffer filled with 24 bit signed integers from an OpenBCI device with gain settings in
  *                  channelSettingsArray[index].gain and converts based on settings of ADS1299... spits out an
  *                  array of floats in VOLTS
- * @param dataBuf - Buffer with 24 bit signed integers, number of elements is same as channelSettingsArray.length * 3
- * @param channelSettingsArray - The channel settings array, see OpenBCIConstants.channelSettingsArrayInit() for specs
+ * @param dataBuf {Buffer} - Buffer with 33 bit signed integers, number of elements is same as channelSettingsArray.length * 3
+ * @param channelSettingsArray {Array} - The channel settings array, see OpenBCIConstants.channelSettingsArrayInit() for specs
  * @returns {Promise} - Fulfilled with Array filled with floats for each channel's voltage in VOLTS
  * @author AJ Keller (@pushtheworldllc)
  */
@@ -762,17 +765,28 @@ function getChannelDataArray(dataBuf, channelSettingsArray) {
     return new Promise((resolve, reject) => {
         if (!Array.isArray(channelSettingsArray)) reject('Error [getChannelDataArray]: Channel Settings must be an array!');
         var channelData = [];
-        // Iterate through each object in the array
-        channelSettingsArray.forEach((channelSettingsObject, index) => {
-            if (!channelSettingsObject.hasOwnProperty('gain')) reject('Error [getChannelDataArray]: Invalid channel settings object at index ' + index);
-            if (!k.isNumber(channelSettingsObject.gain)) reject('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
-            // Get scale factor
-            var scaleFactor = ADS1299_VREF / channelSettingsObject.gain / (Math.pow(2,23) - 1);
-            // Each number is 3 bytes, need to traverse index * 3 in the buffer
-            index *= 3;
+        // Grab the sample number from the buffer
+        var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+        // console.log(`sample number ${sampleNumber}`);
+        var daisy = channelSettingsArray.length > k.OBCINumberOfChannelsDefault;
+
+        // Channel data arrays are always 8 long
+        for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+            if (!channelSettingsArray[i].hasOwnProperty("gain")) reject(`Error [getChannelDataArray]: Invalid channel settings object at index ${i}`);
+            if (!k.isNumber(channelSettingsArray[i].gain)) reject('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
+            
+            var scaleFactor = 0;
+            if(isEven(sampleNumber) && daisy) {
+                scaleFactor = ADS1299_VREF / channelSettingsArray[i + k.OBCINumberOfChannelsDefault].gain / (Math.pow(2,23) - 1);
+            } else {
+                scaleFactor = ADS1299_VREF / channelSettingsArray[i].gain / (Math.pow(2,23) - 1);
+            }
             // Convert the three byte signed integer and convert it
-            channelData.push(scaleFactor * sampleModule.interpret24bitAsInt32(dataBuf.slice(index, index + 3)));
-        });
+            // console.log('three bytes:', dataBuf.slice((i * 3) + k.OBCIPacketPositionChannelDataStart, (i * 3) + k.OBCIPacketPositionChannelDataStart + 3));
+            // console.log(`start position ${k.OBCIPacketPositionChannelDataStart}`);
+            channelData.push(scaleFactor * sampleModule.interpret24bitAsInt32(dataBuf.slice((i * 3) + k.OBCIPacketPositionChannelDataStart, (i * 3) + k.OBCIPacketPositionChannelDataStart + 3)));
+        }
+        console.log(`Channel data ${channelData}`);
         resolve(channelData);
     });
 }
@@ -900,4 +914,21 @@ function makeDaisySampleObject(lowerSampleObject,upperSampleObject) {
     }
 
     return daisySampleObject;
+}
+
+/**
+ * @description Used to test a number to see if it is even
+ * @param a {Number} - The number to test
+ * @returns {boolean} - True if `a` is even
+ */
+function isEven(a) {
+    return a % 2 === 0;
+}
+/**
+ * @description Used to test a number to see if it is odd
+ * @param a {Number} - The number to test
+ * @returns {boolean} - True if `a` is odd
+ */
+function isOdd(a) {
+    return a % 2 === 1;
 }
