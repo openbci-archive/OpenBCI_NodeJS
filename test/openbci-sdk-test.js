@@ -1352,36 +1352,36 @@ describe('openbci-sdk',function() {
                 done()
             }
         });
-        it("should not query if not connected", done => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose : true,
-                simulate : true
-            });
-            ourBoard.radioChannelQuery().should.be.rejected.and.notify(done);
-        });
-        it("should not query if streaming", done => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose : true,
-                simulate : true
-            });
-            ourBoard.connect(k.OBCISimulatorPortName)
-                .then(() => {
-                    ourBoard.once('ready', () => {
-                        ourBoard.streamStart()
-                            .then(() => {
-                                ourBoard.radioChannelQuery().should.be.rejected.and.notify(done);
-                            }).catch(err => done(err));
-                    });
-                }).catch(err => done(err));
-
-        });
-        it("should not query if not firmware version 2", function() {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose : true,
-                simulate : true
-            });
-            
-        });
+        // it("should not query if not connected", done => {
+        //     ourBoard = new openBCIBoard.OpenBCIBoard({
+        //         verbose : true,
+        //         simulate : true
+        //     });
+        //     ourBoard.radioChannelQuery().should.be.rejected.and.notify(done);
+        // });
+        // it("should not query if streaming", done => {
+        //     ourBoard = new openBCIBoard.OpenBCIBoard({
+        //         verbose : true,
+        //         simulate : true
+        //     });
+        //     ourBoard.connect(k.OBCISimulatorPortName)
+        //         .then(() => {
+        //             ourBoard.once('ready', () => {
+        //                 ourBoard.streamStart()
+        //                     .then(() => {
+        //                         ourBoard.radioChannelQuery().should.be.rejected.and.notify(done);
+        //                     }).catch(err => done(err));
+        //             });
+        //         }).catch(err => done(err));
+        //
+        // });
+        // it("should not query if not firmware version 2", function() {
+        //     ourBoard = new openBCIBoard.OpenBCIBoard({
+        //         verbose : true,
+        //         simulate : true
+        //     });
+        //    
+        // });
         it("should query ")
     });
 
