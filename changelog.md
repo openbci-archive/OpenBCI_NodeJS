@@ -1,4 +1,4 @@
-# 0.4.0
+# 1.0.0
 
 ### New Features
 
@@ -8,6 +8,7 @@
 * `log` event that is emitted for data sent from the board that is not a stream packet
 * `eot` event that is emitted when a user sends a command that results in an EOT ("$$$") being sent from the board
 * Daisy (16 channel) support
+* Simulator overhaul, it completely mocks the board. Can now simulate board failure, where the board stops talking to the dongle. Can also mock a serial port failure.
 
 ### Breaking Changes
 
@@ -15,6 +16,7 @@
 * In openBCISample.js 
   * `parseRawPacket()` is now called `parseRawPacketStandard()`
 * `ready` event only triggered after soft reset. `eot` event emitted in all other conditions resulting in the board sending EOT ("$$$")
+* Must use camel case on the OpenBCISimulator object.
 
 # 0.3.9
 

@@ -11,38 +11,48 @@ var now = require('performance-now');
 
 function OpenBCISimulatorFactory() {
     var factory = this;
-
-
-
+    
     var _options = {
-        samplerate: 250,
+        sampleRate: 250,
         daisy: false,
         verbose: false,
         alpha: true,
         lineNoise: '60Hz',
         firmwareVersion: k.OBCIFirmwareV1,
-        boardFailure:false
+        boardFailure:false,
+        serialPortFailure:false
     };
 
 
 
     function OpenBCISimulator(portName, options) {
+        console.log('options',options);
         options = (typeof options !== 'function') && options || {};
         var opts = {};
 
         stream.Stream.call(this);
 
         /** Configuring Options */
-        opts.sampleRate = options.sampleRate || options.samplerate || _options.samplerate;
         opts.daisy = options.daisy || _options.daisy;
-        opts.lineNoise = options.lineNoise || options.linenoise || _options.lineNoise;
+        opts.lineNoise = options.lineNoise || _options.lineNoise;
         opts.alpha = options.alpha || _options.alpha;
         opts.verbose = options.verbose || _options.verbose;
         opts.firmwareVersion = options.firmwareVersion || _options.firmwareVersion;
-        opts.boardFailure = options.boardFailure || options.boardfailure || _options.boardFailure;
+        opts.boardFailure = options.boardFailure || _options.boardFailure;
+        opts.serialPortFailure = options.serialPortFailure || _options.serialPortFailure;
+
+        if (options.sampleRate) {
+            opts.sampleRate = options.sampleRate;
+        } else {
+            if (opts.daisy) {
+                opts.sampleRate = k.OBCISampleRate125;
+            } else {
+                opts.sampleRate = k.OBCISampleRate250;
+            }
+        }
 
         this.options = opts;
-
+        
         // Bools
         this.connected = false;
         this.sd = {
@@ -58,14 +68,10 @@ function OpenBCISimulatorFactory() {
         this.time = {
             current: 0,
             start: now(),
-            loop: null,
-            ntp0: 0,
-            ntp1: 0,
-            ntp2: 0,
-            ntp3: 0
+            loop: null
         };
-        console.log('Simulator started at time: ' + this.time.start);
-        console.log('Time board has been running: ' + (now() - this.time.start));
+        // console.log('Simulator started at time: ' + this.time.start);
+        // console.log('Time board has been running: ' + (now() - this.time.start));
         // Strings
         this.portName = portName || k.OBCISimulatorPortName;
 
@@ -101,8 +107,6 @@ function OpenBCISimulatorFactory() {
                     } else {
                         this.emit('data', new Buffer("Host is on channel number: 0, however there is no communications with the Board$$$"));
                     }
-
-
                 }
             case k.OBCIStreamStart:
                 if (!this.stream) this._startStream();

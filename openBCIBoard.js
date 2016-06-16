@@ -194,7 +194,9 @@ function OpenBCIFactory() {
                     verbose: this.options.verbose,
                     sampleRate: this.options.simulatorSampleRate,
                     alpha: this.options.simulatorAlpha,
-                    lineNoise: this.options.simulatorLineNoise
+                    lineNoise: this.options.simulatorLineNoise,
+                    firmwareVersion: this.options.simulatorFirmwareVersion,
+                    boardFailure: this.options.simulatorBoardCommsFailure
                 });
             } else {
                 /* istanbul ignore if */
