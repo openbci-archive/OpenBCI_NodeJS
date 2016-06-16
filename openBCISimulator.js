@@ -13,34 +13,40 @@ function OpenBCISimulatorFactory() {
     var factory = this;
     
     var _options = {
-        sampleRate: 250,
-        daisy: false,
-        verbose: false,
+        accel: true,
         alpha: true,
-        lineNoise: '60Hz',
-        firmwareVersion: k.OBCIFirmwareV1,
         boardFailure:false,
-        serialPortFailure:false
+        daisy: false,
+        drift: 0,
+        firmwareVersion: k.OBCIFirmwareV1,
+        lineNoise: '60Hz',
+        sampleRate: 250,
+        serialPortFailure:false,
+        verbose: false
     };
 
-
-
     function OpenBCISimulator(portName, options) {
-        console.log('options',options);
         options = (typeof options !== 'function') && options || {};
         var opts = {};
 
         stream.Stream.call(this);
 
         /** Configuring Options */
-        opts.daisy = options.daisy || _options.daisy;
-        opts.lineNoise = options.lineNoise || _options.lineNoise;
-        opts.alpha = options.alpha || _options.alpha;
-        opts.verbose = options.verbose || _options.verbose;
-        opts.firmwareVersion = options.firmwareVersion || _options.firmwareVersion;
+        if (options.accel === false) {
+            opts.accel = false;
+        } else {
+            opts.accel = _options.accel;
+        }
+        if (options.alpha === false) {
+            opts.alpha = false;
+        } else {
+            opts.alpha = _options.alpha;
+        }
         opts.boardFailure = options.boardFailure || _options.boardFailure;
-        opts.serialPortFailure = options.serialPortFailure || _options.serialPortFailure;
-
+        opts.daisy = options.daisy || _options.daisy;
+        opts.drift = options.drift || _options.drift;
+        opts.firmwareVersion = options.firmwareVersion || _options.firmwareVersion;
+        opts.lineNoise = options.lineNoise || _options.lineNoise;
         if (options.sampleRate) {
             opts.sampleRate = options.sampleRate;
         } else {
@@ -50,6 +56,8 @@ function OpenBCISimulatorFactory() {
                 opts.sampleRate = k.OBCISampleRate250;
             }
         }
+        opts.serialPortFailure = options.serialPortFailure || _options.serialPortFailure;
+        opts.verbose = options.verbose || _options.verbose;
 
         this.options = opts;
         
@@ -70,8 +78,6 @@ function OpenBCISimulatorFactory() {
             start: now(),
             loop: null
         };
-        // console.log('Simulator started at time: ' + this.time.start);
-        // console.log('Time board has been running: ' + (now() - this.time.start));
         // Strings
         this.portName = portName || k.OBCISimulatorPortName;
 

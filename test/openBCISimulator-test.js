@@ -23,14 +23,16 @@ describe('openBCISimulator',function() {
         });
         it('constructs with the correct default options', function() {
             simulator = new openBCISimulator.OpenBCISimulator();
-            expect(simulator.options.sampleRate).to.equal(k.OBCISampleRate250);
-            expect(simulator.options.daisy).to.be.false;
-            expect(simulator.options.verbose).to.be.false;
+            expect(simulator.options.accel).to.be.true;
             expect(simulator.options.alpha).to.be.true;
-            expect(simulator.options.lineNoise).to.equal(k.OBCISimulatorLineNoiseHz60);
-            expect(simulator.options.firmwareVersion).to.equal(k.OBCIFirmwareV1);
             expect(simulator.options.boardFailure).to.be.false;
+            expect(simulator.options.daisy).to.be.false;
+            expect(simulator.options.drift).to.equal(0);
+            expect(simulator.options.firmwareVersion).to.equal(k.OBCIFirmwareV1);
+            expect(simulator.options.lineNoise).to.equal(k.OBCISimulatorLineNoiseHz60);
+            expect(simulator.options.sampleRate).to.equal(k.OBCISampleRate250);
             expect(simulator.options.serialPortFailure).to.be.false;
+            expect(simulator.options.verbose).to.be.false;
         });
         it('should be able to get into daisy mode',function () {
             simulator = new openBCISimulator.OpenBCISimulator(portName,{
@@ -86,7 +88,25 @@ describe('openBCISimulator',function() {
             simulator = new openBCISimulator.OpenBCISimulator(portName,{
                 alpha: false
             });
-            expect(simulator.options.alpha).to.be.funcSpyStandardAccel;
+            expect(simulator.options.alpha).to.be.false;
+        });
+        it('should be able to not use the accel', function() {
+            simulator = new openBCISimulator.OpenBCISimulator(portName,{
+                accel: false
+            });
+            expect(simulator.options.accel).to.be.false;
+        });
+        it('should be able to set positive drift', function() {
+            simulator = new openBCISimulator.OpenBCISimulator(portName,{
+                drift: 1
+            });
+            expect(simulator.options.drift).to.be.greaterThan(0);
+        });
+        it('should be able to set negative drift', function() {
+            simulator = new openBCISimulator.OpenBCISimulator(portName,{
+                drift: -1
+            });
+            expect(simulator.options.drift).to.be.lessThan(0);
         });
     });
     describe("firmwareVersion1",function () {

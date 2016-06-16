@@ -17,6 +17,9 @@
   * `parseRawPacket()` is now called `parseRawPacketStandard()`
 * `ready` event only triggered after soft reset. `eot` event emitted in all other conditions resulting in the board sending EOT ("$$$")
 * Must use camel case on the OpenBCISimulator object.
+* Renamed constructor options for readability:
+  * `simulatorAlpha` to `simulatorInjectAlpha`
+  * `simulatorLineNoise` to `simulatorInjectLineNoise`
 
 # 0.3.9
 

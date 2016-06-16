@@ -17,61 +17,6 @@ chai.use(sinonChai);
 
 var k = openBCISample.k;
 
-<<<<<<< 32c8f07c771cb78a2b61a9d0faaad2a99ef6a7dc
-var samplePacket = function (sampleNumber) {
-    if (sampleNumber === undefined || sampleNumber === null) {
-        sampleNumber = 0x45;
-    }
-    if(sampleNumber > 255) {
-        sampleNumber = 0x45;
-    }
-    return new Buffer([0xA0,sampleNumber,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2, 0xC0]);
-};
-// Actual first byte recieved from device, one time...
-var samplePacketReal = function () {
-    return new Buffer([0xA0,0,0x8F,0xF2,0x40,0x8F,0xDF,0xF4,0x90,0x2B,0xB6,0x8F,0xBF,0xBF,0x7F,0xFF,0xFF,0x7F,0xFF,0xFF,0x94,0x25,0x34,0x20,0xB6,0x7D,0,0xE0,0,0xE0,0x0F,0x70, 0xC0]);
-};
-
-var samplePacketTimeSyncSet = function () {
-    return new Buffer([0xA0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0,0,0,1,0xC3]);
-};
-
-var samplePacketStandardRawAux = function (sampleNumber) {
-    if (sampleNumber || sampleNumber === 0) {
-        if (sampleNumber > 255) {
-            sampleNumber = 255;
-        }
-    } else {
-        sampleNumber = 0x45;
-    }
-    return new Buffer([0xA0,sampleNumber,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,1,2,3,4,5,0xC1]);
-};
-
-var samplePacketTimeSyncedAccel = function (sampleNumber) {
-    if (sampleNumber || sampleNumber === 0) {
-        if (sampleNumber > 255) {
-            sampleNumber = 255;
-        }
-    } else {
-        sampleNumber = 0x45;
-    }
-    return new Buffer([0xA0,sampleNumber,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,1,0,0,0,1,0xC4]);
-};
-
-
-var samplePacketTimeSyncedRawAux = function (sampleNumber) {
-    if (sampleNumber || sampleNumber === 0) {
-        if (sampleNumber > 255) {
-            sampleNumber = 255;
-        }
-    } else {
-        sampleNumber = 0x45;
-    }
-    return new Buffer([0xA0,sampleNumber,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0x00,0x01,0,0,0,1,0xC5]);
-};
-
-=======
->>>>>>> Refactored openBCISample
 const defaultChannelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
 
 

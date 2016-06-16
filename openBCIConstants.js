@@ -284,6 +284,9 @@ const OBCIParsingTimeSyncSent     = 1;
 /** Timeouts */
 const OBCITimeoutProcessBytes = 500; // 0.5 seconds
 
+/** Simulator Board Configurations */
+const OBCISimulatorRawAux   = 'rawAux';
+const OBCISimulatorStandard = 'standard';
 
 module.exports = {
     /** Turning channels off */
@@ -788,7 +791,10 @@ module.exports = {
     OBCIParsingReset,
     OBCIParsingTimeSyncSent,
     /** Timeouts */
-    OBCITimeoutProcessBytes
+    OBCITimeoutProcessBytes,
+    /** Simulator Board Configurations */
+    OBCISimulatorRawAux,
+    OBCISimulatorStandard
 };
 
 /**

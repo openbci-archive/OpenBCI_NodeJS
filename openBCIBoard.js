@@ -21,55 +21,71 @@ function OpenBCIFactory() {
     var _options = {
         boardType: k.OBCIBoardDefault,
         baudrate: 115200,
-        verbose: false,
-        sntp: false,
         simulate: false,
-        simulatorSampleRate: 250,
-        simulatorAlpha: true,
-        simulatorLineNoise: '60Hz',
+        simulatorBoardFailure: false,
+        simulatorDaisyModuleAttached: false,
         simulatorFirmwareVersion: k.OBCIFirmwareV1,
-        simulatorBoardCommsFailure: false
+        simulatorHasAccelerometer: true,
+        simulatorInternalClockDrift: 0,
+        simulatorInjectAlpha: true,
+        simulatorInjectLineNoise: '60Hz',
+        simulatorSampleRate: 250,
+        simulatorSerialPortFailure:false,
+        timeSync: false,
+        verbose: false
     };
 
     /**
      * @description The initialization method to call first, before any other method.
      * @param options (optional) - Board optional configurations.
-     *     - `boardType` {String} - Specifies type of OpenBCI board.
-     *          3 Possible Boards:
-     *              `default` - 8 Channel OpenBCI board (Default)
-     *              `daisy` - 8 Channel board with Daisy Module
-     *                  (NOTE: THIS IS IN-OP AT THIS TIME DUE TO NO ACCESS TO ACCESSORY BOARD)
-     *              `ganglion` - 4 Channel board
-     *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
-     *
      *     - `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if
      *                      firmware on board has been previously configured.
      *
-     *     - `verbose` {Boolean} - Print out useful debugging events
+     *     - `boardType` {String} - Specifies type of OpenBCI board.
+     *          3 Possible Boards:
+     *              `default` - 8 Channel OpenBCI board (Default)
+     *              `daisy` - 8 Channel OpenBCI board with Daisy Module. Total of 16 channels.
+     *              `ganglion` - 4 Channel board
+     *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
      *
-     *     - `simulate` {Boolean} - Full functionality, just mock data.
+     *     - `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting
+     *                  `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
      *
-     *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator
-     *                      (Default is `250`)
+     *     - `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on
+     *                  the board is not polling the RFduino on the dongle. (Default `false`)
      *
-     *     - `simulatorAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+     *     - `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board. 
+     *                  This is useful if you want to test how your application reacts to a user requesting 16 channels
+     *                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
+     *                  attached and the user only wants to use 8 channels. (Default `false`)
      *
-     *     - `simulatorLineNoise` {String} - Injects line noise on channels.
-     *          3 Possible Options:
-     *              `60Hz` - 60Hz line noise (Default) [America]
-     *              `50Hz` - 50Hz line noise [Europe]
-     *              `None` - Do not inject line noise.
-     *              
      *     - `simulatorFirmwareVersion` {String} - Starts the simulator in with firmware version 2 features
      *          2 Possible Options:
      *              `v1` - Firmware Version 1 (Default)
      *              `v2` - Firmware Version 2
      *
-     *     - `simulatorBoardCommsFailure` {Boolean} - Simulates board communications failure.
+     *     - `simulatorHasAccelerometer` - {Boolean} - Does the board have accelerometer functionality? (Default `true`)
      *
-     *     - `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup
-     *                  with the SNTP time. Adds a time stamp to the AUX channels. (NOT FULLY
-     *                  IMPLEMENTED) [DO NOT USE]
+     *     - `simulatorInjectAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+     *
+     *     - `simulatorInjectLineNoise` {String} - Injects line noise on channels.
+     *          3 Possible Options:
+     *              `60Hz` - 60Hz line noise (Default) [America]
+     *              `50Hz` - 50Hz line noise [Europe]
+     *              `None` - Do not inject line noise.
+     *
+     *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if
+     *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option over rides that
+     *                  setting and this sample rate will be used. (Default is `250`)
+     *
+     *     - `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely
+     *                  due to a OpenBCI dongle not being plugged in.
+     *
+     *     - `timeSync` - Syncs the module up with an SNTP time server. Syncs the board on startup
+     *                  with the SNTP time. Adds a time stamp to the AUX channels.
+     *
+     *     - `verbose` {Boolean} - Print out useful debugging events
+     *
      * @constructor
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -84,20 +100,32 @@ function OpenBCIFactory() {
         /** Configuring Options */
         opts.boardType = options.boardType || options.boardtype || _options.boardType;
         opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
-        opts.verbose = options.verbose || _options.verbose;
-        opts.sntp = options.SNTP || options.sntp || _options.NTP;
         opts.simulate = options.simulate || _options.simulate;
-        opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
-        opts.simulatorLineNoise = options.simulatorLineNoise || options.simulatorlinenoise || _options.simulatorLineNoise;
-        // Safety check!
-        if (opts.simulatorLineNoise !== '60Hz' && opts.simulatorLineNoise !== '50Hz' && opts.simulatorLineNoise !== 'None') {
-            opts.simulatorLineNoise = '60Hz';
+        opts.simulatorBoardFailure = options.simulatorBoardFailure || options.simulatorboardfailure || _options.simulatorBoardFailure;
+        opts.simulatorDaisyModuleAttached = options.simulatorDaisyModuleAttached || options.simulatordaisymoduleattached || _options.simulatorDaisyModuleAttached;
+        if (opts.simulatorFirmwareVersion !== k.OBCIFirmwareV1 && opts.simulatorFirmwareVersion !== k.OBCIFirmwareV2) {
+            opts.simulatorFirmwareVersion = k.OBCIFirmwareV1;
         }
-        if (options.simulatorAlpha === false || options.simulatoralpha === false) {
-            opts.simulatorAlpha = false;
+        if (options.simulatorHasAccelerometer === false || options.simulatorhasaccelerometer === false) {
+            opts.simulatorHasAccelerometer = false;
         } else {
-            opts.simulatorAlpha = _options.simulatorAlpha;
+            opts.simulatorHasAccelerometer = _options.simulatorHasAccelerometer;
         }
+        opts.simulatorInternalClockDrift = options.simulatorInternalClockDrift || options.simulatorinternalclockdrift || _options.simulatorInternalClockDrift;
+        if (options.simulatorInjectAlpha === false || options.simulatoralpha === false) {
+            opts.simulatorInjectAlpha = false;
+        } else {
+            opts.simulatorInjectAlpha = _options.simulatorInjectAlpha;
+        }
+        opts.simulatorInjectLineNoise = options.simulatorInjectLineNoise || options.simulatorinjectlinenoise || _options.simulatorInjectLineNoise;
+        if (opts.simulatorInjectLineNoise !== '60Hz' && opts.simulatorInjectLineNoise !== '50Hz' && opts.simulatorInjectLineNoise !== 'None') {
+            opts.simulatorInjectLineNoise = '60Hz';
+        }
+        opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
+        opts.simulatorSerialPortFailure = options.simulatorSerialPortFailure || options.simulatorserialportfailure || _options.simulatorSerialPortFailure;
+        opts.timeSync = options.timeSync || options.timesync || _options.timeSync;
+        opts.verbose = options.verbose || _options.verbose;
+
         // Set to global options object
         this.options = opts;
 
@@ -193,10 +221,10 @@ function OpenBCIFactory() {
                 boardSerial = new openBCISimulator.OpenBCISimulator(portName, {
                     verbose: this.options.verbose,
                     sampleRate: this.options.simulatorSampleRate,
-                    alpha: this.options.simulatorAlpha,
-                    lineNoise: this.options.simulatorLineNoise,
+                    alpha: this.options.simulatorInjectAlpha,
+                    lineNoise: this.options.simulatorInjectLineNoise,
                     firmwareVersion: this.options.simulatorFirmwareVersion,
-                    boardFailure: this.options.simulatorBoardCommsFailure
+                    boardFailure: this.options.simulatorBoardFailure
                 });
             } else {
                 /* istanbul ignore if */
