@@ -20,7 +20,8 @@ function OpenBCISimulatorFactory() {
         verbose: false,
         alpha: true,
         lineNoise: '60Hz',
-        firmware: k.OBCIFirmwareV2
+        firmwareVersion: k.OBCIFirmwareV1,
+        boardFailure:false
     };
 
 
@@ -37,7 +38,8 @@ function OpenBCISimulatorFactory() {
         opts.lineNoise = options.lineNoise || options.linenoise || _options.lineNoise;
         opts.alpha = options.alpha || _options.alpha;
         opts.verbose = options.verbose || _options.verbose;
-        opts.firmware = options.firmware || _options.firmware;
+        opts.firmwareVersion = options.firmwareVersion || _options.firmwareVersion;
+        opts.boardFailure = options.boardFailure || options.boardfailure || _options.boardFailure;
 
         this.options = opts;
 
@@ -92,6 +94,16 @@ function OpenBCISimulatorFactory() {
     OpenBCISimulator.prototype.write = function(data,callback) {
 
         switch (data[0]) {
+            case 0x00:
+                if (this.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (this.boardFailure) {
+                        this.emit('data', new Buffer([0x00,'$','$','$']));
+                    } else {
+                        this.emit('data', new Buffer("Host is on channel number: 0, however there is no communications with the Board$$$"));
+                    }
+
+
+                }
             case k.OBCIStreamStart:
                 if (!this.stream) this._startStream();
                 this.streaming = true;

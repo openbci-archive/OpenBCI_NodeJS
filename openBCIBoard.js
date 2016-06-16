@@ -26,13 +26,15 @@ function OpenBCIFactory() {
         simulate: false,
         simulatorSampleRate: 250,
         simulatorAlpha: true,
-        simulatorLineNoise: '60Hz'
+        simulatorLineNoise: '60Hz',
+        simulatorFirmwareVersion: k.OBCIFirmwareV1,
+        simulatorBoardCommsFailure: false
     };
 
     /**
      * @description The initialization method to call first, before any other method.
      * @param options (optional) - Board optional configurations.
-     *     - `boardType` - Specifies type of OpenBCI board
+     *     - `boardType` {String} - Specifies type of OpenBCI board.
      *          3 Possible Boards:
      *              `default` - 8 Channel OpenBCI board (Default)
      *              `daisy` - 8 Channel board with Daisy Module
@@ -40,23 +42,30 @@ function OpenBCIFactory() {
      *              `ganglion` - 4 Channel board
      *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
      *
-     *     - `baudRate` - Baud Rate, defaults to 115200. Manipulating this is allowed if
+     *     - `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if
      *                      firmware on board has been previously configured.
      *
-     *     - `verbose` - Print out useful debugging events
+     *     - `verbose` {Boolean} - Print out useful debugging events
      *
-     *     - `simulate` - Full functionality, just mock data.
+     *     - `simulate` {Boolean} - Full functionality, just mock data.
      *
-     *     - `simulatorSampleRate` - The sample rate to use for the simulator
+     *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator
      *                      (Default is `250`)
      *
      *     - `simulatorAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
      *
-     *     - `simulatorLineNoise` - Injects line noise on channels.
+     *     - `simulatorLineNoise` {String} - Injects line noise on channels.
      *          3 Possible Options:
      *              `60Hz` - 60Hz line noise (Default) [America]
      *              `50Hz` - 50Hz line noise [Europe]
      *              `None` - Do not inject line noise.
+     *              
+     *     - `simulatorFirmwareVersion` {String} - Starts the simulator in with firmware version 2 features
+     *          2 Possible Options:
+     *              `v1` - Firmware Version 1 (Default)
+     *              `v2` - Firmware Version 2
+     *
+     *     - `simulatorBoardCommsFailure` {Boolean} - Simulates board communications failure.
      *
      *     - `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup
      *                  with the SNTP time. Adds a time stamp to the AUX channels. (NOT FULLY
@@ -476,6 +485,10 @@ function OpenBCIFactory() {
                 });
             }
         })
+    };
+
+    OpenBCIBoard.prototype.radioChannelQuery = function() {
+
     };
 
     /**
