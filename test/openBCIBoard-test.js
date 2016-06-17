@@ -109,47 +109,107 @@ describe('openbci-sdk',function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 simulate: true
             });
-            (ourBoard.options.simulate).should.equal(true);
+            expect(ourBoard.options.simulate).to.be.true;
         });
         it('should be able to set the simulator to board failure mode', () =>{
             var ourBoard1 = new openBCIBoard.OpenBCIBoard({
-                simulateBoardFailure: true
+                simulatorBoardFailure: true
             });
-            (ourBoard1.options.simulateBoardFailure).should.equal(true);
+            expect(ourBoard1.options.simulatorBoardFailure).to.be.true;
             var ourBoard2 = new openBCIBoard.OpenBCIBoard({
-                simulateBoardFailure: true
+                simulatorboardfailure: true
             });
-            (ourBoard2.options.simulateBoardFailure).should.equal(true);
+            expect(ourBoard2.options.simulatorBoardFailure).to.be.true;
         });
-
         it('should be able to attach the daisy board in the simulator', () =>{
             var ourBoard1 = new openBCIBoard.OpenBCIBoard({
                 simulatorDaisyModuleAttached: true
             });
-            (ourBoard1.options.simulatorDaisyModuleAttached).should.equal(true);
+            expect(ourBoard1.options.simulatorDaisyModuleAttached).to.be.true;
             // Verify multi case support
             var ourBoard2 = new openBCIBoard.OpenBCIBoard({
                 simulatordaisymoduleattached: true
             });
-            (ourBoard2.options.simulatordaisymoduleattached).should.equal(true);
+            expect(ourBoard2.options.simulatorDaisyModuleAttached).to.be.true;
         });
-        
-        
-
-
-        it('should start in current stream state in the init mode', () => {
-            ourBoard = new openBCIBoard.OpenBCIBoard();
-
-            ourBoard.curParsingMode.should.equal(k.OBCIParsingReset);
-        });
-
-        it('can enter verbose mode', function() {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
+        it('should be able to start the simulator with firmware version 2', () =>{
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                simulatorFirmwareVersion: 'v2'
             });
-            (ourBoard.options.verbose).should.equal(true);
+            (ourBoard1.options.simulatorFirmwareVersion).should.equal(k.OBCIFirmwareV2);
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                simulatorfirmwareversion: 'v2'
+            });
+            (ourBoard2.options.simulatorFirmwareVersion).should.equal(k.OBCIFirmwareV2);
         });
-
+        it('should be able to put the simulator in raw aux mode', () =>{
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                simulatorHasAccelerometer: false
+            });
+            expect(ourBoard1.options.simulatorHasAccelerometer).to.be.false;
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                simulatorhasaccelerometer: false
+            });
+            expect(ourBoard2.options.simulatorHasAccelerometer).to.be.false;
+        });
+        it('should be able to make the internal clock of the simulator run slow', () =>{
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                simulatorInternalClockDrift: -1
+            });
+            expect(ourBoard1.options.simulatorInternalClockDrift).to.be.lessThan(0);
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                simulatorinternalclockdrift: -1
+            });
+            expect(ourBoard2.options.simulatorInternalClockDrift).to.be.lessThan(0);
+        });
+        it('should be able to make the internal clock of the simulator run fast', () =>{
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                simulatorInternalClockDrift: 1
+            });
+            expect(ourBoard1.options.simulatorInternalClockDrift).to.be.greaterThan(0);
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                simulatorinternalclockdrift: 1
+            });
+            expect(ourBoard2.options.simulatorInternalClockDrift).to.be.greaterThan(0);
+        });
+        it('should be able to not inject alpha waves into the simulator', function() {
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                simulatorInjectAlpha: false
+            });
+            expect(ourBoard1.options.simulatorInjectAlpha).to.be.false;
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                simulatorinjectalpha: false
+            });
+            expect(ourBoard2.options.simulatorInjectAlpha).to.be.false;
+        });
+        it('can turn 50Hz line noise on', function() {
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                simulatorInjectLineNoise: '50Hz'
+            });
+            expect(ourBoard1.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz50);
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                simulatorinjectlinenoise: '50Hz'
+            });
+            expect(ourBoard2.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz50);
+        });
+        it('can turn no line noise on', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulatorInjectLineNoise: 'None'
+            });
+            (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseNone);
+        });
+        it('defaults to 60Hz line noise when bad input', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulatorInjectLineNoise: '20Hz'
+            });
+            (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseHz60);
+        });
         it('can enter simulate mode with different sample rate', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 simulate: true,
@@ -159,29 +219,38 @@ describe('openbci-sdk',function() {
             (ourBoard.options.simulatorSampleRate).should.equal(69);
             (ourBoard.sampleRate()).should.equal(69);
         });
-        it('can turn 50Hz line noise on', function() {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                simulatorInjectLineNoise: '50Hz'
+        it('should be able to attach the daisy board in the simulator', () =>{
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                simulatorSerialPortFailure: true
             });
-            (ourBoard.options.simulatorInjectLineNoise).should.equal('50Hz');
+            expect(ourBoard1.options.simulatorSerialPortFailure).to.be.true;
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                simulatorserialportfailure: true
+            });
+            expect(ourBoard2.options.simulatorSerialPortFailure).to.be.true;
         });
-        it('can turn no line noise on', function() {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                simulatorInjectLineNoise: 'None'
+        it('should be able to enter sync mode', function() {
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                timeSync: true
             });
-            (ourBoard.options.simulatorInjectLineNoise).should.equal('None');
+            expect(ourBoard1.options.timeSync).to.be.true;
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                timesync: true
+            });
+            expect(ourBoard2.options.timeSync).to.be.true;
         });
-        it('defaults to 60Hz line noise when bad input', function() {
+        it('can enter verbose mode', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
-                simulatorInjectLineNoise: '20Hz'
+                verbose: true
             });
-            (ourBoard.options.simulatorInjectLineNoise).should.equal('60Hz');
+            (ourBoard.options.verbose).should.equal(true);
         });
-        it('will not inject alpha', function() {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                simulatorInjectAlpha: false
-            });
-            (ourBoard.options.simulatorInjectAlpha).should.equal(false);
+        it('should start in current stream state in the init mode', () => {
+            ourBoard = new openBCIBoard.OpenBCIBoard();
+
+            ourBoard.curParsingMode.should.equal(k.OBCIParsingReset);
         });
         it('configures impedance testing variables correctly', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard();

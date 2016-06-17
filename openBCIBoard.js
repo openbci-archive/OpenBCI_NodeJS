@@ -103,6 +103,7 @@ function OpenBCIFactory() {
         opts.simulate = options.simulate || _options.simulate;
         opts.simulatorBoardFailure = options.simulatorBoardFailure || options.simulatorboardfailure || _options.simulatorBoardFailure;
         opts.simulatorDaisyModuleAttached = options.simulatorDaisyModuleAttached || options.simulatordaisymoduleattached || _options.simulatorDaisyModuleAttached;
+        opts.simulatorFirmwareVersion = options.simulatorFirmwareVersion || options.simulatorfirmwareversion || _options.simulatorFirmwareVersion;
         if (opts.simulatorFirmwareVersion !== k.OBCIFirmwareV1 && opts.simulatorFirmwareVersion !== k.OBCIFirmwareV2) {
             opts.simulatorFirmwareVersion = k.OBCIFirmwareV1;
         }
@@ -112,7 +113,7 @@ function OpenBCIFactory() {
             opts.simulatorHasAccelerometer = _options.simulatorHasAccelerometer;
         }
         opts.simulatorInternalClockDrift = options.simulatorInternalClockDrift || options.simulatorinternalclockdrift || _options.simulatorInternalClockDrift;
-        if (options.simulatorInjectAlpha === false || options.simulatoralpha === false) {
+        if (options.simulatorInjectAlpha === false || options.simulatorinjectalpha === false) {
             opts.simulatorInjectAlpha = false;
         } else {
             opts.simulatorInjectAlpha = _options.simulatorInjectAlpha;
