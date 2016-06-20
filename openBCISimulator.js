@@ -60,7 +60,7 @@ function OpenBCISimulatorFactory() {
         opts.verbose = options.verbose || _options.verbose;
 
         this.options = opts;
-        
+
         // Bools
         this.connected = false;
         this.sd = {
@@ -70,7 +70,9 @@ function OpenBCISimulatorFactory() {
         this.streaming = false;
         // Buffers
         this.buffer = new Buffer(500);
+        this.eotBuf = new Buffer("$$$");
         // Numbers
+        this.channelNumber = 1;
         this.sampleNumber = -1; // So the first sample is 0
         // Objects
         this.time = {
@@ -83,7 +85,7 @@ function OpenBCISimulatorFactory() {
 
         // Call 'open'
         setTimeout(() => {
-            console.log('Port name: ' + portName);
+            if (this.options.verbose) console.log('Port name: ' + portName);
             if (portName === k.OBCISimulatorPortName) {
                 this.emit('open');
                 this.connected = true;
@@ -104,16 +106,32 @@ function OpenBCISimulatorFactory() {
     };
 
     OpenBCISimulator.prototype.write = function(data,callback) {
-
         switch (data[0]) {
-            case 0x00:
-                if (this.firmwareVersion === k.OBCIFirmwareV2) {
-                    if (this.boardFailure) {
-                        this.emit('data', new Buffer([0x00,'$','$','$']));
+            case 0xF0:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (!this.options.boardFailure) {
+                        this.emit('data', new Buffer([this.channelNumber]));
+                        this.emit('data', this.eotBuf);
                     } else {
-                        this.emit('data', new Buffer("Host is on channel number: 0, however there is no communications with the Board$$$"));
+                        this.emit('data', new Buffer("Board comm failure, Host on channel number: "));
+                        this.emit('data', new Buffer([this.channelNumber]));
+                        this.emit('data', this.eotBuf);
                     }
                 }
+                break;
+            case 0xF1:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (!this.options.boardFailure) {
+                        this.channelNumber = data[1];
+                        this.emit('data', new Buffer("Channel changed: "));
+                        this.emit('data', new Buffer([this.channelNumber]));
+                        this.emit('data', this.eotBuf);
+                    } else {
+                        this.emit('data', new Buffer("Error: No communications from Device/Board. Serial buffer cleared. Is your device is on the right channel? Is your board powered up?"));
+                        this.emit('data', this.eotBuf);
+                    }
+                }
+                break;
             case k.OBCIStreamStart:
                 if (!this.stream) this._startStream();
                 this.streaming = true;

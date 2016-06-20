@@ -220,12 +220,16 @@ function OpenBCIFactory() {
                 this.options.simulate = true;
                 if (this.options.verbose) console.log('using faux board ' + portName);
                 boardSerial = new openBCISimulator.OpenBCISimulator(portName, {
-                    verbose: this.options.verbose,
-                    sampleRate: this.options.simulatorSampleRate,
+                    accel: this.options.simulatorHasAccelerometer,
                     alpha: this.options.simulatorInjectAlpha,
-                    lineNoise: this.options.simulatorInjectLineNoise,
+                    boardFailure:this.options.simulatorBoardFailure,
+                    daisy: this.options.simulatorDaisyModuleAttached,
+                    drift: this.options.simulatorInternalClockDrift,
                     firmwareVersion: this.options.simulatorFirmwareVersion,
-                    boardFailure: this.options.simulatorBoardFailure
+                    lineNoise: this.options.simulatorInjectLineNoise,
+                    sampleRate: this.options.simulatorSampleRate,
+                    serialPortFailure: this.options.simulatorSerialPortFailure,
+                    verbose: this.options.verbose
                 });
             } else {
                 /* istanbul ignore if */
@@ -456,7 +460,7 @@ function OpenBCIFactory() {
 
     /**
      * @description Should be used to send data to the board
-     * @param data
+     * @param data {Buffer} - The data to write out
      * @returns {Promise} if signal was able to be sent
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -518,8 +522,107 @@ function OpenBCIFactory() {
         })
     };
 
-    OpenBCIBoard.prototype.radioChannelQuery = function() {
+    /**
+     * @description Convenience
+     * @returns {boolean}
+     */
+    OpenBCIBoard.prototype.usingVersionTwoFirmware = function() {
+        if (this.options.simulate) {
+            return this.options.simulatorFirmwareVersion === k.OBCIFirmwareV2;
+        } else {
+            return this.info.firmware === k.OBCIFirmwareV2;
+        }
+    };
 
+    /**
+     * @description Used to query the OpenBCI system for it's radio channel number. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+     *      an
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - An object with:
+     *      `success` {Boolean} - True if the channel number of the system was successfully changed
+     *      `channelNumber` {Number} - The new channel number
+     *      `err` {Error} - An error if there was a problem trying to change the channel.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioChannelChange = function(channelNumber) {
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the radio while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (channelNumber === undefined || channelNumber === null) return reject("Must input a new channel number to switch too!");
+            if (!k.isNumber(channelNumber)) return reject("Must input type Number");
+            if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
+            if (channelNumber < k.OBCIRadioChannelMin) return reject(`New channel number must be greater than ${k.OBCIRadioChannelMin}`);
+
+
+            // resolve({channelNumber:channelNumber})
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioChangeChannel,channelNumber]));
+        });
+
+    };
+
+    /**
+     * @description Used to query the OpenBCI system for it's radio channel number. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+     *      an
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - An object with keys `channelNumber` which is a Number and `err` which contains an error in
+     *      the condition that there system is experiencing board communications failure.
+     */
+    OpenBCIBoard.prototype.radioChannelQuery = function() {
+        // The function to run on timeout
+        var badCommsTimeout;
+
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the radio while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("No response from board, are you using new firmware");
+            }, 500);
+
+            // Subscribe to the EOT event
+            this.on('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                // The error message from no board comms is long while the message on normal operation is short
+                if (data.byteLength > 5) {
+                    // The channel number is right before the $$$
+                    resolve({
+                        channelNumber : data[data.length - 4],
+                        err:Error(data)
+                    });
+
+                } else {
+                    resolve({
+                        channelNumber : data[0],
+                        err : null
+                    }); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioQuery]));
+
+        });
     };
 
     /**
@@ -1134,7 +1237,7 @@ function OpenBCIFactory() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
             //if (this.streaming) reject('Cannot be streaming to sync clocks');
-            if (this.firmwareVersion === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
+            if (this.info.firmware === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
             this.curParsingMode = k.OBCIParsingTimeSyncSent;
             this.sync.timeEnteredQueue = this.sntpNow();
 

@@ -748,6 +748,20 @@ describe('OpenBCIConstants', function() {
             assert.equal(250, k.OBCISampleRate250);
         });
     });
+    describe("Radio Channel Limits", function() {
+        it("should get the right channel number max",function () {
+            expect(k.OBCIRadioChannelMax).to.be.equal(25); 
+        });
+        it("should get the right channel number min",function () {
+            expect(k.OBCIRadioChannelMin).to.be.equal(0);
+        });
+        it("should get the right poll time max",function () {
+            expect(k.OBCIRadioPollTimeMax).to.be.equal(255);
+        });
+        it("should get the right poll time min",function () {
+            expect(k.OBCIRadioPollTimeMin).to.be.equal(0);
+        });
+    });
     describe('#getChannelSetter', function() {
         //'channel 1, power on, gain 24, inputType normal, bias include, srb2 connect, srb1 dissconnect'
         describe('channel input selection works', function() {

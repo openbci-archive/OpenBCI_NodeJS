@@ -168,6 +168,11 @@ const OBCITrigger = '`';
 const OBCISyncTimeSet = '<';
 const OBCISyncTimeSent = ",";
 
+/** Radio Commands */
+const OBCIRadioChangeChannel    = 0xF1;
+const OBCIRadioChangePollTime   = 0xF5;
+const OBCIRadioQuery            = 0xF0;
+
 /** Possible number of channels */
 const OBCINumberOfChannelsDaisy = 16;
 const OBCINumberOfChannelsDefault = 8;
@@ -287,6 +292,12 @@ const OBCITimeoutProcessBytes = 500; // 0.5 seconds
 /** Simulator Board Configurations */
 const OBCISimulatorRawAux   = 'rawAux';
 const OBCISimulatorStandard = 'standard';
+
+/** OpenBCI Radio Limits */
+const OBCIRadioChannelMax   = 25;
+const OBCIRadioChannelMin   = 0;
+const OBCIRadioPollTimeMax  = 255;
+const OBCIRadioPollTimeMin  = 0;
 
 module.exports = {
     /** Turning channels off */
@@ -721,6 +732,10 @@ module.exports = {
     /** Sync Clocks */
     OBCISyncTimeSent,
     OBCISyncTimeSet,
+    /** Radio Commands */
+    OBCIRadioChangeChannel,
+    OBCIRadioChangePollTime,
+    OBCIRadioQuery,
     /** Impedance */
     OBCIImpedanceTextBad,
     OBCIImpedanceTextGood,
@@ -794,7 +809,12 @@ module.exports = {
     OBCITimeoutProcessBytes,
     /** Simulator Board Configurations */
     OBCISimulatorRawAux,
-    OBCISimulatorStandard
+    OBCISimulatorStandard,
+    /** Radio Channel Limits */
+    OBCIRadioChannelMax,
+    OBCIRadioChannelMin,
+    OBCIRadioPollTimeMax,
+    OBCIRadioPollTimeMin
 };
 
 /**

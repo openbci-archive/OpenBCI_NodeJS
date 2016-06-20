@@ -2,6 +2,7 @@
 
 ### New Features
 
+* NPM Module now called `openbci` instead of `openbci-sdk`
 * Firmware version 2.0 support.
 * Clock synchronization between OpenBCI board and this driver
 * `.info` property which contains verified board information parsed from the OpenBCI's `softReset()` response.

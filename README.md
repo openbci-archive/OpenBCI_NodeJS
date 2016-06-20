@@ -16,7 +16,7 @@ The purpose of this module is to **get connected** and **start streaming** as fa
 #### Install via npm:
 
 ```
-npm install openbci-sdk
+npm install openbci
 ```
 
 #### Get connected and start streaming
