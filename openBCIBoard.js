@@ -549,6 +549,7 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioChannelChange = function(channelNumber) {
+        var badCommsTimeout;
         return new Promise((resolve,reject) => {
             if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
             if (this.streaming) return reject("Don't query for the radio while streaming");
@@ -558,6 +559,33 @@ function OpenBCIFactory() {
             if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
             if (channelNumber < k.OBCIRadioChannelMin) return reject(`New channel number must be greater than ${k.OBCIRadioChannelMin}`);
 
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("No response from board, are you using new firmware");
+            }, 500);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                // The error message from no board comms is long while the message on normal operation is short
+                if (data.byteLength > 5) {
+                    // The channel number is right before the $$$
+                    resolve({
+                        channelNumber : data[data.length - 4],
+                        err:Error(data)
+                    });
+
+                } else {
+                    resolve({
+                        channelNumber : data[0],
+                        err : null
+                    }); // The channel number is in the first byte
+                }
+            });
 
             // resolve({channelNumber:channelNumber})
 
@@ -596,7 +624,7 @@ function OpenBCIFactory() {
             }, 500);
 
             // Subscribe to the EOT event
-            this.on('eot',data => {
+            this.once('eot',data => {
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;

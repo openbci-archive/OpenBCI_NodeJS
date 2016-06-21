@@ -1491,7 +1491,7 @@ describe('openbci-sdk',function() {
         
     });
 
-    describe.only('#radioChannelChange', function() {
+    describe('#radioChannelChange', function() {
         it("should not change the channel number if not connected", done => {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
