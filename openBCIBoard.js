@@ -562,8 +562,8 @@ function OpenBCIFactory() {
             // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
             //  important if the module was connected, not streaming and using the old firmware
             badCommsTimeout = setTimeout(() => {
-                reject("No response from board, are you using new firmware");
-            }, 500);
+                reject("Please make sure your dongle is using firmware v2");
+            }, 1000);
 
             // Subscribe to the EOT event
             this.once('eot',data => {
@@ -586,8 +586,6 @@ function OpenBCIFactory() {
                     }); // The channel number is in the first byte
                 }
             });
-
-            // resolve({channelNumber:channelNumber})
 
             this.curParsingMode = k.OBCIParsingEOT;
 

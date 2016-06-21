@@ -1629,7 +1629,7 @@ describe('openbci-sdk',function() {
 
     });
 
-    describe('#radioChannelQuery', function() {
+    describe.only('#radioChannelQuery', function() {
         afterEach(done => {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
