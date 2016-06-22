@@ -547,7 +547,7 @@ function OpenBCIFactory() {
      *      `err` {Error} - An error if there was a problem trying to change the channel.
      * @author AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.radioChannelChange = function(channelNumber) {
+    OpenBCIBoard.prototype.radioChannelSet = function(channelNumber) {
         var badCommsTimeout;
         return new Promise((resolve,reject) => {
             if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
@@ -570,25 +570,21 @@ function OpenBCIFactory() {
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
 
-                // The error message from no board comms is long while the message on normal operation is short
-                if (data.byteLength < 22) {
-                    // The channel number is right before the $$$
+                if (this._isSuccessInBuffer(data)) {
                     resolve({
                         channelNumber : data[data.length - 4],
                         err:Error(data)
                     });
-
                 } else {
-                    reject(`Error [radioChannelChange]: ${data}`); // The channel number is in the first byte
+                    reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
                 }
             });
 
             this.curParsingMode = k.OBCIParsingEOT;
 
             // Send the radio channel query command
-            this._writeAndDrain(new Buffer([k.OBCIRadioChangeChannel,channelNumber]));
+            this._writeAndDrain(new Buffer([k.OBCIRadioCmdChannelSet,channelNumber]));
         });
-
     };
 
     /**
@@ -602,7 +598,7 @@ function OpenBCIFactory() {
      * @returns {Promise} - An object with keys `channelNumber` which is a Number and `err` which contains an error in
      *      the condition that there system is experiencing board communications failure.
      */
-    OpenBCIBoard.prototype.radioChannelQuery = function() {
+    OpenBCIBoard.prototype.radioChannelGet = function() {
         // The function to run on timeout
         var badCommsTimeout;
 
@@ -623,7 +619,6 @@ function OpenBCIFactory() {
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
 
-                // The error message from no board comms is long while the message on normal operation is short
                 if (data.byteLength > 5) {
                     // The channel number is right before the $$$
                     resolve({
@@ -642,8 +637,57 @@ function OpenBCIFactory() {
             this.curParsingMode = k.OBCIParsingEOT;
 
             // Send the radio channel query command
-            this._writeAndDrain(new Buffer([k.OBCIRadioQuery]));
+            this._writeAndDrain(new Buffer([k.OBCIRadioCmdChannelGet]));
 
+        });
+    };
+
+    /**
+     * @description Used to set the OpenBCI poll time. With the RFduino configuration, the Dongle is the Host and the
+     *      Board is the Device. Only the Device can initiate a communication between the two entities. Therefore this
+     *      sets the interval at which the Device polls the Host for new information. Further the function should reject
+     *      if currently streaming. Lastly and more important, if the board is not running the new firmware then this
+     *      functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this
+     *      function should resolve.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - With a {Buffer} that contains the success message.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioPollTimeSet = function (pollTime) {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't change the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (pollTime === undefined || pollTime === null) return reject("Must input a new poll time to switch too!");
+            if (!k.isNumber(pollTime)) return reject("Must input type Number");
+            if (pollTime > k.OBCIRadioPollTimeMax) return reject(`New polltime must be less than ${k.OBCIRadioPollTimeMax}`);
+            if (pollTime < k.OBCIRadioPollTimeMin) return reject(`New polltime must be greater than ${k.OBCIRadioPollTimeMin}`);
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (this._isSuccessInBuffer(data)) {
+                    resolve(data);
+                } else {
+                    reject(`Error [radioPollTimeSet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioCmdPollTimeSet,pollTime]));
         });
     };
 
@@ -653,7 +697,7 @@ function OpenBCIFactory() {
      * Note: This method is used for convenience essentially just wrapping up
      *           serial port.
      * @author Andy Heusser (@andyh616)
-     * @returns {Promise}
+     * @returns {Promise} - On fulfill will contain an array of Serial ports to use.
      */
     OpenBCIBoard.prototype.listPorts = function() {
         return new Promise((resolve, reject) => {
@@ -1491,23 +1535,32 @@ function OpenBCIFactory() {
         return s.matches === 1;
     };
 
-    // OpenBCIBoard.prototype._extractTimeSyncSent = function(dataBuffer) {
-    //     const s = new StreamSearch(new Buffer(k.OBCISyncTimeSent));
-    //
-    //     // Clear the buffer
-    //     s.reset();
-    //
-    //     var tempBuf;
-    //     s.on('info', function(isMatch, data, start, end) {
-    //         tempBuf = Buffer.concat([tempBuf,dataBuffer.slice(start,end)],tempBuf.byteLength + (end - start));
-    //         console.log(`data:${data} | start:${start} | end:${end}`);
-    //
-    //     });
-    //
-    //     // Push the new data buffer. This runs the search.
-    //     s.push(dataBuffer);
-    //    
-    // };
+    OpenBCIBoard.prototype._isSuccessInBuffer = function(dataBuffer) {
+        const s = new StreamSearch(new Buffer(k.OBCIParseSuccess));
+
+        // Clear the buffer
+        s.reset();
+
+        // Push the new data buffer. This runs the search.
+        s.push(dataBuffer);
+
+        // Check and see if there is a match
+        return s.matches === 1;
+    };
+
+    OpenBCIBoard.prototype._isFailureInBuffer = function(dataBuffer) {
+        const s = new StreamSearch(new Buffer(k.OBCIParseFailure));
+
+        // Clear the buffer
+        s.reset();
+
+        // Push the new data buffer. This runs the search.
+        s.push(dataBuffer);
+
+        // Check and see if there is a match
+        return s.matches === 1;
+    };
+
 
     /**
      * @description Used to route qualified packets to their proper parsers

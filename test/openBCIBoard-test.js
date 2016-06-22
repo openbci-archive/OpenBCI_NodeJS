@@ -1366,6 +1366,54 @@ describe('openbci-sdk',function() {
         });
     });
 
+    describe('#_isSuccessInBuffer',function() {
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            ourBoard._isSuccessInBuffer(buf).should.equal(false);
+        });
+        it("should not find any success in a failure message",function() {
+            var buf = new Buffer("Failure: Could not change Dongle channel number");
+
+            ourBoard._isSuccessInBuffer(buf).should.equal(false);
+        });
+        it("should find success in a success message",function() {
+            var buf = new Buffer("Success: Poll time set$$$");
+
+            ourBoard._isSuccessInBuffer(buf).should.equal(true);
+        });
+    });
+
+    describe('#_isFailureInBuffer',function() {
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            ourBoard._isFailureInBuffer(buf).should.equal(false);
+        });
+        it("should not find any failure in a success message",function() {
+            var buf = new Buffer("Success: Poll time set$$$");
+
+            ourBoard._isFailureInBuffer(buf).should.equal(false);
+        });
+        it("should find failure in a failure message",function() {
+            var buf = new Buffer("Failure: Could not change Dongle channel number$$$");
+
+            ourBoard._isFailureInBuffer(buf).should.equal(true);
+        });
+    });
+
     describe("#_finalizeNewSampleForDaisy", function() {
         var ourBoard, randomSampleGenerator, sampleEvent, failTimeout;
         before(() => {
@@ -1491,14 +1539,24 @@ describe('openbci-sdk',function() {
         
     });
 
-    describe('#radioChannelChange', function() {
+    describe('#radioChannelSet', function() {
+        afterEach(done => {
+            if (ourBoard.connected) {
+                ourBoard.disconnect().then(() => {
+                    done();
+                }).catch(() => done);
+            } else {
+                done()
+            }
+        });
+
         it("should not change the channel number if not connected", done => {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
                 simulatorFirmwareVersion: 'v2'
             });
-            ourBoard.radioChannelQuery().should.be.rejected.and.notify(done);
+            ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
         });
 
         it("should reject if streaming", done => {
@@ -1512,7 +1570,7 @@ describe('openbci-sdk',function() {
                     ourBoard.once('ready', () => {
                         ourBoard.streamStart()
                             .then(() => {
-                                ourBoard.radioChannelChange(1).then(() => {
+                                ourBoard.radioChannelSet(1).then(() => {
                                     done("should have rejected");
                                 }).catch(() => {
                                     done(); // Test pass
@@ -1530,7 +1588,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelChange(1).should.be.rejected.and.notify(done);
+                        ourBoard.radioChannelSet(1).should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
         });
@@ -1544,7 +1602,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelChange('1').should.be.rejected.and.notify(done);
+                        ourBoard.radioChannelSet('1').should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
 
@@ -1559,7 +1617,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelChange().should.be.rejected.and.notify(done);
+                        ourBoard.radioChannelSet().should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
         });
@@ -1573,7 +1631,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelChange(-1).should.be.rejected.and.notify(done);
+                        ourBoard.radioChannelSet(-1).should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
         });
@@ -1587,7 +1645,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelChange(26).should.be.rejected.and.notify(done);
+                        ourBoard.radioChannelSet(26).should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
         });
@@ -1602,7 +1660,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelChange(1).should.be.rejected.and.notify(done);
+                        ourBoard.radioChannelSet(1).should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
         });
@@ -1617,7 +1675,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelChange(newChannelNumber).then(res => {
+                        ourBoard.radioChannelSet(newChannelNumber).then(res => {
                             expect(res.channelNumber).to.be.equal(newChannelNumber);
                             expect(res.err).to.not.be.undefined;
                             done();
@@ -1625,10 +1683,9 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-
     });
 
-    describe('#radioChannelQuery', function() {
+    describe('#radioChannelGet', function() {
         afterEach(done => {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
@@ -1644,7 +1701,7 @@ describe('openbci-sdk',function() {
                 verbose : true,
                 simulate : true
             });
-            ourBoard.radioChannelQuery().should.be.rejected.and.notify(done);
+            ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
         });
         it("should not query if streaming", done => {
             ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -1656,7 +1713,7 @@ describe('openbci-sdk',function() {
                     ourBoard.once('ready', () => {
                         ourBoard.streamStart()
                             .then(() => {
-                                ourBoard.radioChannelQuery().then(() => {
+                                ourBoard.radioChannelGet().then(() => {
                                     done("should have rejected");
                                 }).catch(() => {
                                     done(); // Test pass
@@ -1674,7 +1731,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelQuery().should.be.rejected.and.notify(done);
+                        ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
 
@@ -1688,7 +1745,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelQuery().then(res => {
+                        ourBoard.radioChannelGet().then(res => {
                             expect(res.channelNumber).to.be.within(k.OBCIRadioChannelMin,k.OBCIRadioChannelMax);
                             done();
                         }).catch(err => done(err));
@@ -1705,11 +1762,152 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelQuery().then(res => {
+                        ourBoard.radioChannelGet().then(res => {
                             expect(res.channelNumber).to.be.within(k.OBCIRadioChannelMin,k.OBCIRadioChannelMax);
                             expect(res.err).to.not.be.undefined;
                             done();
                         }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+    });
+
+    describe.only("#radioPollTimeSet",function() {
+        afterEach(done => {
+            if (ourBoard.connected) {
+                ourBoard.disconnect().then(() => {
+                    done();
+                }).catch(() => done);
+            } else {
+                done()
+            }
+        });
+        it("should not change the channel number if not connected", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.radioPollTimeSet().should.be.rejected.and.notify(done);
+        });
+
+        it("should reject if streaming", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.streamStart()
+                            .then(() => {
+                                ourBoard.radioPollTimeSet(1).then(() => {
+                                    done("should have rejected");
+                                }).catch(() => {
+                                    done(); // Test pass
+                                })
+                            }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+
+        it("should reject if not firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeSet(1).should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+
+        it("should reject if a number is not sent as input", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeSet('1').should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+
+        });
+
+        it("should reject if no poll time is presented as arg", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeSet().should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+
+        it("should reject if the requested new poll time is lower than 0", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeSet(-1).should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+
+        it("should reject if the requested new poll time is higher than 255", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeSet(256).should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+
+        it("should not change the poll time if the board is not communicating with the host", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorBoardFailure: true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeSet(1).should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+
+        it("should change the poll time if connected, not steaming, and using firmware version 2+",done => {
+            var newPollTime = 69;
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeSet(newPollTime).then(() => {done()}).catch(err => done);
                     });
                 }).catch(err => done(err));
         });

@@ -107,27 +107,39 @@ function OpenBCISimulatorFactory() {
 
     OpenBCISimulator.prototype.write = function(data,callback) {
         switch (data[0]) {
-            case 0xF0:
+            case k.OBCIRadioCmdChannelGet:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     if (!this.options.boardFailure) {
+                        this.emit('data', new Buffer("Success: Channel changed to 0x"));
                         this.emit('data', new Buffer([this.channelNumber]));
                         this.emit('data', this.eotBuf);
                     } else {
-                        this.emit('data', new Buffer("Board comm failure, Host on channel number: "));
+                        this.emit('data', new Buffer("Failure: No Board communications; Dongle on channel number: 0x"));
                         this.emit('data', new Buffer([this.channelNumber]));
                         this.emit('data', this.eotBuf);
                     }
                 }
                 break;
-            case 0xF1:
+            case k.OBCIRadioCmdChannelSet:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     if (!this.options.boardFailure) {
                         this.channelNumber = data[1];
-                        this.emit('data', new Buffer("Channel changed: "));
+                        this.emit('data', new Buffer("Success: Channel changed to 0x"));
                         this.emit('data', new Buffer([this.channelNumber]));
                         this.emit('data', this.eotBuf);
                     } else {
-                        this.emit('data', new Buffer("Error: No communications from Device/Board. Serial buffer cleared. Is your device is on the right channel? Is your board powered up?"));
+                        this.emit('data', new Buffer("Failure: No communications from Board. Is your Board on the right channel? Is your Board powered up?"));
+                        this.emit('data', this.eotBuf);
+                    }
+                }
+                break;
+            case k.OBCIRadioCmdPollTimeSet:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (!this.options.boardFailure) {
+                        this.emit('data', new Buffer("Success: Poll time set"));
+                        this.emit('data', this.eotBuf);
+                    } else {
+                        this.emit('data', new Buffer("Failure: No communications from Board. Is your Board on the right channel? Is your Board powered up?"));
                         this.emit('data', this.eotBuf);
                     }
                 }

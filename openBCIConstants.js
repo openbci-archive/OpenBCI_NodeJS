@@ -169,9 +169,11 @@ const OBCISyncTimeSet = '<';
 const OBCISyncTimeSent = ",";
 
 /** Radio Commands */
-const OBCIRadioChangeChannel    = 0xF1;
-const OBCIRadioChangePollTime   = 0xF5;
-const OBCIRadioQuery            = 0xF0;
+const OBCIRadioCmdChannelGet            = 0xF0;
+const OBCIRadioCmdChannelSet            = 0xF1;
+const OBCIRadioCmdChannelSetOverride    = 0xF2;
+const OBCIRadioCmdPollTimeGet           = 0xF3;
+const OBCIRadioCmdPollTimeSet           = 0xF4;
 
 /** Possible number of channels */
 const OBCINumberOfChannelsDaisy = 16;
@@ -187,6 +189,7 @@ const OBCIBoardGanglion = 'ganglion';
 const OBCISimulatorLineNoiseHz60 = '60Hz';
 const OBCISimulatorLineNoiseHz50 = '50Hz';
 const OBCISimulatorLineNoiseNone = 'None';
+
 /** Possible Sample Rates*/
 const OBCISampleRate125 = 125;
 const OBCISampleRate250 = 250;
@@ -277,7 +280,9 @@ const OBCIFirmwareV2 = 'v2';
 /** Parse */
 const OBCIParseDaisy        = "Daisy";
 const OBCIParseFirmware     = "v2";
+const OBCIParseFailure      = "Failure";
 const OBCIParseEOT          = "$$$";
+const OBCIParseSuccess      = "Success";
 
 /** Used in parsing incoming serial data*/
 const OBCIParsingChannelSettings  = 2;
@@ -733,9 +738,11 @@ module.exports = {
     OBCISyncTimeSent,
     OBCISyncTimeSet,
     /** Radio Commands */
-    OBCIRadioChangeChannel,
-    OBCIRadioChangePollTime,
-    OBCIRadioQuery,
+    OBCIRadioCmdChannelGet,
+    OBCIRadioCmdChannelSet,
+    OBCIRadioCmdChannelSetOverride,
+    OBCIRadioCmdPollTimeGet,
+    OBCIRadioCmdPollTimeSet,
     /** Impedance */
     OBCIImpedanceTextBad,
     OBCIImpedanceTextGood,
@@ -797,8 +804,10 @@ module.exports = {
     OBCIStreamPacketTimeByteSize,
     /** Parse */
     OBCIParseDaisy,
+    OBCIParseFailure,
     OBCIParseFirmware,
     OBCIParseEOT,
+    OBCIParseSuccess,
     /** Used in parsing incoming serial data*/
     OBCIParsingChannelSettings,
     OBCIParsingEOT,
