@@ -1,3 +1,9 @@
+# 0.3.7
+
+### New Features
+* Upgrade dependencies
+* Update Travis
+
 # 0.3.6
 
 ### New Features
