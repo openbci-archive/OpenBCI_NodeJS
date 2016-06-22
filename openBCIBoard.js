@@ -543,7 +543,6 @@ function OpenBCIFactory() {
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
      * @returns {Promise} - An object with:
-     *      `success` {Boolean} - True if the channel number of the system was successfully changed
      *      `channelNumber` {Number} - The new channel number
      *      `err` {Error} - An error if there was a problem trying to change the channel.
      * @author AJ Keller (@pushtheworldllc)
@@ -572,7 +571,7 @@ function OpenBCIFactory() {
                 badCommsTimeout = null;
 
                 // The error message from no board comms is long while the message on normal operation is short
-                if (data.byteLength > 5) {
+                if (data.byteLength < 22) {
                     // The channel number is right before the $$$
                     resolve({
                         channelNumber : data[data.length - 4],
@@ -580,10 +579,7 @@ function OpenBCIFactory() {
                     });
 
                 } else {
-                    resolve({
-                        channelNumber : data[0],
-                        err : null
-                    }); // The channel number is in the first byte
+                    reject(`Error [radioChannelChange]: ${data}`); // The channel number is in the first byte
                 }
             });
 

@@ -1618,7 +1618,6 @@ describe('openbci-sdk',function() {
                 .then(() => {
                     ourBoard.once('ready', () => {
                         ourBoard.radioChannelChange(newChannelNumber).then(res => {
-                            expect(res.success).to.be.true;
                             expect(res.channelNumber).to.be.equal(newChannelNumber);
                             expect(res.err).to.not.be.undefined;
                             done();
@@ -1629,7 +1628,7 @@ describe('openbci-sdk',function() {
 
     });
 
-    describe.only('#radioChannelQuery', function() {
+    describe('#radioChannelQuery', function() {
         afterEach(done => {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
