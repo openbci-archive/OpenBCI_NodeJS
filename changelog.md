@@ -13,6 +13,7 @@
 
 ### Breaking Changes
 
+* NPM package is not called `openbci-sdk` anymore, now called `openbci`
 * Accelerometer data now goes into `.accelData` array instead of `.auxData` array.
 * In openBCISample.js 
   * `parseRawPacket()` is now called `parseRawPacketStandard()`
