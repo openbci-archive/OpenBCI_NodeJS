@@ -22,7 +22,8 @@ npm install openbci-sdk
 #### Get connected and start streaming
 
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName)
     .then(function() {
         ourBoard.on('ready',function() {
@@ -67,7 +68,8 @@ var ourBoard = new OpenBCIBoard.OpenBCIBoard();
 For initializing with options, such as verbose print outs:
 
 ```js
-var ourBoard = require('openbci-sdk').OpenBCIBoard({
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard({
     verbose: true
 });
 ```
@@ -75,7 +77,8 @@ var ourBoard = require('openbci-sdk').OpenBCIBoard({
 Or if you don't have a board and want to use synthetic data:
 
 ```js
-var ourBoard = require('openbci-sdk').OpenBCIBoard({
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard({
     simulate: true
 });
 ```
@@ -103,7 +106,8 @@ You MUST wait for the 'ready' event to be emitted before streaming/talking with 
 so installing the 'sample' listener and writing before the ready event might result in... nothing at all.
 
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
         /** Start streaming, reading registers, what ever your heart desires  */
@@ -132,7 +136,8 @@ To get a 'sample' event, you need to:
 3. In callback for 'ready' emitter, call `streamStart()`
 4. Install the 'sample' event emitter
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function() {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();
@@ -157,7 +162,8 @@ You must have the OpenBCI board connected to the PC before trying to automatical
 If a port is not automatically found, then call `.listPorts()` to get a list of all serial ports this would be a good place to present a drop down picker list to the user, so they may manually select the serial port name.
 
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.autoFindOpenBCIBoard().then(portName => {
     if(portName) {
         /** 
@@ -198,7 +204,8 @@ Where there are the same number of elements as channels and each element can be 
 
 Without further ado, here is an example:
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();
@@ -254,7 +261,8 @@ To run an impedance test on all inputs, one channel at a time:
 For example:
 
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.streamStart();
     ourBoard.on('impedanceArray', impedanceArray => {
@@ -436,7 +444,8 @@ A Number, specifies which channel you want to test.
 
 Example:
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();
@@ -477,7 +486,8 @@ A Number, specifies which channel you want to test.
 
 Example:
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();
@@ -518,7 +528,8 @@ A Number, specifies which channel you want to test.
 
 Example:
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
         ourBoard.streamStart();

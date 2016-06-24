@@ -1,3 +1,8 @@
+# 0.3.8
+
+### Bug Fixes
+* Fixed readme.md
+
 # 0.3.7
 
 ### New Features
