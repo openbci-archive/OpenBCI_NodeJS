@@ -1772,7 +1772,7 @@ describe('openbci-sdk',function() {
         });
     });
 
-    describe.only("#radioPollTimeSet",function() {
+    describe("#radioPollTimeSet",function() {
         afterEach(done => {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
