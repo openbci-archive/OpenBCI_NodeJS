@@ -94,7 +94,7 @@ function OpenBCIFactory() {
         /** Properties (keep alphabetical) */
         // Arrays
         this.writeOutArray = new Array(100);
-        this.channelSettingsArray = k.channelSettingsArrayInit(this.numberOfChannels());
+        this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
         // Bools
         this.isLookingForKeyInBuffer = true;
         // Buffers
@@ -105,7 +105,7 @@ function OpenBCIFactory() {
         };
         this.searchingBuf = this.searchBuffers.miscStop;
         // Objects
-        this.goertzelObject = openBCISample.goertzelNewObject(this.numberOfChannels());
+        this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writer = null;
         this.impedanceTest = {
             active: false,

@@ -36,6 +36,13 @@ describe('openbci-sdk',function() {
             })
     });
     describe('#constructor', function () {
+        it('constructs with require', function() {
+            var OpenBCIBoard = require('../openBCIBoard').OpenBCIBoard;
+            ourBoard = new OpenBCIBoard({
+                verbose:true
+            });
+            expect(ourBoard.numberOfChannels()).to.equal(8);
+        });
         it('constructs with the correct default options', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard();
             (ourBoard.options.boardType).should.equal('default');
