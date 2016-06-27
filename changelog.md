@@ -1,3 +1,14 @@
+# 0.3.9
+
+### Enhancements
+
+* Add tests for parsing raw packets
+
+### Bug Fixes
+
+* Removed `got here` log from `.streamStart()`
+* Validate stop byte before emitting `rawDataPacket`
+
 # 0.3.8
 
 ### Bug Fixes

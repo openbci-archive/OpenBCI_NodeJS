@@ -266,7 +266,6 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.streamStart = function() {
         return new Promise((resolve, reject) => {
-            console.log('got here');
             if(this.streaming) reject('Error [.streamStart()]: Already streaming');
             this.streaming = true;
             this._reset();
@@ -1149,8 +1148,8 @@ function OpenBCIFactory() {
             while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
                 if (data[readingPosition] === k.OBCIByteStart) {
                     var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
-                    this.emit('rawDataPacket',rawPacket);
                     if (data[readingPosition + k.OBCIPacketSize - 1] === k.OBCIByteStop) {
+                        this.emit('rawDataPacket',rawPacket);
                         // standard packet!
                         openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
                             .then(sampleObject => {
