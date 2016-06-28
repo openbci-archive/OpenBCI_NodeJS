@@ -12,8 +12,6 @@ chai.use(chaiAsPromised);
 chai.use(sinonChai);
 var bufferEqual = require('buffer-equal');
 var fs = require('fs');
-//var wstream = fs.createWriteStream('myOutput.txt');
-
 
 describe('openbci-sdk',function() {
     this.timeout(2000);
@@ -759,7 +757,7 @@ describe('openbci-sdk',function() {
             // The buffer should not have anything in it any more
             buffer.length.should.equal(0);
         });
-        it('should extract a buffer and preseve the remaining data in the buffer',() => {
+        it('should extract a buffer and preserve the remaining data in the buffer',() => {
             var expectedString = "AJ";
             var extraBuffer = new Buffer(expectedString);
             // declare the big buffer
@@ -1330,11 +1328,38 @@ describe('openbci-sdk',function() {
                 verbose: true
             });
         });
+        after(() => {
+            ourBoard = null;
+        });
         it("should find the character in a buffer with only the character", function() {
             ourBoard._isTimeSyncSetConfirmationInBuffer(new Buffer(",")).should.equal(true);
         });
         it("should not find the character in a buffer without the character", function() {
             ourBoard._isTimeSyncSetConfirmationInBuffer(openBCISample.samplePacket()).should.equal(false);
+        });
+    });
+
+    describe('#_isStopByte',function() {
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+        });
+        after(() => {
+            ourBoard = null;
+        });
+        it('should return true for a normal stop byte', () => {
+            expect(ourBoard._isStopByte(0xC0)).to.be.true;
+        });
+        it('should return false for a good stop byte with a different end nibble', () => {
+            expect(ourBoard._isStopByte(0xCF)).to.be.true;
+        });
+        it('should return false for a bad stop byte', () => {
+            expect(ourBoard._isStopByte(0xF0)).to.be.false;
+        });
+        it('should return false for a bad stop byte', () => {
+            expect(ourBoard._isStopByte(0x00)).to.be.false;
         });
     });
 

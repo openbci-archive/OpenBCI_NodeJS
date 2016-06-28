@@ -1382,7 +1382,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._processDataBuffer = function(dataBuffer) {
         if (!dataBuffer) return null;
-        var bytesToParse = dataBuffer.byteLength;
+        var bytesToParse = dataBuffer.length;
         // Exit if we have a buffer with less data than a packet
         if (bytesToParse < k.OBCIPacketSize) return dataBuffer;
 
@@ -1393,7 +1393,7 @@ function OpenBCIFactory() {
             if (dataBuffer[parsePosition] === k.OBCIByteStart) {
                 // Now that we know the first is a head byte, let's see if the last one is a
                 //  tail byte 0xCx where x is the set of numbers from 0-F (hex)
-                if ((dataBuffer[parsePosition + k.OBCIPacketSize - 1] & 0xF0) === k.OBCIByteStop) {
+                if (this._isStopByte(dataBuffer[parsePosition + k.OBCIPacketSize - 1])) {
                     /** We just qualified a raw packet */
                     // Grab the raw packet, make a copy of it.
                     var rawPacket;
@@ -1406,14 +1406,11 @@ function OpenBCIFactory() {
 
                     // Emit that buffer
                     this.emit('rawDataPacket',rawPacket);
-                    // console.log('rawDataPacket',rawPacket);
                     // Submit the packet for processing
                     this._processQualifiedPacket(rawPacket);
                     // Overwrite the dataBuffer with a new buffer
-                    // console.log("parsePosition",parsePosition);
                     var tempBuf;
                     if (parsePosition > 0) {
-                        // console.log("-->",dataBuffer.slice(0,parsePosition));
                         tempBuf = Buffer.concat([dataBuffer.slice(0,parsePosition),dataBuffer.slice(parsePosition + k.OBCIPacketSize)],dataBuffer.byteLength - k.OBCIPacketSize);
                     } else {
                         tempBuf = dataBuffer.slice(k.OBCIPacketSize);
@@ -1423,7 +1420,6 @@ function OpenBCIFactory() {
                     } else {
                         dataBuffer = new Buffer(tempBuf);
                     }
-                    // console.log('dataBuffer',dataBuffer);
                     // Move the parse position up one packet
                     parsePosition = -1;
                     bytesToParse -= k.OBCIPacketSize;
@@ -1433,6 +1429,16 @@ function OpenBCIFactory() {
         }
 
         return dataBuffer;
+    };
+
+    /**
+     * @description Used to check and see if a byte adheres to the stop byte structure of 0xCx where x is the set of
+     *      numbers from 0-F in hex of 0-15.
+     * @param byte {Number} - The number to test
+     * @returns {boolean} - True if `byte` follows the correct form
+     */
+    OpenBCIBoard.prototype._isStopByte = function(byte) {
+        return (byte & 0xF0) === k.OBCIByteStop;
     };
 
     /**
