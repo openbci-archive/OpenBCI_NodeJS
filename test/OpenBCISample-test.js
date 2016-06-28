@@ -5,6 +5,7 @@ var assert = require('assert');
 var openBCISample = require('../openBCISample');
 var sinon = require('sinon');
 var chai = require('chai'),
+    expect = chai.expect,
     should = chai.should(),
     openBCIBoard = require('../openBCIBoard');
 
@@ -15,10 +16,14 @@ chai.use(sinonChai);
 
 var k = openBCISample.k;
 
-var samplePacket = function () {
-    var byteSample = 0x45;
-    var buffy = new Buffer([0xA0,byteSample,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2, 0xC0]);
-    return buffy;
+var samplePacket = function (sampleNumber) {
+    if (sampleNumber === undefined || sampleNumber === null) {
+        sampleNumber = 0x45;
+    }
+    if(sampleNumber > 255) {
+        sampleNumber = 0x45;
+    }
+    return new Buffer([0xA0,sampleNumber,0,0,1,0,0,2,0,0,3,0,0,4,0,0,5,0,0,6,0,0,7,0,0,8,0,0,0,1,0,2, 0xC0]);
 };
 // Actual first byte recieved from device, one time...
 var samplePacketReal = function () {
@@ -84,28 +89,40 @@ describe('openBCISample',function() {
                 })
                 .catch(err => done(err));
         });
+        it('should work on 200 samples',done => {
+            var numberOfSamplesToTest = 200;
+            var samplesReceived = 0;
+
+            for (var i = 0; i < numberOfSamplesToTest; i++) {
+                var temp = samplePacket(i);
+                //console.log(temp);
+                var taco = new Buffer([i]);
+                taco.copy(temp,2);
+                openBCISample.parseRawPacket(temp)
+                    .then(sampleObject => {
+                        if (sampleObject.sampleNumber === numberOfSamplesToTest - 1) {
+                            done();
+                        }
+                        expect(sampleObject.sampleNumber).to.equal(samplesReceived);
+                        samplesReceived++;
+                    })
+                    .catch(err => done(err));
+            }
+        });
         describe('#errorConditions', function() {
             it('send non data buffer', function(done) {
-                openBCISample.parseRawPacket(1).should.be.rejected.and.notify(done)
-                //var sample = openBCISample.convertPacketToSample(1);
-                //assert.equal(undefined,sample);
+                openBCISample.parseRawPacket(1).should.be.rejected.and.notify(done);
             });
             it('bad start byte', function(done) {
                 var temp = samplePacket();
                 temp[0] = 69;
                 openBCISample.parseRawPacket(temp).should.be.rejected.and.notify(done);
-                //var sample = openBCISample.convertPacketToSample(temp);
-                //assert.equal(undefined,sample);
             });
             it('wrong number of bytes', function(done) {
                 openBCISample.parseRawPacket(new Buffer(5)).should.be.rejected.and.notify(done);
-                //var sample = openBCISample.convertPacketToSample(new Buffer(5));
-                //assert.equal(undefined,sample);
             });
             it('undefined', function(done) {
                 openBCISample.parseRawPacket().should.be.rejected.and.notify(done);
-                //var sample = openBCISample.convertPacketToSample();
-                //assert.equal(undefined,sample);
             });
         });
     });
