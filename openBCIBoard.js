@@ -1,15 +1,17 @@
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
-var util = require('util');
-var stream = require('stream');
-var serialPort = require('serialport');
-var openBCISample = require('./openBCISample');
-var k = openBCISample.k;
-var openBCISimulator = require('./openBCISimulator');
-var now = require('performance-now');
-var Sntp = require('sntp');
-var StreamSearch = require('streamsearch');
+var EventEmitter = require('events').EventEmitter,
+    util = require('util'),
+    stream = require('stream'),
+    serialPort = require('serialport'),
+    openBCISample = require('./openBCISample'),
+    k = openBCISample.k,
+    openBCISimulator = require('./openBCISimulator'),
+    now = require('performance-now'),
+    Sntp = require('sntp'),
+    StreamSearch = require('streamsearch'),
+    bufferEqual = require('buffer-equal');
+
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -1326,8 +1328,11 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
         // Concat old buffer
+        var oldDataBuffer = null;
         if (this.buffer) {
+            oldDataBuffer = this.buffer;
             data = Buffer.concat([this.buffer,data],data.length + this.buffer.length);
+
         }
 
         switch (this.curParsingMode) {
@@ -1362,17 +1367,12 @@ function OpenBCIFactory() {
                 break;
         }
 
-        setTimeout(() => {
-            if (this.buffer) {
-                if (process.version > 6) {
-                    // From introduced in node version 6.x.x
-                    this.emit("log",Buffer.from(this.buffer));
-                } else {
-                    this.emit("log",new Buffer(this.buffer));
-                }
+        if (this.buffer && oldDataBuffer) {
+            if (bufferEqual(this.buffer,oldDataBuffer)) {
                 this.buffer = null;
             }
-        },k.OBCITimeoutProcessBytes);
+        }
+
     };
 
     /**
@@ -1415,10 +1415,14 @@ function OpenBCIFactory() {
                     } else {
                         tempBuf = dataBuffer.slice(k.OBCIPacketSize);
                     }
-                    if (process.version > 6) {
-                        dataBuffer = Buffer.from(tempBuf);
+                    if (tempBuf.length === 0) {
+                        dataBuffer = null;
                     } else {
-                        dataBuffer = new Buffer(tempBuf);
+                        if (process.version > 6) {
+                            dataBuffer = Buffer.from(tempBuf);
+                        } else {
+                            dataBuffer = new Buffer(tempBuf);
+                        }
                     }
                     // Move the parse position up one packet
                     parsePosition = -1;
@@ -1433,7 +1437,7 @@ function OpenBCIFactory() {
 
     /**
      * @description Used to check and see if a byte adheres to the stop byte structure of 0xCx where x is the set of
-     *      numbers from 0-F in hex of 0-15.
+     *      numbers from 0-F in hex of 0-15 in decimal.
      * @param byte {Number} - The number to test
      * @returns {boolean} - True if `byte` follows the correct form
      */

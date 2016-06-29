@@ -6,7 +6,6 @@
 * Firmware version 2.0 support.
 * Clock synchronization between OpenBCI board and this driver
 * `.info` property which contains verified board information parsed from the OpenBCI's `softReset()` response.
-* `log` event that is emitted for data sent from the board that is not a stream packet
 * `eot` event that is emitted when a user sends a command that results in an EOT ("$$$") being sent from the board
 * Daisy (16 channel) support
 * Simulator overhaul, it completely mocks the board. Can now simulate board failure, where the board stops talking to the dongle. Can also mock a serial port failure.

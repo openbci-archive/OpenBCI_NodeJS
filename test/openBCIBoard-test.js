@@ -755,7 +755,7 @@ describe('openbci-sdk',function() {
             _processQualifiedPacketSpy.should.have.been.calledOnce;
 
             // The buffer should not have anything in it any more
-            buffer.length.should.equal(0);
+            expect(buffer).to.be.null;
         });
         it('should extract a buffer and preserve the remaining data in the buffer',() => {
             var expectedString = "AJ";
@@ -793,7 +793,7 @@ describe('openbci-sdk',function() {
             // Ensure that we extracted only one buffer
             _processQualifiedPacketSpy.should.have.been.calledThrice;
             // The buffer should not have anything in it any more
-            buffer.length.should.equal(0);
+            expect(buffer).to.be.null;
         });
 
         it('should be able to get multiple packets and keep extra data on the end', () => {
@@ -1089,33 +1089,43 @@ describe('openbci-sdk',function() {
                 ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
                 spy.reset();
             });
-            // afterEach(() => {
-            //     spy.reset();
-            // });
-            // after(() => {
-            //     spy = null;
-            // });
             it("should call to find the time sync set character in the buffer", done => {
-                var buf = new Buffer(",");
                 // Verify the log event is called
-
-                var logEvent = data => {
-                    // bufferEqual(data,buf).should.be.true;
-                    //
-                    // setTimeout(() => {
-                    //     console.log(`done`);
-                    //     // expect(ourBoard.buffer).to.be.null;
-                    //
-                    // },1); // tiny timeout
-                    done();
-                };
-                ourBoard.once("log",logEvent);
+                var buf = new Buffer(",");
                 // Call the processBytes function
                 ourBoard._processBytes(buf);
                 // Verify the function was called
                 spy.should.have.been.calledOnce;
-                // Verify the buffer is not empty
-                ourBoard.buffer.byteLength.should.equal(1);
+
+                // Listen for the sample event
+                ourBoard.once('sample',() => {
+                    // Verify the buffer is cleared
+                    expect(ourBoard.buffer).to.be.null;
+                    done();
+                });
+                // Make a new buffer
+                var buf1 = openBCISample.samplePacketReal(1);
+                // Send the buffer in
+                ourBoard._processBytes(buf1);
+            });
+            it("should clear the buffer after a time sync set packet", done => {
+                // Verify the log event is called
+                var buf = new Buffer(",");
+                // Call the processBytes function
+                ourBoard._processBytes(buf);
+                // Verify the function was called
+                spy.should.have.been.calledOnce;
+
+                // Listen for the sample event
+                ourBoard.once('synced',() => {
+                    // Verify the buffer is cleared
+                    expect(ourBoard.buffer).to.be.null;
+                    done();
+                });
+                // Make a new buffer
+                var buf1 = openBCISample.samplePacketTimeSyncSet(1);
+                // Send the buffer in
+                ourBoard._processBytes(buf1);
             });
             it("should call to find the time sync set character in the buffer after packet", function() {
                 var buf1 = openBCISample.samplePacket();
@@ -1177,14 +1187,125 @@ describe('openbci-sdk',function() {
                 ourBoard.once("sample",sample => {
                     sample.sampleNumber.should.equal(expectedSampleNumber);
 
-                    expect(ourBoard.buffer.byteLength).to.be.equal(0);
-
-
+                    expect(ourBoard.buffer).to.be.null;
                     done();
                 });
 
                 // Now call the function which should call the "sample" event
                 ourBoard._processBytes(buf1);
+            });
+            it("should get three packets even if one was sent in the last data emit", done => {
+                var expectedSampleNumber = 0;
+                var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
+                var buf2 = openBCISample.samplePacketReal(expectedSampleNumber+1);
+                var buf3 = openBCISample.samplePacketReal(expectedSampleNumber+2);
+                // Pretend that half of buf1 got sent in the first serial flush
+                //  and that the last half of it will arrive a lil later
+                var splitPoint = 15;
+                if (process.version > 6) {
+                    // from introduced in node version 6.x.x
+                    ourBoard.buffer = Buffer.from(buf1.slice(0,splitPoint));
+                } else {
+                    ourBoard.buffer = new Buffer(buf1.slice(0,splitPoint));
+                }
+                var dataBuf = Buffer.concat([buf1.slice(splitPoint),buf2,buf3]);
+
+                var sampleCounter = 0;
+                var newSample = sample => {
+                    if (sampleCounter == expectedSampleNumber) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber);
+                    } else if (sampleCounter == expectedSampleNumber + 1) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber + 1);
+                    } else if (sampleCounter == expectedSampleNumber + 2) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber + 2);
+                        expect(ourBoard.buffer).to.be.null;
+                        ourBoard.removeListener("sample", newSample);
+                        done();
+                    } else {
+                        done(`invalid sample number: expected ${sampleCounter} got ${sample.sampleNumber}`);
+                    }
+                    sampleCounter++;
+                };
+                ourBoard.on("sample",newSample);
+                // Now call the function which should call the "sample" event
+                ourBoard._processBytes(dataBuf);
+            });
+            it("should keep extra data in the buffer", done => {
+                var expectedSampleNumber = 0;
+                var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
+                var buf2 = openBCISample.samplePacketReal(expectedSampleNumber+1);
+                var buf3 = openBCISample.samplePacketReal(expectedSampleNumber+2);
+                // Pretend that half of buf1 got sent in the first serial flush
+                //  and that the last half of it will arrive a lil later
+                var splitPoint = 15;
+
+                ourBoard["buffer"] = null;
+                var bufFirstHalf, bufLastHalf;
+                if (process.version > 6) {
+                    // from introduced in node version 6.x.x
+                    bufFirstHalf = Buffer.from(buf3.slice(0,splitPoint));
+                    bufLastHalf = Buffer.from(buf3.slice(splitPoint));
+                } else {
+                    bufFirstHalf = new Buffer(buf3.slice(0,splitPoint));
+                    bufLastHalf = new Buffer(buf3.slice(splitPoint));
+                }
+
+                var sampleCounter = 0;
+                var newSample = sample => {
+                    if (sampleCounter == expectedSampleNumber) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber);
+                    } else if (sampleCounter == expectedSampleNumber + 1) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber + 1);
+                    } else if (sampleCounter == expectedSampleNumber + 2) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber + 2);
+                        expect(ourBoard.buffer).to.be.null;
+                        ourBoard.removeListener("sample", newSample);
+                        done();
+                    } else {
+                        done(`invalid sample number: expected ${sampleCounter} got ${sample.sampleNumber}`);
+                    }
+                    sampleCounter++;
+                };
+                ourBoard.on("sample",newSample);
+                // Now call the function which should call the "sample" event
+                ourBoard._processBytes(Buffer.concat([buf1,buf2,bufFirstHalf]));
+                // Now verify there is data still in the global buffer by calling _processBytes on the last half
+                ourBoard._processBytes(bufLastHalf);
+            });
+            it("should throw out old data if it is incomplete and add to badPackets count",done => {
+                // Some how this packet go messed up and lodged in... This is the worst case, that the buffer has
+                //  an incomplete packet.
+                ourBoard.buffer = new Buffer([0xA0,0,0,0,0,0,0,0,0,0,0,0xC0]);
+
+                // New buffer incoming
+                var expectedSampleNumber = 1;
+                var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
+                var buf2 = openBCISample.samplePacketReal(expectedSampleNumber+1);
+                var buf3 = openBCISample.samplePacketReal(expectedSampleNumber+2);
+
+                // New data incoming!
+                var dataBuf = Buffer.concat([buf1,buf2,buf3]);
+
+                var sampleCounter = expectedSampleNumber;
+                var newSample = sample => {
+                    if (sampleCounter == expectedSampleNumber) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber);
+                    } else if (sampleCounter == expectedSampleNumber + 1) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber + 1);
+                    } else if (sampleCounter == expectedSampleNumber + 2) {
+                        expect(sample.sampleNumber).to.equal(expectedSampleNumber + 2);
+                        // Verify that the old data was rejected
+                        expect(ourBoard.buffer).to.be.null;
+                        ourBoard.removeListener("sample", newSample);
+                        done();
+                    } else {
+                        done(`invalid sample number: expected ${sampleCounter} got ${sample.sampleNumber}`);
+                    }
+                    sampleCounter++;
+                };
+                ourBoard.on("sample",newSample);
+                // Now call the function which should call the "sample" event
+                ourBoard._processBytes(dataBuf);
             });
         });
 
@@ -1352,7 +1473,7 @@ describe('openbci-sdk',function() {
         it('should return true for a normal stop byte', () => {
             expect(ourBoard._isStopByte(0xC0)).to.be.true;
         });
-        it('should return false for a good stop byte with a different end nibble', () => {
+        it('should return true for a good stop byte with a different end nibble', () => {
             expect(ourBoard._isStopByte(0xCF)).to.be.true;
         });
         it('should return false for a bad stop byte', () => {
