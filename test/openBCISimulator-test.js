@@ -119,25 +119,35 @@ describe('openBCISimulator',function() {
 
     });
     describe("sync",function () {
-        var simulator = new openBCISimulator.OpenBCISimulator();
-        it("should emit the time sync sent command", done => {
-            var emitCounter = 0;
-            simulator.once('data',data => {
-                open
-            });
+        var simulator;
+        before(() => {
+            simulator = new openBCISimulator.OpenBCISimulator();
         });
-        it("should set synced to true", () => {
+        it("should emit the time sync sent command", done => {
+            simulator.once('data',data => {
+                expect(openBCISample.isTimeSyncSetConfirmationInBuffer(data)).to.be.true;
+                done();
+            });
+            simulator.write(k.OBCISyncTimeSet);
+        });
+        it("should set synced to true", done => {
             simulator.synced = false;
             var emitCounter = 0;
-            simulator.on('data',data => {
-                if (emitCounter === 0) {
-
+            var newData = data => {
+                if (emitCounter === 1) {
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncSet);
+                    // simulator.removeEventListener('data', newData);
+                    done();
                 }
-            });
-            
+                emitCounter++;
+            };
+
+            simulator.on('data', newData);
+
+            simulator.write(k.OBCISyncTimeSet);
         });
         it("should emit a time sync set packet", () => {
-            
+
         });
     })
 });

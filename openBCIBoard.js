@@ -153,11 +153,15 @@ function OpenBCIFactory() {
         };
         this.info = {
             boardType : this.options.boardType,
-            sampleRate : this.options.boardType === k.OBCIBoardDaisy ? k.OBCISampleRate125 : k.OBCISampleRate125,
+            sampleRate : k.OBCISampleRate125,
             firmware : k.OBCIFirmwareV1,
             numberOfChannels : k.OBCINumberOfChannelsDefault,
             missedPackets : 0
         };
+        if (this.options.boardType === k.OBCIBoardDefault) {
+            this.info.sampleRate = k.OBCISampleRate250
+        }
+
         this._lowerChannelsSampleObject = null;
         this.sync = {
             active: false,
@@ -572,7 +576,7 @@ function OpenBCIFactory() {
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
 
-                if (this._isSuccessInBuffer(data)) {
+                if (openBCISample.isSuccessInBuffer(data)) {
                     resolve({
                         channelNumber : data[data.length - 4],
                         err:Error(data)
@@ -679,7 +683,7 @@ function OpenBCIFactory() {
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
 
-                if (this._isSuccessInBuffer(data)) {
+                if (openBCISample.isSuccessInBuffer(data)) {
                     resolve(data);
                 } else {
                     reject(`Error [radioPollTimeSet]: ${data}`); // The channel number is in the first byte
@@ -1261,16 +1265,20 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.sampleRate = function() {
         if (this.options.simulate) {
+            console.log('sampleRate2',this.options.simulatorSampleRate);
             return this.options.simulatorSampleRate;
         } else {
             if (this.info) {
+                console.log('sampleRate3',this.info.sampleRate);
                 return this.info.sampleRate;
             } else {
                 switch (this.boardType) {
                     case k.OBCIBoardDaisy:
+                        console.log('sampleRate4',this.info.sampleRate);
                         return k.OBCISampleRate125;
                     case k.OBCIBoardDefault:
                     default:
+                        console.log('sampleRate5',this.info.sampleRate);
                         return k.OBCISampleRate250;
                 }
             }

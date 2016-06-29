@@ -23,7 +23,6 @@ describe('#impedanceTesting', function() {
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose: true
         });
-
         var useSim = () => {
             ourBoard.simulatorEnable().then(() => {
                 return ourBoard.connect(k.OBCISimulatorPortName);
@@ -54,13 +53,21 @@ describe('#impedanceTesting', function() {
                 .catch(err => {
                     console.log(err);
                     done(err);
-                })
+                });
         });
 
 
     });
-    after(function() {
-        ourBoard.disconnect();
+    after(done => {
+        if(ourBoard["connected"]) {
+            ourBoard.disconnect()
+                .then(() => {
+                    done();
+                })
+                .catch(err => {
+                    done(err);
+                })
+        }
     });
 
     describe('#impedanceTestAllChannels', function () {

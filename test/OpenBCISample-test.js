@@ -7,8 +7,7 @@ var sinon = require('sinon');
 var chai = require('chai'),
     expect = chai.expect,
     should = chai.should(),
-    expect = chai.expect,
-    openBCIBoard = require('../openBCIBoard');
+    expect = chai.expect;
 
 var chaiAsPromised = require("chai-as-promised");
 var sinonChai = require("sinon-chai");
@@ -929,7 +928,7 @@ describe('openBCISample',function() {
             openBCISample.isFailureInBuffer(buf).should.equal(true);
         });
     });
-    describe('#_isSuccessInBuffer',function() {
+    describe('#isSuccessInBuffer',function() {
         it("should not crash on small buff",function() {
             var buf = new Buffer("AJ!");
 

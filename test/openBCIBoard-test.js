@@ -33,6 +33,19 @@ describe('openbci-sdk',function() {
                 done();
             })
     });
+    after(done => {
+        if(ourBoard["connected"]) {
+            ourBoard.disconnect()
+                .then(() => {
+                    done();
+                })
+                .catch(err => {
+                    done(err);
+                })
+        } else {
+            done();
+        }
+    });
     describe('#constructor', function () {
         afterEach(() => {
             ourBoard = null;
@@ -44,38 +57,30 @@ describe('openbci-sdk',function() {
             });
             expect(ourBoard.numberOfChannels()).to.equal(8);
         });
-        it('constructs with the correct default options', function() {
-            ourBoard = new openBCIBoard.OpenBCIBoard();
-            expect(ourBoard.options.boardType).to.equal(k.OBCIBoardDefault);
-            expect(ourBoard.options.baudRate).to.equal(115200);
-            expect(ourBoard.options.simulate).to.be.false;
-            expect(ourBoard.options.simulatorBoardFailure).to.be.false;
-            expect(ourBoard.options.simulatorDaisyModuleAttached).to.be.false;
-            expect(ourBoard.options.simulatorFirmwareVersion).to.equal(k.OBCIFirmwareV1);
-            expect(ourBoard.options.simulatorHasAccelerometer).to.be.true;
-            expect(ourBoard.options.simulatorInternalClockDrift).to.equal(0);
-            expect(ourBoard.options.simulatorInjectAlpha).to.be.true;
-            expect(ourBoard.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz60);
-            expect(ourBoard.options.simulatorSampleRate).to.equal(k.OBCISampleRate250);
-            expect(ourBoard.options.simulatorSerialPortFailure).to.be.false;
-            expect(ourBoard.options.timeSync).to.be.false;
-            expect(ourBoard.options.verbose).to.be.false;
-            describe('#sampleRate', () => {
-                it('should get value for default', () => {
-                    ourBoard.sampleRate().should.equal(250);
-                });
-            });
-            describe('#numberOfChannels', () => {
-                it('should get value for default',() => {
-                    ourBoard.numberOfChannels().should.equal(8);
-                });
-            });
+        it('constructs with the correct default options', () => {
+            var board = new openBCIBoard.OpenBCIBoard();
+            expect(board.options.boardType).to.equal(k.OBCIBoardDefault);
+            expect(board.options.baudRate).to.equal(115200);
+            expect(board.options.simulate).to.be.false;
+            expect(board.options.simulatorBoardFailure).to.be.false;
+            expect(board.options.simulatorDaisyModuleAttached).to.be.false;
+            expect(board.options.simulatorFirmwareVersion).to.equal(k.OBCIFirmwareV1);
+            expect(board.options.simulatorHasAccelerometer).to.be.true;
+            expect(board.options.simulatorInternalClockDrift).to.equal(0);
+            expect(board.options.simulatorInjectAlpha).to.be.true;
+            expect(board.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz60);
+            expect(board.options.simulatorSampleRate).to.equal(k.OBCISampleRate250);
+            expect(board.options.simulatorSerialPortFailure).to.be.false;
+            expect(board.options.timeSync).to.be.false;
+            expect(board.options.verbose).to.be.false;
+            expect(board.sampleRate()).to.equal(250);
+            expect(board.numberOfChannels()).to.equal(8);
         });
         it('should be able to set ganglion mode', () => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
+            var board = new openBCIBoard.OpenBCIBoard({
                 boardType: 'ganglion'
             });
-            (ourBoard.options.boardType).should.equal('ganglion');
+            (board.options.boardType).should.equal('ganglion');
         });
         it('should be able to set set daisy mode', () => {
             var ourBoard1 = new openBCIBoard.OpenBCIBoard({
@@ -104,10 +109,10 @@ describe('openbci-sdk',function() {
             (ourBoard2.options.baudRate).should.equal(9600);
         });
         it('should be able to enter simulate mode from the constructor', () =>{
-            ourBoard = new openBCIBoard.OpenBCIBoard({
+            var board = new openBCIBoard.OpenBCIBoard({
                 simulate: true
             });
-            expect(ourBoard.options.simulate).to.be.true;
+            expect(board.options.simulate).to.be.true;
         });
         it('should be able to set the simulator to board failure mode', () =>{
             var ourBoard1 = new openBCIBoard.OpenBCIBoard({
@@ -713,10 +718,16 @@ describe('openbci-sdk',function() {
      * Test the function that parses an incoming data buffer for packets
      */
     describe('#_processDataBuffer', function() {
-        var ourBoard = new openBCIBoard.OpenBCIBoard({
-            verbose: true
+        var _processQualifiedPacketSpy;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+            _processQualifiedPacketSpy = sinon.spy(ourBoard,"_processQualifiedPacket");
         });
-        var _processQualifiedPacketSpy = sinon.spy(ourBoard,"_processQualifiedPacket");
+        after(() => {
+            ourBoard = null;
+        });
 
         it('should do nothing when empty buffer inserted', () => {
             var buffer = null;
@@ -889,6 +900,9 @@ describe('openbci-sdk',function() {
             funcSpyTimeSyncedAccel.reset();
             funcSpyTimeSyncedRawAux.reset();
         });
+        after(() => {
+            ourBoard = null;
+        });
 
 
         it('should process a standard packet',() => {
@@ -983,6 +997,10 @@ describe('openbci-sdk',function() {
                 firmware:'taco',
                 numberOfChannels:200
             };
+        });
+
+        after(() => {
+            ourBoard = null;
         });
 
 
@@ -1911,18 +1929,19 @@ describe('openbci-sdk',function() {
         this.timeout(20000); // long timeout for pleanty of stream time :)
         var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;
         var wstream;
+        var board;
         before(function(done) {
             if (runHardwareValidation) {
-                ourBoard = new openBCIBoard.OpenBCIBoard({
+                board = new openBCIBoard.OpenBCIBoard({
                     verbose:true
                 });
                 // Use the line below to output the
                 wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
 
-                ourBoard.connect(masterPortName)
+                board.connect(masterPortName)
                     .catch(err => done(err));
 
-                ourBoard.once('ready',() => {
+                board.once('ready',() => {
                     done();
                 });
 
@@ -1933,12 +1952,12 @@ describe('openbci-sdk',function() {
         });
         after(function() {
             if (runHardwareValidation) {
-                ourBoard.disconnect();
+                board.disconnect();
             }
         });
         it('test all output signals', function(done) {
             if (runHardwareValidation) {
-                ourBoard.streamStart()
+                board.streamStart()
                     .then(() => {
                         console.log('Started stream');
                         console.log('--------');
@@ -1948,35 +1967,35 @@ describe('openbci-sdk',function() {
 
                 setTimeout(() => {
                     console.log('*-------');
-                    ourBoard.testSignal('pulse1xSlow');
+                    board.testSignal('pulse1xSlow');
                 },3000);
                 setTimeout(() => {
                     console.log('**------');
-                    ourBoard.testSignal('pulse2xSlow');
+                    board.testSignal('pulse2xSlow');
                 },5000);
                 setTimeout(() => {
                     console.log('***-----');
-                    ourBoard.testSignal('pulse1xFast');
+                    board.testSignal('pulse1xFast');
                 },7000);
                 setTimeout(() => {
                     console.log('****----');
-                    ourBoard.testSignal('pulse2xFast');
+                    board.testSignal('pulse2xFast');
                 },9000);
                 setTimeout(() => {
                     console.log('*****---');
-                    ourBoard.testSignal('none');
+                    board.testSignal('none');
                 },11000);
                 setTimeout(() => {
                     console.log('******--');
-                    ourBoard.testSignal('pulse1xSlow');
+                    board.testSignal('pulse1xSlow');
                 },13000);
                 setTimeout(() => {
                     console.log('*******-');
-                    ourBoard.testSignal('none');
+                    board.testSignal('none');
                 },15000);
 
 
-                ourBoard.on('sample', sample => {
+                board.on('sample', sample => {
                     openBCISample.samplePrintLine(sample)
                         .then(line => {
                             wstream.write(line);

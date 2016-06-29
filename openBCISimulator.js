@@ -235,13 +235,13 @@ function OpenBCISimulatorFactory() {
     };
 
     OpenBCISimulator.prototype._syncUp = function() {
-        // this.synced = true;
-        //
-        // var timeSyncSetPacket = openBCISample.samplePacketTimeSyncSet();
-        //
-        // timeSyncSetPacket.writeInt32BE(now().toFixed(0),28);
-        //
-        // this.emit('data',timeSyncSetPacket);
+        this.synced = true;
+
+        var timeSyncSetPacket = openBCISample.samplePacketTimeSyncSet();
+
+        timeSyncSetPacket.writeInt32BE(now().toFixed(0),28);
+
+        this.emit('data',timeSyncSetPacket);
     };
 
     OpenBCISimulator.prototype._syncUp_vak = function(data) {
