@@ -1,7 +1,7 @@
 'use strict';
-var gaussian = require('gaussian');
-
-var k = require('./openBCIConstants');
+var gaussian = require('gaussian'),
+    k = require('./openBCIConstants'),
+    StreamSearch = require('streamsearch');
 
 /** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
@@ -448,7 +448,13 @@ var sampleModule = {
     makeDaisySampleObject,
     getChannelDataArray,
     isEven,
-    isOdd
+    isOdd,
+    countADSPresent,
+    doesBufferHaveEOT,
+    findV2Firmware,
+    isFailureInBuffer,
+    isSuccessInBuffer,
+    isTimeSyncSetConfirmationInBuffer
 };
 
 module.exports = sampleModule;
@@ -930,4 +936,113 @@ function isEven(a) {
  */
 function isOdd(a) {
     return a % 2 === 1;
+}
+
+/**
+ * @description Since we know exactly what this input will look like (See the hardware firmware) we can program this
+ *      function with prior knowledge.
+ * @param dataBuffer {Buffer} - The buffer you want to parse.
+ * @return {Number} - The number of "ADS1299" present in the `dataBuffer`
+ */
+function countADSPresent(dataBuffer) {
+    const s = new StreamSearch(new Buffer("ADS1299"));
+
+    // Clear the buffer
+    s.reset();
+
+    // Push the new data buffer. This runs the search.
+    s.push(dataBuffer);
+
+    // Check and see if there is a match
+    return s.matches;
+}
+
+/**
+ * @description Searchs the buffer for a "$$$" or as we call an EOT
+ * @param dataBuffer - The buffer of some length to parse
+ * @returns {boolean} - True if the `$$$` was found.
+ */
+function doesBufferHaveEOT(dataBuffer) {
+    const s = new StreamSearch(new Buffer(k.OBCIParseEOT));
+
+    // Clear the buffer
+    s.reset();
+
+    // Push the new data buffer. This runs the search.
+    s.push(dataBuffer);
+
+    // Check and see if there is a match
+    return s.matches === 1;
+}
+
+/**
+ * @description Used to parse a soft reset response to determine if the board is running the v2 firmware
+ * @param dataBuffer {Buffer} - The data to parse
+ * @returns {boolean} - True if `v2`is indeed found in the `dataBuffer`
+ */
+function findV2Firmware(dataBuffer) {
+    const s = new StreamSearch(new Buffer(k.OBCIParseFirmware));
+
+    // Clear the buffer
+    s.reset();
+
+    // Push the new data buffer. This runs the search.
+    s.push(dataBuffer);
+
+    // Check and see if there is a match
+    return s.matches === 1;
+}
+
+/**
+ * @description Used to parse a buffer for the word `Failure` that is acked back after private radio msg on failure
+ * @param dataBuffer {Buffer} - The buffer of some length to parse
+ * @returns {boolean} - True if `Failure` was found.
+ */
+function isFailureInBuffer(dataBuffer) {
+    const s = new StreamSearch(new Buffer(k.OBCIParseFailure));
+
+    // Clear the buffer
+    s.reset();
+
+    // Push the new data buffer. This runs the search.
+    s.push(dataBuffer);
+
+    // Check and see if there is a match
+    return s.matches === 1;
+}
+
+/**
+ * @description Used to parse a buffer for the word `Success` that is acked back after private radio msg on success
+ * @param dataBuffer {Buffer} - The buffer of some length to parse
+ * @returns {boolean} - True if `Success` was found.
+ */
+function isSuccessInBuffer(dataBuffer) {
+    const s = new StreamSearch(new Buffer(k.OBCIParseSuccess));
+
+    // Clear the buffer
+    s.reset();
+
+    // Push the new data buffer. This runs the search.
+    s.push(dataBuffer);
+
+    // Check and see if there is a match
+    return s.matches === 1;
+}
+
+/**
+ * @description Used to parse a buffer for the `,` character that is acked back after a time sync request is sent
+ * @param dataBuffer {Buffer} - The buffer of some length to parse
+ * @returns {boolean} - True if the `,` was found.
+ */
+function isTimeSyncSetConfirmationInBuffer(dataBuffer) {
+    const s = new StreamSearch(new Buffer(k.OBCISyncTimeSent));
+
+    // Clear the buffer
+    s.reset();
+
+    // Push the new data buffer. This runs the search.
+    s.push(dataBuffer);
+
+    // Check and see if there is a match
+    return s.matches === 1;
 }

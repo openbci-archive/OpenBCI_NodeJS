@@ -68,6 +68,7 @@ function OpenBCISimulatorFactory() {
             startTime: 0
         };
         this.streaming = false;
+        this.synced = false;
         // Buffers
         this.buffer = new Buffer(500);
         this.eotBuf = new Buffer("$$$");
@@ -189,12 +190,8 @@ function OpenBCISimulatorFactory() {
             case k.OBCISyncTimeSet:
                 setTimeout(() => {
                     this.emit('data',k.OBCISyncTimeSent);
-                    //this._syncStart();
+                    this._syncUp();
                 }, 10);
-                break;
-            case k.OBCISyncClockServerData:
-                this.time.ntp3 = this.time.current;
-                this._syncUp(data.slice(1));
                 break;
             default:
                 break;
@@ -237,14 +234,17 @@ function OpenBCISimulatorFactory() {
         }, intervalInMS);
     };
 
-    OpenBCISimulator.prototype._syncStart = function() {
-
-        this.time.ntp0 = now();
-        var buffer = new Buffer('$a$' + this.time.ntp0);
-        this.emit('data',buffer);
+    OpenBCISimulator.prototype._syncUp = function() {
+        // this.synced = true;
+        //
+        // var timeSyncSetPacket = openBCISample.samplePacketTimeSyncSet();
+        //
+        // timeSyncSetPacket.writeInt32BE(now().toFixed(0),28);
+        //
+        // this.emit('data',timeSyncSetPacket);
     };
 
-    OpenBCISimulator.prototype._syncUp = function(data) {
+    OpenBCISimulator.prototype._syncUp_vak = function(data) {
         // get the first number
         console.log(data.length);
         var halfwayPoint = (data.length / 2);

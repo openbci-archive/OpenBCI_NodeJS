@@ -1337,7 +1337,7 @@ function OpenBCIFactory() {
 
         switch (this.curParsingMode) {
             case k.OBCIParsingEOT:
-                if (this._doesBufferHaveEOT(data)) {
+                if (openBCISample.doesBufferHaveEOT(data)) {
                     this.curParsingMode = k.OBCIParsingNormal;
                     this.emit('eot',data);
                     this.buffer = null;
@@ -1347,7 +1347,7 @@ function OpenBCIFactory() {
                 break;
             case k.OBCIParsingReset:
                 // Does the buffer have an EOT in it?
-                if (this._doesBufferHaveEOT(data)) {
+                if (openBCISample.doesBufferHaveEOT(data)) {
                     this._processParseBufferForReset(data);
                     this.curParsingMode = k.OBCIParsingNormal;
                     this.buffer = null;
@@ -1355,7 +1355,7 @@ function OpenBCIFactory() {
                 }
                 break;
             case k.OBCIParsingTimeSyncSent:
-                if (this._isTimeSyncSetConfirmationInBuffer(data)) {
+                if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
                     this.sync.timeSent = this.sntpNow();
                     this.curParsingMode = k.OBCIParsingNormal;
                 }
@@ -1446,30 +1446,12 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Searchs the buffer for a "$$$" or as we call an EOT
-     * @param dataBuffer - The buffer of some length to parse
-     * @returns {boolean} - True if the `$$$` was found.
-     */
-    OpenBCIBoard.prototype._doesBufferHaveEOT = function(dataBuffer) {
-        const s = new StreamSearch(new Buffer(k.OBCIParseEOT));
-
-        // Clear the buffer
-        s.reset();
-
-        // Push the new data buffer. This runs the search.
-        s.push(dataBuffer);
-
-        // Check and see if there is a match
-        return s.matches === 1;
-    };
-
-    /**
      * @description Alters the global info object by parseing an incoming soft reset key
      * @param dataBuffer {Buffer} - The soft reset data buffer
      * @private
      */
     OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
-        if (this._countADSPresent(dataBuffer) === 2) {
+        if (openBCISample.countADSPresent(dataBuffer) === 2) {
             this.info.boardType = k.OBCIBoardDaisy;
             this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
             this.info.sampleRate = k.OBCISampleRate125;
@@ -1479,98 +1461,12 @@ function OpenBCIFactory() {
             this.info.sampleRate = k.OBCISampleRate250;
         }
 
-        if (this._findV2Firmware(dataBuffer)) {
+        if (openBCISample.findV2Firmware(dataBuffer)) {
             this.info.firmware = k.OBCIFirmwareV2;
         } else {
             this.info.firmware = k.OBCIFirmwareV1;
         }
     };
-
-    /**
-     * @description Since we know exactly what this input will look like (See the hardware firmware) we can program this
-     *      function with proior knowledge.
-     * @param dataBuffer - The buffer you want to parse.
-     * @return {Number} - The number of "ADS1299" present in the `dataBuffer`
-     * @private
-     */
-    OpenBCIBoard.prototype._countADSPresent = function(dataBuffer) {
-        const s = new StreamSearch(new Buffer("ADS1299"));
-
-        // Clear the buffer
-        s.reset();
-
-        // Push the new data buffer. This runs the search.
-        s.push(dataBuffer);
-
-        // Check and see if there is a match
-        return s.matches;
-    };
-
-
-    /**
-     * @description Used to parse a soft reset response to determine if the board is running the v2 firmware
-     * @param dataBuffer {Buffer} - The data to parse
-     * @returns {boolean} - True if `v2`is indeed found in the `dataBuffer`
-     * @private
-     */
-    OpenBCIBoard.prototype._findV2Firmware = function(dataBuffer) {
-        const s = new StreamSearch(new Buffer(k.OBCIParseFirmware));
-
-        // Clear the buffer
-        s.reset();
-
-        // Push the new data buffer. This runs the search.
-        s.push(dataBuffer);
-
-        // Check and see if there is a match
-        return s.matches === 1;
-    };
-
-
-    /**
-     * @description Used to parse a buffer for the `,` character that is acked back after a time sync request is sent
-     * @param dataBuffer - The buffer of some length to parse
-     * @returns {boolean} - True if the `,` was found.
-     */
-    OpenBCIBoard.prototype._isTimeSyncSetConfirmationInBuffer = function(dataBuffer) {
-        const s = new StreamSearch(new Buffer(k.OBCISyncTimeSent));
-
-        // Clear the buffer
-        s.reset();
-
-        // Push the new data buffer. This runs the search.
-        s.push(dataBuffer);
-
-        // Check and see if there is a match
-        return s.matches === 1;
-    };
-
-    OpenBCIBoard.prototype._isSuccessInBuffer = function(dataBuffer) {
-        const s = new StreamSearch(new Buffer(k.OBCIParseSuccess));
-
-        // Clear the buffer
-        s.reset();
-
-        // Push the new data buffer. This runs the search.
-        s.push(dataBuffer);
-
-        // Check and see if there is a match
-        return s.matches === 1;
-    };
-
-    OpenBCIBoard.prototype._isFailureInBuffer = function(dataBuffer) {
-        const s = new StreamSearch(new Buffer(k.OBCIParseFailure));
-
-        // Clear the buffer
-        s.reset();
-
-        // Push the new data buffer. This runs the search.
-        s.push(dataBuffer);
-
-        // Check and see if there is a match
-        return s.matches === 1;
-    };
-
 
     /**
      * @description Used to route qualified packets to their proper parsers

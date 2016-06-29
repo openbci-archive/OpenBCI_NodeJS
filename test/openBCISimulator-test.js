@@ -1,5 +1,5 @@
-var sinon = require('sinon');
-var chai = require('chai'),
+var sinon = require('sinon'),
+    chai = require('chai'),
     should = chai.should(),
     expect = chai.expect,
     openBCISimulator = require('../openBCISimulator'),
@@ -118,6 +118,28 @@ describe('openBCISimulator',function() {
     describe("boardFailure",function () {
 
     });
+    describe("sync",function () {
+        var simulator = new openBCISimulator.OpenBCISimulator();
+        it("should emit the time sync sent command", done => {
+            var emitCounter = 0;
+            simulator.once('data',data => {
+                open
+            });
+        });
+        it("should set synced to true", () => {
+            simulator.synced = false;
+            var emitCounter = 0;
+            simulator.on('data',data => {
+                if (emitCounter === 0) {
+
+                }
+            });
+            
+        });
+        it("should emit a time sync set packet", () => {
+            
+        });
+    })
 });
 
 

@@ -1081,13 +1081,13 @@ describe('openbci-sdk',function() {
 
 
         describe("#OBCIParsingTimeSyncSent",function() {
-            var spy;
+            // var spy;
             before(() => {
-                spy = sinon.spy(ourBoard,"_isTimeSyncSetConfirmationInBuffer");
+                // spy = sinon.spy(ourBoard.openBCISample,"isTimeSyncSetConfirmationInBuffer");
             });
             beforeEach(() => {
                 ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-                spy.reset();
+                // spy.reset();
             });
             it("should call to find the time sync set character in the buffer", done => {
                 // Verify the log event is called
@@ -1095,7 +1095,7 @@ describe('openbci-sdk',function() {
                 // Call the processBytes function
                 ourBoard._processBytes(buf);
                 // Verify the function was called
-                spy.should.have.been.calledOnce;
+                expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
 
                 // Listen for the sample event
                 ourBoard.once('sample',() => {
@@ -1114,7 +1114,7 @@ describe('openbci-sdk',function() {
                 // Call the processBytes function
                 ourBoard._processBytes(buf);
                 // Verify the function was called
-                spy.should.have.been.calledOnce;
+                expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
 
                 // Listen for the sample event
                 ourBoard.once('synced',() => {
@@ -1134,7 +1134,7 @@ describe('openbci-sdk',function() {
                 // Call the processBytes function
                 ourBoard._processBytes(Buffer.concat([buf1,buf2],buf1.length + 1));
                 // Verify the function was called
-                spy.should.have.been.calledOnce;
+                expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
                 // Verify the buffer is empty
                 // expect(ourBoard.buffer).to.be.null;
                 // ourBoard.buffer.length.should.equal(0);
@@ -1384,82 +1384,6 @@ describe('openbci-sdk',function() {
 
     });
 
-    describe('#_countADSPresent',function() {
-        var ourBoard;
-        before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
-            });
-        });
-        it("should not crash on small buff",function() {
-            var buf = new Buffer("AJ!");
-
-            ourBoard._countADSPresent(buf).should.equal(0);
-        });
-        it("should not find any ADS1299 present",function() {
-            var buf = new Buffer("AJ Keller is an awesome programmer!\n I know right!");
-
-            ourBoard._countADSPresent(buf).should.equal(0);
-        });
-        it("should find one ads present",function() {
-            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422$$$`);
-
-            ourBoard._countADSPresent(buf).should.equal(1);
-        });
-        it("should find two ads1299 present",function() {
-            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\n$$$`);
-
-            ourBoard._countADSPresent(buf).should.equal(2);
-        });
-    });
-
-    describe('#_findV2Firmware',function() {
-        var ourBoard;
-        before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
-            });
-        });
-        it("should not crash on small buff",function() {
-            var buf = new Buffer("AJ!");
-
-            ourBoard._findV2Firmware(buf).should.equal(false);
-        });
-        it("should not find any v2",function() {
-            var buf = new Buffer("AJ Keller is an awesome programmer!\n I know right!");
-
-            ourBoard._findV2Firmware(buf).should.equal(false);
-        });
-        it("should not find a v2",function() {
-            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422$$$`);
-
-            ourBoard._findV2Firmware(buf).should.equal(false);
-        });
-        it("should find a v2",function() {
-            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
-
-            ourBoard._findV2Firmware(buf).should.equal(true);
-        });
-    });
-
-    describe("#_isTimeSyncSetConfirmationInBuffer", function() {
-        var ourBoard;
-        before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
-            });
-        });
-        after(() => {
-            ourBoard = null;
-        });
-        it("should find the character in a buffer with only the character", function() {
-            ourBoard._isTimeSyncSetConfirmationInBuffer(new Buffer(",")).should.equal(true);
-        });
-        it("should not find the character in a buffer without the character", function() {
-            ourBoard._isTimeSyncSetConfirmationInBuffer(openBCISample.samplePacket()).should.equal(false);
-        });
-    });
-
     describe('#_isStopByte',function() {
         var ourBoard;
         before(() => {
@@ -1481,82 +1405,6 @@ describe('openbci-sdk',function() {
         });
         it('should return false for a bad stop byte', () => {
             expect(ourBoard._isStopByte(0x00)).to.be.false;
-        });
-    });
-
-    describe('#_doesBufferHaveEOT',function() {
-        var ourBoard;
-        before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
-            });
-        });
-        it("should not crash on small buff",function() {
-            var buf = new Buffer("AJ!");
-
-            ourBoard._doesBufferHaveEOT(buf).should.equal(false);
-        });
-        it("should not find any $$$",function() {
-            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n`);
-
-            ourBoard._doesBufferHaveEOT(buf).should.equal(false);
-
-            buf = Buffer.concat([buf, new Buffer(k.OBCIParseEOT)],buf.length + 3);
-
-            ourBoard._doesBufferHaveEOT(buf).should.equal(true);
-        });
-        it("should find a $$$",function() {
-            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
-
-            ourBoard._doesBufferHaveEOT(buf).should.equal(true);
-        });
-    });
-
-    describe('#_isSuccessInBuffer',function() {
-        var ourBoard;
-        before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
-            });
-        });
-        it("should not crash on small buff",function() {
-            var buf = new Buffer("AJ!");
-
-            ourBoard._isSuccessInBuffer(buf).should.equal(false);
-        });
-        it("should not find any success in a failure message",function() {
-            var buf = new Buffer("Failure: Could not change Dongle channel number");
-
-            ourBoard._isSuccessInBuffer(buf).should.equal(false);
-        });
-        it("should find success in a success message",function() {
-            var buf = new Buffer("Success: Poll time set$$$");
-
-            ourBoard._isSuccessInBuffer(buf).should.equal(true);
-        });
-    });
-
-    describe('#_isFailureInBuffer',function() {
-        var ourBoard;
-        before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
-            });
-        });
-        it("should not crash on small buff",function() {
-            var buf = new Buffer("AJ!");
-
-            ourBoard._isFailureInBuffer(buf).should.equal(false);
-        });
-        it("should not find any failure in a success message",function() {
-            var buf = new Buffer("Success: Poll time set$$$");
-
-            ourBoard._isFailureInBuffer(buf).should.equal(false);
-        });
-        it("should find failure in a failure message",function() {
-            var buf = new Buffer("Failure: Could not change Dongle channel number$$$");
-
-            ourBoard._isFailureInBuffer(buf).should.equal(true);
         });
     });
 

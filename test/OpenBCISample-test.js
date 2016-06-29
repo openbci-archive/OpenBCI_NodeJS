@@ -847,6 +847,114 @@ describe('openBCISample',function() {
             openBCISample.getChannelDataArray(sampleBuf,{}).should.be.rejected.and.notify(done);
         });
     });
+    describe('#countADSPresent',function() {
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            openBCISample.countADSPresent(buf).should.equal(0);
+        });
+        it("should not find any ADS1299 present",function() {
+            var buf = new Buffer("AJ Keller is an awesome programmer!\n I know right!");
+
+            openBCISample.countADSPresent(buf).should.equal(0);
+        });
+        it("should find one ads present",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422$$$`);
+
+            openBCISample.countADSPresent(buf).should.equal(1);
+        });
+        it("should find two ads1299 present",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\n$$$`);
+
+            openBCISample.countADSPresent(buf).should.equal(2);
+        });
+    });
+    describe('#doesBufferHaveEOT',function() {
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            openBCISample.doesBufferHaveEOT(buf).should.equal(false);
+        });
+        it("should not find any $$$",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n`);
+
+            openBCISample.doesBufferHaveEOT(buf).should.equal(false);
+
+            buf = Buffer.concat([buf, new Buffer(k.OBCIParseEOT)],buf.length + 3);
+
+            openBCISample.doesBufferHaveEOT(buf).should.equal(true);
+        });
+        it("should find a $$$",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
+
+            openBCISample.doesBufferHaveEOT(buf).should.equal(true);
+        });
+    });
+    describe('#findV2Firmware',function() {
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            openBCISample.findV2Firmware(buf).should.equal(false);
+        });
+        it("should not find any v2",function() {
+            var buf = new Buffer("AJ Keller is an awesome programmer!\n I know right!");
+
+            openBCISample.findV2Firmware(buf).should.equal(false);
+        });
+        it("should not find a v2",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nLIS3DH Device ID: 0x38422$$$`);
+
+            openBCISample.findV2Firmware(buf).should.equal(false);
+        });
+        it("should find a v2",function() {
+            var buf = new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\nOn Daisy ADS1299 Device ID: 0xFFFFF\nLIS3DH Device ID: 0x38422\nFirmware: v2\n$$$`);
+
+            openBCISample.findV2Firmware(buf).should.equal(true);
+        });
+    });
+    describe('#isFailureInBuffer',function() {
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            openBCISample.isFailureInBuffer(buf).should.equal(false);
+        });
+        it("should not find any failure in a success message",function() {
+            var buf = new Buffer("Success: Poll time set$$$");
+
+            openBCISample.isFailureInBuffer(buf).should.equal(false);
+        });
+        it("should find failure in a failure message",function() {
+            var buf = new Buffer("Failure: Could not change Dongle channel number$$$");
+
+            openBCISample.isFailureInBuffer(buf).should.equal(true);
+        });
+    });
+    describe('#_isSuccessInBuffer',function() {
+        it("should not crash on small buff",function() {
+            var buf = new Buffer("AJ!");
+
+            openBCISample.isSuccessInBuffer(buf).should.equal(false);
+        });
+        it("should not find any success in a failure message",function() {
+            var buf = new Buffer("Failure: Could not change Dongle channel number");
+
+            openBCISample.isSuccessInBuffer(buf).should.equal(false);
+        });
+        it("should find success in a success message",function() {
+            var buf = new Buffer("Success: Poll time set$$$");
+
+            openBCISample.isSuccessInBuffer(buf).should.equal(true);
+        });
+    });
+
+    describe("#isTimeSyncSetConfirmationInBuffer", function() {
+        it("should find the character in a buffer with only the character", function() {
+            openBCISample.isTimeSyncSetConfirmationInBuffer(new Buffer(",")).should.equal(true);
+        });
+        it("should not find the character in a buffer without the character", function() {
+            openBCISample.isTimeSyncSetConfirmationInBuffer(openBCISample.samplePacket()).should.equal(false);
+        });
+    });
 });
 
 describe('#goertzelProcessSample', function() {
