@@ -13,6 +13,7 @@ var chaiAsPromised = require("chai-as-promised");
 var sinonChai = require("sinon-chai");
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
+var bufferEqual = require('buffer-equal');
 
 var k = openBCISample.k;
 
@@ -489,14 +490,14 @@ describe('openBCISample',function() {
             });
         });
     });
-    describe('#convertSampleToPacket', function() {
+    describe('#convertSampleToPacketStandard', function() {
         var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);
 
         // get new sample
         var newSample = generateSample(0);
 
         // try to convert to packet
-        var packetBuffer = openBCISample.convertSampleToPacket(newSample);
+        var packetBuffer = openBCISample.convertSampleToPacketStandard(newSample);
 
         it('should have correct start byte', function() {
             packetBuffer[0].should.equal(k.OBCIByteStart,'confirming start byte');
@@ -516,8 +517,6 @@ describe('openBCISample',function() {
                     done();
                 })
                 .catch(err => done(err));
-            //var sample = openBCISample.convertPacketToSample(packetBuffer);
-
         });
         it('should convert aux data to binary', function(done) {
             openBCISample.parseRawPacketStandard(packetBuffer)
@@ -528,8 +527,172 @@ describe('openBCISample',function() {
                     done();
                 })
                 .catch(err => done(err));
-            //var sample = openBCISample.convertPacketToSample(packetBuffer);
+        });
+    });
+    describe('#convertSampleToPacketRawAux', function() {
+        var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);
 
+        // get new sample
+        var newSample = generateSample(0);
+
+        // Make a fake 6 byte buffer
+        var rawBuffer = new Buffer([0,1,2,3,4,5]);
+
+        // try to convert to packet
+        var packetBuffer = openBCISample.convertSampleToPacketRawAux(newSample,rawBuffer);
+
+        it('should have correct start byte', function() {
+            packetBuffer[0].should.equal(k.OBCIByteStart,'confirming start byte');
+        });
+        it('should have correct stop byte', function() {
+            packetBuffer[k.OBCIPacketSize - 1].should.equal(0xC1,'confirming stop byte');
+        });
+        it('should have correct sample number', function() {
+            packetBuffer[1].should.equal(1,'confirming sample number is 1 more than 0');
+        });
+        it('should convert channel data to binary', function(done) {
+            openBCISample.parseRawPacketStandard(packetBuffer,defaultChannelSettingsArray,false)
+                .then(sample => {
+                    for(var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+                        sample.channelData[i].should.be.approximately(newSample.channelData[i],0.001);
+                    }
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        it('should get raw aux buffer', done => {
+            openBCISample.parseRawPacketStandard(packetBuffer,defaultChannelSettingsArray,false)
+                .then(sample => {
+                    expect(sample.auxData).to.exist;
+                    expect(bufferEqual(rawBuffer,sample.auxData)).to.be.true;
+                    done();
+                })
+                .catch(err => done(err));
+        });
+    });
+    describe('#convertSampleToPacketTimeSync', function() {
+        var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);
+
+        // get new sample
+        var newSample = generateSample(0);
+
+        // Make a time
+        var time = 1010101;
+
+        // Accel array
+        var accelArray = [0,0,0];
+
+        // Channel Settings
+        var channelSettingsArray = k.channelSettingsArrayInit(8);
+
+        // try to convert to packet
+        var packetBuffer = openBCISample.convertSampleToPacketTimeSyncAccel(newSample,time);
+
+        it('should have correct start byte', () => {
+            packetBuffer[0].should.equal(k.OBCIByteStart,'confirming start byte');
+        });
+        it('should have correct stop byte', () => {
+            packetBuffer[k.OBCIPacketSize - 1].should.equal(0xC4,'confirming stop byte');
+        });
+        it('should have correct sample number', () => {
+            packetBuffer[1].should.equal(1,'confirming sample number is 1 more than 0');
+        });
+        it('should convert channel data to binary', done => {
+            openBCISample.parsePacketTimeSyncedAccel(packetBuffer,channelSettingsArray,0,accelArray)
+                .then(sample => {
+                    for(var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+                        sample.channelData[i].should.be.approximately(newSample.channelData[i],0.001);
+                    }
+                    done();
+                })
+                .catch(err => done(err));
+
+        });
+        it('should get board time', done => {
+            openBCISample.parsePacketTimeSyncedAccel(packetBuffer,channelSettingsArray,0,accelArray)
+                .then(sample => {
+                    expect(sample.boardTime).to.exist;
+                    expect(sample.boardTime).to.equal(time);
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        it('should get time stamp with offset', done => {
+            var timeOffset = 80;
+            openBCISample.parsePacketTimeSyncedAccel(packetBuffer,channelSettingsArray,timeOffset,accelArray)
+                .then(sample => {
+                    expect(sample.timeStamp).to.exist;
+                    expect(sample.timeStamp).to.equal(time + timeOffset);
+                    done();
+                })
+                .catch(err => done(err));
+        });
+    });
+    describe('#convertSampleToPacketTimeSyncRawAux', function() {
+        var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250);
+
+        // get new sample
+        var newSample = generateSample(0);
+
+        // Make a time
+        var time = 1010101;
+
+        // Raw Aux
+        var rawAux = new Buffer([0,1]);
+
+        // Channel Settings
+        var channelSettingsArray = k.channelSettingsArrayInit(8);
+
+        // try to convert to packet
+        var packetBuffer = openBCISample.convertSampleToPacketTimeSyncRawAux(newSample,time,rawAux);
+
+        it('should have correct start byte', () => {
+            packetBuffer[0].should.equal(k.OBCIByteStart,'confirming start byte');
+        });
+        it('should have correct stop byte', () => {
+            packetBuffer[k.OBCIPacketSize - 1].should.equal(0xC5,'confirming stop byte');
+        });
+        it('should have correct sample number', () => {
+            packetBuffer[1].should.equal(1,'confirming sample number is 1 more than 0');
+        });
+        it('should convert channel data to binary', done => {
+            openBCISample.parsePacketTimeSyncedRawAux(packetBuffer,channelSettingsArray,0)
+                .then(sample => {
+                    for(var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+                        sample.channelData[i].should.be.approximately(newSample.channelData[i],0.001);
+                    }
+                    done();
+                })
+                .catch(err => done(err));
+
+        });
+        it('should get raw aux buffer', done => {
+            openBCISample.parsePacketTimeSyncedRawAux(packetBuffer,channelSettingsArray,0)
+                .then(sample => {
+                    expect(sample.auxData).to.exist;
+                    expect(bufferEqual(rawAux,sample.auxData)).to.be.true;
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        it('should get board time', done => {
+            openBCISample.parsePacketTimeSyncedRawAux(packetBuffer,channelSettingsArray,0)
+                .then(sample => {
+                    expect(sample.boardTime).to.exist;
+                    expect(sample.boardTime).to.equal(time);
+                    done();
+                })
+                .catch(err => done(err));
+        });
+        it('should get time stamp with offset', done => {
+            var timeOffset = 80;
+            openBCISample.parsePacketTimeSyncedRawAux(packetBuffer,channelSettingsArray,timeOffset)
+                .then(sample => {
+                    expect(sample.timeStamp).to.exist;
+                    expect(sample.timeStamp).to.equal(time + timeOffset);
+                    done();
+                })
+                .catch(err => done(err));
         });
     });
     describe('#interpret24bitAsInt32', function() {

@@ -86,13 +86,13 @@ function OpenBCISimulatorFactory() {
 
         // Call 'open'
         setTimeout(() => {
-            if (this.options.verbose) console.log('Port name: ' + portName);
+            if (this.options.verbose) console.log(`Port name: ${portName}`);
             if (portName === k.OBCISimulatorPortName) {
+                if (this.options.verbose) console.log(`faux serialport open`);
                 this.emit('open');
                 this.connected = true;
             } else {
-                var err = new Error('Serialport not open.');
-                this.emit('error',err);
+                this.emit('error',`Call function with portName equal to ${k.OBCISimulatorPortName}`);
             }
         }, 200);
 
@@ -188,10 +188,12 @@ function OpenBCISimulatorFactory() {
                 this.SDLogActive = false;
                 break;
             case k.OBCISyncTimeSet:
-                setTimeout(() => {
-                    this.emit('data',k.OBCISyncTimeSent);
-                    this._syncUp();
-                }, 10);
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    setTimeout(() => {
+                        this.emit('data', k.OBCISyncTimeSent);
+                        this._syncUp();
+                    }, 10);
+                }
                 break;
             default:
                 break;
@@ -205,7 +207,6 @@ function OpenBCISimulatorFactory() {
 
     OpenBCISimulator.prototype.drain = function(callback) {
         callback();
-        //if (this.options.verbose) console.log('drain');
     };
 
     OpenBCISimulator.prototype.close = function(callback) {
@@ -213,7 +214,6 @@ function OpenBCISimulatorFactory() {
             this.emit('close');
         }
         this.connected = false;
-        //if (this.options.verbose) console.log('close');
         callback();
     };
 
@@ -225,7 +225,7 @@ function OpenBCISimulatorFactory() {
         var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, this.options.alpha, this.options.lineNoise);
 
         var getNewPacket = sampNumber => {
-            return openBCISample.convertSampleToPacket(generateSample(sampNumber));
+            return openBCISample.convertSampleToPacketStandard(generateSample(sampNumber));
         };
 
         this.stream = setInterval(() => {
@@ -244,33 +244,7 @@ function OpenBCISimulatorFactory() {
         this.emit('data',timeSyncSetPacket);
     };
 
-    OpenBCISimulator.prototype._syncUp_vak = function(data) {
-        // get the first number
-        console.log(data.length);
-        var halfwayPoint = (data.length / 2);
-        this.time.ntp1 = parseFloat(data.slice(0,halfwayPoint-1));
-        this.time.ntp2 = parseFloat(data.slice(halfwayPoint));
-        console.log('ntp1: ' + this.time.ntp1 + ' ntp2: ' + this.time.ntp2);
-
-        var timeSpentOnNetwork = this.time.ntp3 - this.time.ntp0 - (this.time.ntp2 - this.time.ntp1);
-
-        var transferTime = timeSpentOnNetwork / 2;
-
-        var trueTime = this.time.ntp2 + transferTime;
-
-        var delta = trueTime - this.time.ntp3;
-        console.log('Delta: ' + delta);
-
-        this.time.start += delta;
-
-
-
-        this.emit('data','Synced!' + '$$$');
-
-    };
-
     factory.OpenBCISimulator = OpenBCISimulator;
-
 }
 
 util.inherits(OpenBCISimulatorFactory, EventEmitter);

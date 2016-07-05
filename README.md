@@ -119,11 +119,14 @@ ourBoard.connect(portName).then(function(boardSerial) {
 
 Sample properties:
 ------------------
-* `startByte` (`Number`  should be `0xA0`)
+* `startByte` (`Number` should be `0xA0`)
 * `sampleNumber` (a `Number` between 0-255) 
 * `channelData` (channel data indexed at 0 filled with floating point `Numbers` in Volts)
-* `auxData` (aux data indexed starting at 0 [0,1,2] filled with floating point `Numbers`)
-* `stopByte` (`Number` should be `0xC0`)
+* `accelData` (`Array` with X, Y, Z accelerometer values when new data available)
+* `auxData` (`Buffer` filled with either 2 bytes (if time synced) or 6 bytes (not time synced))
+* `stopByte` (`Number` should be `0xCx` where x is 0-15 in hex)
+* `boardTime` (`Number` the raw board time)
+* `timeStamp` (`Number` the `boardTime` plus the NTP calculated offset)
 
 The power of this module is in using the sample emitter, to be provided with samples to do with as you wish.
 
