@@ -126,7 +126,7 @@ describe('openBCISimulator',function() {
     });
     describe("#sync",function () {
         var simulator;
-        before(done => {
+        beforeEach(done => {
             simulator = new openBCISimulator.OpenBCISimulator(portName, {
                 firmwareVersion: 'v2'
             });
@@ -134,6 +134,9 @@ describe('openBCISimulator',function() {
                 done();
             });
         });
+        afterEach(() => {
+            simulator = null;
+        })
         it("should emit the time sync sent command", done => {
             simulator.once('data',data => {
                 expect(openBCISample.isTimeSyncSetConfirmationInBuffer(data)).to.be.true;
@@ -183,6 +186,62 @@ describe('openBCISimulator',function() {
             simulator.on('data', newData);
 
             simulator.write(k.OBCISyncTimeSet, (err, msg) => {
+                if (err) {
+                    done(err);
+                }
+            });
+        });
+        it("should emit a time synced standard packet after sync up call", done => {
+            simulator.synced = false;
+            var emitCounter = 0;
+            var newData = data => {
+                if (emitCounter === 1) { // the time sync packet is emitted here
+                    // Make a call to start streaming
+                    simulator.write(k.OBCIStreamStart, err => {
+                        if (err) done(err);
+                    });
+                } else if (emitCounter === 2) {
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncedAccel);
+                    simulator.write(k.OBCIStreamStop, err => {
+                        if (err) done(err);
+                        simulator.removeListener('data', newData);
+                        done();
+                    });
+                }
+                emitCounter++;
+            };
+
+            simulator.on('data', newData);
+
+            simulator.write(k.OBCISyncTimeSet, (err, msg) => {
+                if (err) {
+                    done(err);
+                }
+            });
+        });
+        it("should emit a time synced raw aux packet", done => {
+            simulator.options.accel = false;
+            var emitCounter = 0;
+            var newData = data => {
+                if (emitCounter === 1) { // the time sync packet is emitted here
+                    // Make a call to start streaming
+                    simulator.write(k.OBCIStreamStart, err => {
+                        if (err) done(err);
+                    });
+                } else if (emitCounter === 2) {
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncedRawAux);
+                    simulator.write(k.OBCIStreamStop, err => {
+                        if (err) done(err);
+                        simulator.removeListener('data', newData);
+                        done();
+                    });
+                }
+                emitCounter++;
+            };
+
+            simulator.on('data', newData);
+
+            simulator.write(k.OBCISyncTimeSet, err => {
                 if (err) {
                     done(err);
                 }

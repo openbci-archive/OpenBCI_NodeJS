@@ -151,7 +151,7 @@ function OpenBCISimulatorFactory() {
             case k.OBCIMiscSoftReset:
                 if (this.stream) clearInterval(this.stream);
                 this.streaming = false;
-                this.emit('data', new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\n${this.options.daisy ? "On Daisy ADS1299 Device ID: 0xFFFFF\n" : ""}LIS3DH Device ID: 0x38422\n${this.options.firmware === k.OBCIFirmwareV2 ? "Firmware: v2\n" : ""}$$$`));
+                this.emit('data', new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\n${this.options.daisy ? "On Daisy ADS1299 Device ID: 0xFFFFF\n" : ""}LIS3DH Device ID: 0x38422\n${this.options.firmware === k.OBCIFirmwareV2 ? "Firmware: v2.0.0\n" : ""}$$$`));
                 break;
             case k.OBCISDLogForHour1:
             case k.OBCISDLogForHour2:
@@ -220,7 +220,20 @@ function OpenBCISimulatorFactory() {
         var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, this.options.alpha, this.options.lineNoise);
 
         var getNewPacket = sampNumber => {
-            return openBCISample.convertSampleToPacketStandard(generateSample(sampNumber));
+            if (this.options.accel) {
+                if (this.synced) {
+                    return openBCISample.convertSampleToPacketTimeSyncAccel(generateSample(sampNumber),now().toFixed(0));
+                } else {
+                    return openBCISample.convertSampleToPacketStandard(generateSample(sampNumber));
+                }
+            } else {
+                if (this.synced) {
+                    return openBCISample.convertSampleToPacketTimeSyncRawAux(generateSample(sampNumber),now().toFixed(0),new Buffer([0,0,0,0,0,0]));
+                } else {
+                    return openBCISample.convertSampleToPacketRawAux(generateSample(sampNumber),new Buffer([0,0,0,0,0,0]));
+                }
+
+            }
         };
 
         this.stream = setInterval(() => {

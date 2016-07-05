@@ -97,7 +97,7 @@ describe('openBCISample',function() {
             var samplesReceived = 0;
 
             for (var i = 0; i < numberOfSamplesToTest; i++) {
-                var temp = samplePacket(i);
+                var temp = openBCISample.samplePacket(i);
                 //console.log(temp);
                 var taco = new Buffer([i]);
                 taco.copy(temp,2);
