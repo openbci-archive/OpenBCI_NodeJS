@@ -14,12 +14,18 @@ var bufferEqual = require('buffer-equal');
 var fs = require('fs');
 
 describe('openBCISimulator',function() {
-    this.timeout(2000);
+    this.timeout(4000);
     var portName = k.OBCISimulatorPortName;
     describe('#constructor', function () {
         var simulator;
         afterEach(() => {
             simulator = null;
+        });
+        after(done => {
+            setTimeout(() => {
+                // Since there is a conditional timeout, it's important to wait to start the next test till this ends for sure
+                done();
+            }, 200); // The same amount of time in the simulator
         });
         it('constructs with the correct default options', function() {
             simulator = new openBCISimulator.OpenBCISimulator();
@@ -118,31 +124,32 @@ describe('openBCISimulator',function() {
     describe("boardFailure",function () {
 
     });
-    describe("sync",function () {
+    describe("#sync",function () {
         var simulator;
         before(done => {
             simulator = new openBCISimulator.OpenBCISimulator(portName, {
-                verbose:true
+                firmwareVersion: 'v2'
             });
             simulator.once('open',() => {
-                console.log("Made it here");
                 done();
             });
         });
         it("should emit the time sync sent command", done => {
-            console.log("Taco");
             simulator.once('data',data => {
                 expect(openBCISample.isTimeSyncSetConfirmationInBuffer(data)).to.be.true;
                 done();
             });
-            simulator.write(k.OBCISyncTimeSet);
+            simulator.write(k.OBCISyncTimeSet, (err, msg) => {
+                if (err) {
+                    done(err);
+                }
+            });
         });
         it("should set synced to true", done => {
             simulator.synced = false;
             var emitCounter = 0;
             var newData = data => {
                 if (emitCounter === 1) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncSet);
                     expect(simulator.synced).to.be.true;
                     simulator.removeListener('data', newData);
                     done();
@@ -152,7 +159,34 @@ describe('openBCISimulator',function() {
 
             simulator.on('data', newData);
 
-            simulator.write(k.OBCISyncTimeSet);
+            simulator.write(k.OBCISyncTimeSet, (err, msg) => {
+                if (err) {
+                    done(err);
+                }
+            });
+        });
+        it("should set emit a legit time sync set packet", done => {
+            simulator.synced = false;
+            var emitCounter = 0;
+            var newData = data => {
+                if (emitCounter === 1) {
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncSet);
+                    openBCISample.getFromTimePacketTime(data).then(time => {
+                        expect(time).to.be.greaterThan(0);
+                        done();
+                    }).catch(err => done(err));
+                    simulator.removeListener('data', newData);
+                }
+                emitCounter++;
+            };
+
+            simulator.on('data', newData);
+
+            simulator.write(k.OBCISyncTimeSet, (err, msg) => {
+                if (err) {
+                    done(err);
+                }
+            });
         });
     })
 });

@@ -85,15 +85,10 @@ function OpenBCISimulatorFactory() {
         this.portName = portName || k.OBCISimulatorPortName;
 
         // Call 'open'
+        if (this.options.verbose) console.log(`Port name: ${portName}`);
         setTimeout(() => {
-            if (this.options.verbose) console.log(`Port name: ${portName}`);
-            if (portName === k.OBCISimulatorPortName) {
-                if (this.options.verbose) console.log(`faux serialport open`);
-                this.emit('open');
-                this.connected = true;
-            } else {
-                this.emit('error',`Call function with portName equal to ${k.OBCISimulatorPortName}`);
-            }
+            this.emit('open');
+            this.connected = true;
         }, 200);
 
     }
