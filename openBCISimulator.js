@@ -151,7 +151,7 @@ function OpenBCISimulatorFactory() {
             case k.OBCISyncTimeSet:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     setTimeout(() => {
-                        this.emit('data', new Buffer([k.OBCISyncTimeSent]));
+                        this.emit('data', new Buffer(k.OBCISyncTimeSent));
                         this._syncUp();
                     }, 10);
                 }

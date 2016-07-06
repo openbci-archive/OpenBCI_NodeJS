@@ -2154,6 +2154,38 @@ describe('openbci-sdk',function() {
         });
     });
 
+    describe('#radioTestsWithBoard',function() {
+        this.timeout(2000);
+        before(done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                simulate: !realBoard,
+                verbose: true
+            });
+            ourBoard.connect(masterPortName).catch(err => done(err));
+
+            ourBoard.once('ready', () => {
+                done();
+            });
+        });
+        after(done => {
+            if (ourBoard.connected) {
+                ourBoard.disconnect().then(() => {
+                    done();
+                });
+            } else {
+                done()
+            }
+        });
+        it("should be able to set the system status", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioSystemStatusGet().then(isUp => {
+                expect(isUp).to.be.true;
+                done();
+            }).catch(err => done(err));
+        });
+    });
+
     xdescribe('#hardwareValidation', function() {
         this.timeout(20000); // long timeout for pleanty of stream time :)
         var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;

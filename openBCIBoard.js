@@ -820,6 +820,17 @@ function OpenBCIFactory() {
         });
     };
 
+    /**
+     * @description Used to ask the Host if it's radio system is up. This is useful to quickly determine if you are
+     *      infact ready to start trying to connect and such. The function will reject if not connected to the serial
+     *      port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware +v2.0.0 and the radios are both on the
+     *      same channel and powered, then this will resolve true.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves true if both radios are powered and on the same channel; false otherwise.
+     */
     OpenBCIBoard.prototype.radioSystemStatusGet = function() {
         var badCommsTimeout;
         return new Promise((resolve,reject) => {

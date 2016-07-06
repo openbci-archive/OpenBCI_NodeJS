@@ -136,7 +136,7 @@ describe('openBCISimulator',function() {
         });
         afterEach(() => {
             simulator = null;
-        })
+        });
         it("should emit the time sync sent command", done => {
             simulator.once('data',data => {
                 expect(openBCISample.isTimeSyncSetConfirmationInBuffer(data)).to.be.true;
