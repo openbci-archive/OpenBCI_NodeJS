@@ -312,6 +312,12 @@ const OBCIRadioPollTimeMin  = 0;
 /** Time sync array size */
 const OBCITimeSyncArraySize = 10;
 
+/** Baud Rates */
+const OBCIRadioBaudRateDefault      = 115200;
+const OBCIRadioBaudRateDefaultStr   = 'default';
+const OBCIRadioBaudRateFast         = 230400;
+const OBCIRadioBaudRateFastStr      = 'fast';
+
 module.exports = {
     /** Turning channels off */
     OBCIChannelOff_1,
@@ -838,7 +844,12 @@ module.exports = {
     OBCIRadioPollTimeMax,
     OBCIRadioPollTimeMin,
     /** Time sync array size */
-    OBCITimeSyncArraySize
+    OBCITimeSyncArraySize,
+    /** Baud Rates */
+    OBCIRadioBaudRateDefault,
+    OBCIRadioBaudRateDefaultStr,
+    OBCIRadioBaudRateFast,
+    OBCIRadioBaudRateFastStr
 };
 
 /**

@@ -117,7 +117,6 @@ function OpenBCISimulatorFactory() {
             case k.OBCIMiscSoftReset:
                 if (this.stream) clearInterval(this.stream);
                 this.streaming = false;
-                console.log(`firmware version is ${this.options.firmwareVersion}`);
                 this.emit('data', new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\n${this.options.daisy ? "On Daisy ADS1299 Device ID: 0xFFFFF\n" : ""}LIS3DH Device ID: 0x38422\n${this.options.firmware === k.OBCIFirmwareV2 ? "Firmware: v2.0.0\n" : ""}$$$`));
                 break;
             case k.OBCISDLogForHour1:
@@ -254,6 +253,41 @@ function OpenBCISimulatorFactory() {
                         this.emit('data', this.eotBuf);
                     } else {
                         this.emit('data', new Buffer("Failure: No communications from Board. Is your Board on the right channel? Is your Board powered up?"));
+                        this.emit('data', this.eotBuf);
+                    }
+                }
+                break;
+            case k.OBCIRadioCmdPollTimeGet:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (!this.options.boardFailure) {
+                        this.emit('data', new Buffer("Success: Poll Time 0x"));
+                        this.emit('data', new Buffer([70]));
+                        this.emit('data', this.eotBuf);
+                    } else {
+                        this.emit('data', new Buffer("Failure: Could not get poll time"));
+                        this.emit('data', this.eotBuf);
+                    }
+                }
+                break;
+            case k.OBCIRadioCmdBaudRateSetDefault:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    this.emit('data', new Buffer("Success: Switch your baud rate to 115200"));
+                    this.emit('data', this.eotBuf);
+                }
+                break;
+            case k.OBCIRadioCmdBaudRateSetFast:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    this.emit('data', new Buffer("Success: Switch your baud rate to 230400"));
+                    this.emit('data', this.eotBuf);
+                }
+                break;
+            case k.OBCIRadioCmdSystemStatus:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (!this.options.boardFailure) {
+                        this.emit('data', new Buffer("Success:"));
+                        this.emit('data', this.eotBuf);
+                    } else {
+                        this.emit('data', new Buffer("Failure: System is Down"));
                         this.emit('data', this.eotBuf);
                     }
                 }

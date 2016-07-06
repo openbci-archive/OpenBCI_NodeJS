@@ -250,6 +250,7 @@ function OpenBCIFactory() {
             }
 
             this.serial = boardSerial;
+            this.portName = portName;
 
             if(this.options.verbose) console.log('Serial port connected');
 
@@ -597,7 +598,7 @@ function OpenBCIFactory() {
      *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
      *      Lastly and more important, if the board is not running the new firmware then this functionality does not
      *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
-     *      an
+     *      an Object. See `returns` below.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
      * @returns {Promise} - An object with keys `channelNumber` which is a Number and `err` which contains an error in
@@ -694,6 +695,163 @@ function OpenBCIFactory() {
             // Send the radio channel query command
             this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeSet,pollTime]));
         });
+    };
+
+    /**
+     * @description Used to query the OpenBCI system for it's device's poll time. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+     *      the poll time when fulfilled. It's important to note that if the board is not on, this function will always
+     *      be rejected with a failure message.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves with the poll time, rejects with an error message.
+     */
+    OpenBCIBoard.prototype.radioPollTimeGet = function() {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    var pollTime = data[data.length - 3];
+                    console.log(`pollTime is ${pollTime}`);
+                    resolve(pollTime);
+                } else {
+                    reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeGet]));
+        });
+    };
+
+
+    /**
+     * @description Used to set the OpenBCI Host (Dongle) baud rate. With the RFduino configuration, the Dongle is the
+     *      Host and the Board is the Device. Only the Device can initiate a communication between the two entities.
+     *      There exists a detrimental error where if the Host is interrupted by the radio during a Serial write, then
+     *      all hell breaks loose. So this is an effort to eliminate that problem by increasing the rate at which serial
+     *      data is sent from the Host to the Serial driver. The rate can either be set to default or fast.
+     *      Further the function should reject if currently streaming. Lastly and more important, if the board is not
+     *      running the new firmware then this functionality does not exist and thus this method will reject.
+     *      If the board is using firmware 2+ then this function should resolve the new baud rate after closing the
+     *      current serial port and reopening one.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @param speed {Number} - The baud rate that the system is now running at.
+     * @returns {Promise} - Resolve a {Number} that is the new baud rate
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioBaudRateSet = function(speed) {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (!k.isString(speed)) return reject("Must input type String");
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+                var newBaudRateBuf = data.slice(data.length - 9, data.length - 3);
+                var newBaudRateNum = Number(newBaudRateBuf.toString());
+                if (newBaudRateNum !== k.OBCIRadioBaudRateDefault && newBaudRateNum !== k.OBCIRadioBaudRateFast) {
+                    return reject("Error parse mismatch, restart your system!");
+                }
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    // Change the sample rate here
+                    if (this.options.simulate === false) {
+                        if (this.serial.isOpen()) {
+                            this.serial.close(() => {
+                                this.serial = new serialPort.SerialPort(this.portName, {
+                                    baudRate: newBaudRateNum
+                                },(err) => {
+                                    if (err) {
+                                        this.connected = false;
+                                        reject(err);
+                                    } else {
+                                        this.connected = true;
+                                        this.options.baudRate = newBaudRateNum;
+                                        resolve(newBaudRateNum);
+                                    }
+                                });
+                            });
+                        }
+                    } else {
+                        resolve(newBaudRateNum);
+                    }
+                } else {
+                    reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            if (speed === k.OBCIRadioBaudRateFastStr) {
+                this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetFast]));
+            } else {
+                this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetDefault]));
+            }
+        });
+    };
+
+    OpenBCIBoard.prototype.radioSystemStatusGet = function() {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't change the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdSystemStatus]));
+        });
+
     };
 
     /**
@@ -1457,7 +1615,6 @@ function OpenBCIFactory() {
      * @private
      */
     OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
-        console.log(`data buf:\n${dataBuffer}`);
         if (openBCISample.countADSPresent(dataBuffer) === 2) {
             this.info.boardType = k.OBCIBoardDaisy;
             this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;

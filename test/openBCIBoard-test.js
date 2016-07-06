@@ -1362,46 +1362,6 @@ describe('openbci-sdk',function() {
                 ourBoard._processBytes(buf2);
             });
         });
-
-        /** For later use */
-        // this.timeout(2000);
-        // var _processParseBufferForResetSpy;
-        // before(function() {
-        //     ourBoard = new openBCIBoard.OpenBCIBoard({
-        //         simulate: !realBoard,
-        //         verbose: true
-        //     });
-        //     _processParseBufferForResetSpy = sinon.spy(ourBoard,"_processParseBufferForReset");
-        // });
-        // after(function(done) {
-        //     if (ourBoard.connected) {
-        //         ourBoard.disconnect().then(() => {
-        //             done();
-        //         });
-        //     } else {
-        //         done()
-        //     }
-        // });
-        // afterEach(function() {
-        //     if (_processParseBufferForResetSpy) _processParseBufferForResetSpy.reset();
-        // });
-        //
-        // it("should send a soft reset and set the firmware",function() {
-        //     // Reset the info object
-        //     ourBoard.info = {
-        //         boardType:"burrito",
-        //         sampleRate:60,
-        //         firmware:'taco',
-        //         numberOfChannels:200
-        //     };
-        //
-        //     // Call a soft reset
-        //     ourBoard.softReset();
-        //
-        //     // Wait till
-        //
-        // });
-
     });
 
     describe('#_isStopByte',function() {
@@ -1443,7 +1403,6 @@ describe('openbci-sdk',function() {
         });
         afterEach(() => {
             if (sampleEvent) {
-                console.log("removed");
                 ourBoard.removeListener("sample",sampleEvent);
                 sampleEvent = null;
             }
@@ -1922,6 +1881,274 @@ describe('openbci-sdk',function() {
                 .then(() => {
                     ourBoard.once('ready', () => {
                         ourBoard.radioPollTimeSet(newPollTime).then(() => {done()}).catch(err => done);
+                    });
+                }).catch(err => done(err));
+        });
+    });
+
+    describe('#radioPollTimeGet', function() {
+        afterEach(done => {
+            if (ourBoard.connected) {
+                ourBoard.disconnect().then(() => {
+                    done();
+                }).catch(() => done);
+            } else {
+                done()
+            }
+        });
+
+        it("should not query if not connected", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.radioPollTimeGet().should.be.rejected.and.notify(done);
+        });
+        it("should not query if streaming", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.streamStart()
+                            .then(() => {
+                                ourBoard.radioPollTimeGet().then(() => {
+                                    done("should have rejected");
+                                }).catch(() => {
+                                    done(); // Test pass
+                                })
+                            }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+
+        });
+        it("should not query if not firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeGet().should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+
+        });
+        it("should query if firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeGet().then(pollTime => {
+                            expect(pollTime).to.be.greaterThan(0);
+                            done();
+                        }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+        it("should get failure message if the board is not communicating with dongle", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorBoardFailure: true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioPollTimeGet().should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+    });
+
+    describe('#radioBaudRateSet', function() {
+        afterEach(done => {
+            if (ourBoard.connected) {
+                ourBoard.disconnect().then(() => {
+                    done();
+                }).catch(() => done);
+            } else {
+                done()
+            }
+        });
+
+        it("should not try to set baud rate if not connected", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.radioBaudRateSet('default').should.be.rejected.and.notify(done);
+        });
+        it("should reject if no input", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.radioBaudRateSet().should.be.rejected.and.notify(done);
+        });
+        it("should be rejected if input type incorrect", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.radioBaudRateSet(1).should.be.rejected.and.notify(done);
+        });
+        it("should not try to change the baud rate if streaming", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.streamStart()
+                            .then(() => {
+                                ourBoard.radioBaudRateSet('default').then(() => {
+                                    done("should have rejected");
+                                }).catch(() => {
+                                    done(); // Test pass
+                                })
+                            }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+
+        });
+        it("should not try to change the baud rate if not firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioBaudRateSet('default').should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+
+        });
+        it("should set the baud rate to default if firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioBaudRateSet('default').then(baudrate => {
+                            expect(baudrate).to.be.equal(115200);
+                            done();
+                        }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+        it("should set the baud rate to fast if firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioBaudRateSet('fast').then(baudrate => {
+                            expect(baudrate).to.be.equal(230400);
+                            done();
+                        }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+    });
+
+    describe('#radioSystemStatusGet', function() {
+        afterEach(done => {
+            if (ourBoard.connected) {
+                ourBoard.disconnect().then(() => {
+                    done();
+                }).catch(() => done);
+            } else {
+                done()
+            }
+        });
+
+        it("should not get system status if not connected", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.radioSystemStatusGet().should.be.rejected.and.notify(done);
+        });
+        it("should not get system status if streaming", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.streamStart()
+                            .then(() => {
+                                ourBoard.radioSystemStatusGet().then(() => {
+                                    done("should have rejected");
+                                }).catch(() => {
+                                    done(); // Test pass
+                                })
+                            }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+
+        });
+        it("should not get system status if not firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioSystemStatusGet().should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+
+        });
+        it("should get up system status if firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioSystemStatusGet().then(isUp => {
+                            expect(isUp).to.be.true;
+                            done();
+                        }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+        it("should get down system status if firmware version 2", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2',
+                simulatorBoardFailure: true
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioSystemStatusGet().then(isUp => {
+                            expect(isUp).to.be.false;
+                            done();
+                        }).catch(err => done(err));
                     });
                 }).catch(err => done(err));
         });
