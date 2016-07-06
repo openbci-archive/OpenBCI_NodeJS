@@ -2030,6 +2030,7 @@ describe('#sync', function() {
         var useSim = () => {
             ourBoard.simulatorEnable()
                 .then(() => {
+                    console.log(`sim firmware version: ${ourBoard.options.simulatorFirmwareVersion}`);
                     return ourBoard.connect(k.OBCISimulatorPortName);
                 })
                 .then(() => {
@@ -2059,10 +2060,19 @@ describe('#sync', function() {
             done();
         });
     });
-    after(function () {
-        ourBoard.disconnect();
+    after(done => {
+        if (ourBoard.connected) {
+            ourBoard.disconnect().then(() => {
+                done();
+            }).catch(() => done);
+        } else {
+            done();
+        }
     });
-    describe('#syncClocksStart', function() {
+    afterEach(() => {
+        this.buffer = null;
+    });
+    describe('#syncClocks', function() {
         it('can get time sync set packet', done => {
             ourBoard.syncClocks()
                 .catch(err => {

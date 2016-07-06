@@ -297,7 +297,7 @@ function OpenBCIFactory() {
         if (this.streaming) {
             this.streamStop();
             if(this.options.verbose) console.log('stop streaming');
-            timeout = 20;
+            timeout = 70; // Avg poll time
         }
 
         return new Promise((resolve, reject) => {
@@ -306,11 +306,9 @@ function OpenBCIFactory() {
                 this.connected = false;
                 if (this.serial) {
                     this.serial.close(() => {
-                        this.isLookingForKeyInBuffer = true;
                         resolve();
                     });
                 } else {
-                    this.isLookingForKeyInBuffer = true;
                     resolve();
                 }
 
@@ -474,7 +472,6 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._writeAndDrain = function(data) {
         return new Promise((resolve,reject) => {
-            //console.log('writing command ' + data);
             if(!this.serial) reject('Serial port not open');
             this.serial.write(data,(error,results) => {
                 if(results) {
@@ -591,7 +588,7 @@ function OpenBCIFactory() {
             this.curParsingMode = k.OBCIParsingEOT;
 
             // Send the radio channel query command
-            this._writeAndDrain(new Buffer([k.OBCIRadioCmdChannelSet,channelNumber]));
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSet,channelNumber]));
         });
     };
 
@@ -645,7 +642,7 @@ function OpenBCIFactory() {
             this.curParsingMode = k.OBCIParsingEOT;
 
             // Send the radio channel query command
-            this._writeAndDrain(new Buffer([k.OBCIRadioCmdChannelGet]));
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelGet]));
 
         });
     };
@@ -695,7 +692,7 @@ function OpenBCIFactory() {
             this.curParsingMode = k.OBCIParsingEOT;
 
             // Send the radio channel query command
-            this._writeAndDrain(new Buffer([k.OBCIRadioCmdPollTimeSet,pollTime]));
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeSet,pollTime]));
         });
     };
 
@@ -1315,7 +1312,7 @@ function OpenBCIFactory() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
             //if (this.streaming) reject('Cannot be streaming to sync clocks');
-            if (this.info.firmware === k.OBCIFirmwareV1) reject('Time sync not implemented on V1 firmware, please update');
+            if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on V1 firmware, please update');
             this.curParsingMode = k.OBCIParsingTimeSyncSent;
             this.sync.timeEnteredQueue = this.sntpNow();
 
@@ -1342,7 +1339,6 @@ function OpenBCIFactory() {
         if (this.buffer) {
             oldDataBuffer = this.buffer;
             data = Buffer.concat([this.buffer,data],data.length + this.buffer.length);
-
         }
 
         switch (this.curParsingMode) {

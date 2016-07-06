@@ -168,12 +168,17 @@ const OBCITrigger = '`';
 const OBCISyncTimeSet = '<';
 const OBCISyncTimeSent = ",";
 
+/** Radio Key */
+const OBCIRadioKey = 0xF0;
 /** Radio Commands */
-const OBCIRadioCmdChannelGet            = 0xF0;
-const OBCIRadioCmdChannelSet            = 0xF1;
-const OBCIRadioCmdChannelSetOverride    = 0xF2;
-const OBCIRadioCmdPollTimeGet           = 0xF3;
-const OBCIRadioCmdPollTimeSet           = 0xF4;
+const OBCIRadioCmdChannelGet            = 0x00;
+const OBCIRadioCmdChannelSet            = 0x01;
+const OBCIRadioCmdChannelSetOverride    = 0x02;
+const OBCIRadioCmdPollTimeGet           = 0x03;
+const OBCIRadioCmdPollTimeSet           = 0x04;
+const OBCIRadioCmdBaudRateSetDefault    = 0x05;
+const OBCIRadioCmdBaudRateSetFast       = 0x06;
+const OBCIRadioCmdSystemStatus          = 0x07;
 
 /** Possible number of channels */
 const OBCINumberOfChannelsDaisy = 16;
@@ -740,12 +745,17 @@ module.exports = {
     /** Sync Clocks */
     OBCISyncTimeSent,
     OBCISyncTimeSet,
+    /** Radio Key */
+    OBCIRadioKey,
     /** Radio Commands */
     OBCIRadioCmdChannelGet,
     OBCIRadioCmdChannelSet,
     OBCIRadioCmdChannelSetOverride,
     OBCIRadioCmdPollTimeGet,
     OBCIRadioCmdPollTimeSet,
+    OBCIRadioCmdBaudRateSetDefault,
+    OBCIRadioCmdBaudRateSetFast,
+    OBCIRadioCmdSystemStatus,
     /** Impedance */
     OBCIImpedanceTextBad,
     OBCIImpedanceTextGood,
