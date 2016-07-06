@@ -304,6 +304,9 @@ const OBCIRadioChannelMin   = 0;
 const OBCIRadioPollTimeMax  = 255;
 const OBCIRadioPollTimeMin  = 0;
 
+/** Time sync array size */
+const OBCITimeSyncArraySize = 10;
+
 module.exports = {
     /** Turning channels off */
     OBCIChannelOff_1,
@@ -823,7 +826,9 @@ module.exports = {
     OBCIRadioChannelMax,
     OBCIRadioChannelMin,
     OBCIRadioPollTimeMax,
-    OBCIRadioPollTimeMin
+    OBCIRadioPollTimeMin,
+    /** Time sync array size */
+    OBCITimeSyncArraySize
 };
 
 /**

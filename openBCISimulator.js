@@ -151,6 +151,7 @@ function OpenBCISimulatorFactory() {
             case k.OBCIMiscSoftReset:
                 if (this.stream) clearInterval(this.stream);
                 this.streaming = false;
+                console.log(`firmware version is ${this.options.firmwareVersion}`);
                 this.emit('data', new Buffer(`OpenBCI V3 Simulator\nOn Board ADS1299 Device ID: 0x12345\n${this.options.daisy ? "On Daisy ADS1299 Device ID: 0xFFFFF\n" : ""}LIS3DH Device ID: 0x38422\n${this.options.firmware === k.OBCIFirmwareV2 ? "Firmware: v2.0.0\n" : ""}$$$`));
                 break;
             case k.OBCISDLogForHour1:

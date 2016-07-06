@@ -18,6 +18,7 @@
     "buffer-equal": "^1.0.0",
     "gaussian": "^1.0.0",
     "istanbul": "^0.4.2",
+    "mathjs": "^3.3.0",
     "performance-now": "^0.2.0",
     "serialport": "3.1.2",
     "sntp": "^2.0.0",

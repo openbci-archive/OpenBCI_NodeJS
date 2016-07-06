@@ -1,17 +1,19 @@
-var sinon = require('sinon');
-var chai = require('chai'),
+var sinon = require('sinon'),
+    chai = require('chai'),
     should = chai.should(),
     expect = chai.expect,
     openBCIBoard = require('../openBCIBoard'),
     openBCISample = openBCIBoard.OpenBCISample,
-    k = openBCISample.k;
+    k = openBCISample.k,
+    chaiAsPromised = require("chai-as-promised"),
+    sinonChai = require("sinon-chai"),
+    bufferEqual = require('buffer-equal'),
+    fs = require('fs'),
+    math = require('mathjs');
 
-var chaiAsPromised = require("chai-as-promised");
-var sinonChai = require("sinon-chai");
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
-var bufferEqual = require('buffer-equal');
-var fs = require('fs');
+
 
 describe('openbci-sdk',function() {
     this.timeout(2000);
@@ -2015,13 +2017,14 @@ describe('openbci-sdk',function() {
 });
 
 // Need a better test
-xdescribe('#sync', function() {
+describe('#sync', function() {
     var ourBoard;
-    this.timeout(10000);
+    this.timeout(2000);
     before(function (done) {
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose:true,
-            sntp: true
+            timeSync: true,
+            simulatorFirmwareVersion: 'v2'
         });
 
         var useSim = () => {
@@ -2039,7 +2042,6 @@ xdescribe('#sync', function() {
                 return setTimeout(() => {
                     console.log('Issuing connect');
                     ourBoard.connect(portName);
-                    //ourBoard.connect("/dev/cu.usbserial-DB00JAKZ");
                 },500);
             })
             .catch((err) => {
@@ -2054,26 +2056,56 @@ xdescribe('#sync', function() {
 
 
         ourBoard.once('ready', () => {
-            console.log("Got ready signal...");
-            setTimeout(() => {
-                done();
-            }, 500);
+            done();
         });
     });
     after(function () {
         ourBoard.disconnect();
     });
     describe('#syncClocksStart', function() {
-        it('can get sntp time and verify extend of sntp valid', function(done) {
-            console.log('Sync clocks started!');
-            ourBoard.syncClocksStart()
+        it('can get time sync set packet', done => {
+            ourBoard.syncClocks()
                 .catch(err => {
                     done(err);
                 });
-            ourBoard.on('synced',() => {
-                done()
+            ourBoard.once('synced',() => {
+                done();
             });
+        });
+        it('can sync multiple times and compute average', done => {
+            var trials = 5;
+            var trialCount = 0;
 
+            // Clear the array for sure
+            ourBoard.sync.timeOffsetArray = [];
+
+            // The function executed on each synced event emitted
+            var synced = syncObj => {
+                trialCount++;
+                if (trialCount >= trials) {
+                    // Verify the length of the
+                    expect(syncObj.timeOffsetArray.length).to.equal(trials);
+                    // Verify the mean is correct
+                    expect(math.mean(syncObj.timeOffsetArray)).to.equal(syncObj.timeOffsetAvg);
+                    // Remove the event listener
+                    ourBoard.removeListener('synced',synced);
+                    done();
+                } else {
+                    ourBoard.syncClocks()
+                        .catch(err => {
+                            done(err);
+                        });
+                }
+            };
+
+            // Attached the emitted
+            ourBoard.on('synced',synced);
+
+            // Call the first one
+            ourBoard.syncClocks()
+                .catch(err => {
+                    done(err);
+                });
         });
     });
 });

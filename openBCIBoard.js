@@ -10,7 +10,8 @@ var EventEmitter = require('events').EventEmitter,
     now = require('performance-now'),
     Sntp = require('sntp'),
     StreamSearch = require('streamsearch'),
-    bufferEqual = require('buffer-equal');
+    bufferEqual = require('buffer-equal'),
+    math = require('mathjs');
 
 
 /**
@@ -135,8 +136,8 @@ function OpenBCIFactory() {
         /** Properties (keep alphabetical) */
         // Arrays
         this.accelArray = [0,0,0]; // X, Y, Z
-        this.writeOutArray = new Array(100);
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
+        this.writeOutArray = new Array(100);
         // Buffers
         this.buffer = null;
         this.masterBuffer = masterBufferMaker();
@@ -171,7 +172,9 @@ function OpenBCIFactory() {
             timeGotSetPacket: 0,
             timeRoundTrip: 0,
             timeTransmission: 0,
-            timeOffset: 0
+            timeOffset: 0,
+            timeOffsetAvg: 0,
+            timeOffsetArray: []
         };
         this.sntpOptions = {
             host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
@@ -190,15 +193,14 @@ function OpenBCIFactory() {
         // Strings
 
         // NTP
-        if (this.options.sntp) {
+        if (this.options.timeSync) {
             // establishing ntp connection
             this.sntpStart()
                 .then(() => {
                     if(this.options.verbose) console.log('SNTP: connected');
                 })
                 .catch(err => {
-                    if(this.options.verbose) console.log('SNTP: unable to connect');
-                    console.log(err);
+                    if(this.options.verbose) console.log(`Error [sntpStart] ${err}`);
                 })
         }
 
@@ -1309,7 +1311,7 @@ function OpenBCIFactory() {
     /**
      * @description Send the command to tell the board to start the syncing protocol.
      */
-    OpenBCIBoard.prototype.syncClocksStart = function() {
+    OpenBCIBoard.prototype.syncClocks = function() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
             //if (this.streaming) reject('Cannot be streaming to sync clocks');
@@ -1459,6 +1461,7 @@ function OpenBCIFactory() {
      * @private
      */
     OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
+        console.log(`data buf:\n${dataBuffer}`);
         if (openBCISample.countADSPresent(dataBuffer) === 2) {
             this.info.boardType = k.OBCIBoardDaisy;
             this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
@@ -1579,14 +1582,26 @@ function OpenBCIFactory() {
                 this.sync.timeTransmission = this.sync.timeRoundTrip / 2;
                 this.sync.timeOffset = this.sync.timeGotSetPacket - this.sync.timeTransmission - boardTime;
                 this.sync.active = true;
+                // Add to array
+                if (this.sync.timeOffsetArray.length >= k.OBCITimeSyncArraySize) {
+                    // Shift the oldest one out of the array
+                    this.sync.timeOffsetArray.shift();
+                    // Push the new value into the array
+                    this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                } else {
+                    // Push the new value into the array
+                    this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                }
+                this.sync.timeOffsetAvg = math.mean(this.sync.timeOffsetArray);
                 if (this.options.verbose) {
-                    console.log("Board time: " + boardTime);
-                    console.log('Board offset time: ' + this.sync.timeOffset);
-                    console.log("Queue time to actual send time: " + (this.sync.timeSent - this.sync.timeEnteredQueue) + " ms");
-                    console.log("Round trip time: " + this.sync.timeRoundTrip + " ms");
-                    console.log("Transmission time: " + this.sync.timeTransmission + " ms");
-                    console.log("Corrected board time: " + (this.sync.timeOffset + boardTime) + " ms");
-                    console.log("Diff between corrected board time and actual time we got that packet: " + ((this.sync.timeSent + this.sync.timeTransmission) - (boardTime + this.sync.timeOffset)) + " ms");
+                    console.log(`Board time: ${boardTime}`);
+                    console.log(`Board offset time: ${this.sync.timeOffset}`);
+                    console.log(`Queue time to actual send time: ${(this.sync.timeSent - this.sync.timeEnteredQueue)} ms`);
+                    console.log(`Round trip time: ${this.sync.timeRoundTrip} ms`);
+                    console.log(`Transmission time: ${this.sync.timeTransmission} ms`);
+                    console.log(`Corrected board time: ${(this.sync.timeOffset + boardTime)} ms`);
+                    console.log(`Diff between corrected board time and actual time we got that packet: ${((this.sync.timeSent + this.sync.timeTransmission) - (boardTime + this.sync.timeOffset))} ms`);
+                    console.log(`Avg time offset is ${this.sync.timeOffsetAvg}`);
                 }
                 this.emit('synced',this.sync);
             })

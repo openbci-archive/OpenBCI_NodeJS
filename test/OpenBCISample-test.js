@@ -19,7 +19,6 @@ var k = openBCISample.k;
 
 const defaultChannelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
 
-
 var sampleBuf = openBCISample.samplePacket();
 var sampleBufTimeSyncSet = openBCISample.samplePacketTimeSyncSet();
 

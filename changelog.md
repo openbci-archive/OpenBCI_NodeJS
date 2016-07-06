@@ -1,5 +1,7 @@
 # 1.0.0
 
+The second major release for the OpenBCI Node.js SDK brings major changes, improvements and stability, on top of a push to increase automated test coverage. 
+
 ### New Features
 
 * NPM Module now called `openbci` instead of `openbci-sdk`
