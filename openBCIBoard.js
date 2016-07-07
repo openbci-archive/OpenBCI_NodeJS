@@ -166,9 +166,8 @@ function OpenBCIFactory() {
         this._lowerChannelsSampleObject = null;
         this.sync = {
             active: false,
-            timeSent: 0,
+            timeGotPacketSent: 0,
             timeLastBoardTime: 0,
-            timeEnteredQueue: 0,
             timeGotSetPacket: 0,
             timeRoundTrip: 0,
             timeTransmission: 0,
@@ -649,6 +648,51 @@ function OpenBCIFactory() {
     };
 
     /**
+     * @description Used to query the OpenBCI system for it's device's poll time. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+     *      the poll time when fulfilled. It's important to note that if the board is not on, this function will always
+     *      be rejected with a failure message.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves with the poll time, rejects with an error message.
+     */
+    OpenBCIBoard.prototype.radioPollTimeGet = function() {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    var pollTime = data[data.length - 3];
+                    console.log(`pollTime is ${pollTime}`);
+                    resolve(pollTime);
+                } else {
+                    reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeGet]));
+        });
+    };
+
+    /**
      * @description Used to set the OpenBCI poll time. With the RFduino configuration, the Dongle is the Host and the
      *      Board is the Device. Only the Device can initiate a communication between the two entities. Therefore this
      *      sets the interval at which the Device polls the Host for new information. Further the function should reject
@@ -698,52 +742,6 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Used to query the OpenBCI system for it's device's poll time. The function will reject if not
-     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
-     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
-     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
-     *      the poll time when fulfilled. It's important to note that if the board is not on, this function will always
-     *      be rejected with a failure message.
-     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
-     * @since 1.0.0
-     * @returns {Promise} - Resolves with the poll time, rejects with an error message.
-     */
-    OpenBCIBoard.prototype.radioPollTimeGet = function() {
-        var badCommsTimeout;
-        return new Promise((resolve,reject) => {
-            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
-            if (this.streaming) return reject("Don't query for the poll time while streaming");
-            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
-            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
-            //  important if the module was connected, not streaming and using the old firmware
-            badCommsTimeout = setTimeout(() => {
-                reject("Please make sure your dongle is plugged in and using firmware v2");
-            }, 1000);
-
-            // Subscribe to the EOT event
-            this.once('eot',data => {
-                // Remove the timeout!
-                clearTimeout(badCommsTimeout);
-                badCommsTimeout = null;
-
-                if (openBCISample.isSuccessInBuffer(data)) {
-                    var pollTime = data[data.length - 3];
-                    console.log(`pollTime is ${pollTime}`);
-                    resolve(pollTime);
-                } else {
-                    reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
-                }
-            });
-
-            this.curParsingMode = k.OBCIParsingEOT;
-
-            // Send the radio channel query command
-            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeGet]));
-        });
-    };
-
-
-    /**
      * @description Used to set the OpenBCI Host (Dongle) baud rate. With the RFduino configuration, the Dongle is the
      *      Host and the Board is the Device. Only the Device can initiate a communication between the two entities.
      *      There exists a detrimental error where if the Host is interrupted by the radio during a Serial write, then
@@ -755,7 +753,7 @@ function OpenBCIFactory() {
      *      current serial port and reopening one.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
-     * @param speed {Number} - The baud rate that the system is now running at.
+     * @param speed {String} - The baud rate that to switch to. Can be either `default` (115200) or `fast` (230400)
      * @returns {Promise} - Resolve a {Number} that is the new baud rate
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -1483,8 +1481,6 @@ function OpenBCIFactory() {
             //if (this.streaming) reject('Cannot be streaming to sync clocks');
             if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on V1 firmware, please update');
             this.curParsingMode = k.OBCIParsingTimeSyncSent;
-            this.sync.timeEnteredQueue = this.sntpNow();
-
             if (this.options.verbose) console.log('PC time sent to board: ' + this.sync.timeEnteredQueue);
             this.write(k.OBCISyncTimeSet);
             resolve();
@@ -1531,7 +1527,7 @@ function OpenBCIFactory() {
                 break;
             case k.OBCIParsingTimeSyncSent:
                 if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
-                    this.sync.timeSent = this.sntpNow();
+                    this.sync.timeGotPacketSent = this.sntpNow();
                     this.curParsingMode = k.OBCIParsingNormal;
                 }
                 this.buffer = this._processDataBuffer(data);
@@ -1742,7 +1738,8 @@ function OpenBCIFactory() {
         if (this.options.verbose) console.log('Got time set packet from the board');
         openBCISample.getFromTimePacketTime(rawPacket)
             .then(boardTime => {
-                this.sync.timeRoundTrip = this.sync.timeGotSetPacket - this.sync.timeSent;
+                this.sync.timeRoundTrip = this.sync.timeGotSetPacket - this.sync.timeGotPacketSent;
+                console.log();
                 this.sync.timeTransmission = this.sync.timeRoundTrip / 2;
                 this.sync.timeOffset = this.sync.timeGotSetPacket - this.sync.timeTransmission - boardTime;
                 this.sync.active = true;
@@ -1760,11 +1757,11 @@ function OpenBCIFactory() {
                 if (this.options.verbose) {
                     console.log(`Board time: ${boardTime}`);
                     console.log(`Board offset time: ${this.sync.timeOffset}`);
-                    console.log(`Queue time to actual send time: ${(this.sync.timeSent - this.sync.timeEnteredQueue)} ms`);
+                    console.log(`Queue time to actual send time: ${(this.sync.timeGotPacketSent - this.sync.timeEnteredQueue)} ms`);
                     console.log(`Round trip time: ${this.sync.timeRoundTrip} ms`);
                     console.log(`Transmission time: ${this.sync.timeTransmission} ms`);
                     console.log(`Corrected board time: ${(this.sync.timeOffset + boardTime)} ms`);
-                    console.log(`Diff between corrected board time and actual time we got that packet: ${((this.sync.timeSent + this.sync.timeTransmission) - (boardTime + this.sync.timeOffset))} ms`);
+                    console.log(`Diff between corrected board time and actual time we got that packet: ${((this.sync.timeGotPacketSent + this.sync.timeTransmission) - (boardTime + this.sync.timeOffset))} ms`);
                     console.log(`Avg time offset is ${this.sync.timeOffsetAvg}`);
                 }
                 this.emit('synced',this.sync);

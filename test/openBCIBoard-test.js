@@ -2176,6 +2176,33 @@ describe('openbci-sdk',function() {
                 done()
             }
         });
+        it("should be able to get the channel number", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            // The channel number should be between 0 and 25. Those are hard limits.
+            ourBoard.radioChannelGet().should.eventually.be.between(0,25);
+        });
+        it("should be able to get the poll time", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioPollTimeGet().should.eventually.be.greaterThan(0);
+        });
+        it("should be able to set the poll time", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioPollTimeSet(80).should.become(80);
+        });
+        it("should be able to change to default baud rate", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioBaudRateSet('default').should.become(115200);
+        });
+        it("should be able to change to fast baud rate", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioBaudRateSet('fast').should.become(230400);
+
+        });
         it("should be able to set the system status", done => {
             // Don't test if not using real board
             if (!realBoard) return done();
@@ -2276,9 +2303,9 @@ describe('openbci-sdk',function() {
 });
 
 // Need a better test
-describe('#sync', function() {
+describe.only('#sync', function() {
     var ourBoard;
-    this.timeout(2000);
+    this.timeout(4000);
     before(function (done) {
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose:true,
@@ -2375,6 +2402,29 @@ describe('#sync', function() {
                 .catch(err => {
                     done(err);
                 });
+        });
+        it('can sync while streaming', done => {
+            var syncAfterSamples = 50;
+
+            var samp = sample => {
+                if (sample.sampleNumber >= syncAfterSamples) {
+                    // Call the first one
+                    ourBoard.syncClocks().catch(err => done);
+                }
+            };
+            ourBoard.on('sample',samp);
+            ourBoard.streamStart().catch(err => done);
+            // Attached the emitted
+            ourBoard.once('synced',() => {
+                ourBoard.disconnect()
+                    .then(() => {
+                        done();
+                    });
+                ourBoard.removeListener('sample',samp);
+                done();
+            });
+
+
         });
     });
 });
