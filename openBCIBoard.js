@@ -57,7 +57,7 @@ function OpenBCIFactory() {
      *     - `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on
      *                  the board is not polling the RFduino on the dongle. (Default `false`)
      *
-     *     - `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board. 
+     *     - `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board.
      *                  This is useful if you want to test how your application reacts to a user requesting 16 channels
      *                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
      *                  attached and the user only wants to use 8 channels. (Default `false`)
@@ -67,9 +67,9 @@ function OpenBCIFactory() {
      *              `v1` - Firmware Version 1 (Default)
      *              `v2` - Firmware Version 2
      *
-     *     - `simulatorHasAccelerometer` - {Boolean} - Does the board have accelerometer functionality? (Default `true`)
+     *     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
      *
-     *     - `simulatorInjectAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+     *     - `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
      *
      *     - `simulatorInjectLineNoise` {String} - Injects line noise on channels.
      *          3 Possible Options:
@@ -78,13 +78,13 @@ function OpenBCIFactory() {
      *              `None` - Do not inject line noise.
      *
      *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if
-     *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option over rides that
+     *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that
      *                  setting and this sample rate will be used. (Default is `250`)
      *
      *     - `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely
      *                  due to a OpenBCI dongle not being plugged in.
      *
-     *     - `timeSync` - Syncs the module up with an SNTP time server. Syncs the board on startup
+     *     - `timeSync` - {Boolean} Syncs the module up with an SNTP time server. Syncs the board on startup
      *                  with the SNTP time. Adds a time stamp to the AUX channels.
      *
      *     - `verbose` {Boolean} - Print out useful debugging events
@@ -93,8 +93,6 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     function OpenBCIBoard(options) {
-        //var args = Array.prototype.slice.call(arguments);
-
         options = (typeof options !== 'function') && options || {};
         var opts = {};
 
@@ -528,7 +526,8 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Convenience
+     * @description Convience method to determine if you can use firmware v2.x.x
+     *  capabilities.
      * @returns {boolean}
      */
     OpenBCIBoard.prototype.usingVersionTwoFirmware = function() {
@@ -540,16 +539,13 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Used to query the OpenBCI system for it's radio channel number. The function will reject if not
+     * @description Used to query the OpenBCI system for its radio channel number. The function will reject if not
      *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
      *      Lastly and more important, if the board is not running the new firmware then this functionality does not
-     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
-     *      an
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
-     * @returns {Promise} - An object with:
-     *      `channelNumber` {Number} - The new channel number
-     *      `err` {Error} - An error if there was a problem trying to change the channel.
+     * @returns {Number} - The new channel number.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioChannelSet = function(channelNumber) {
@@ -576,10 +572,7 @@ function OpenBCIFactory() {
                 badCommsTimeout = null;
 
                 if (openBCISample.isSuccessInBuffer(data)) {
-                    resolve({
-                        channelNumber : data[data.length - 4],
-                        err:Error(data)
-                    });
+                    resolve(data[data.length - 4]);
                 } else {
                     reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
                 }
@@ -610,12 +603,12 @@ function OpenBCIFactory() {
         return new Promise((resolve,reject) => {
             if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
             if (this.streaming) return reject("Don't query for the radio while streaming");
-            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
 
             // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
             //  important if the module was connected, not streaming and using the old firmware
             badCommsTimeout = setTimeout(() => {
-                reject("No response from board, are you using new firmware");
+                reject("Please make sure your dongle is plugged in and using firmware v2");
             }, 500);
 
             // Subscribe to the EOT event
@@ -663,7 +656,7 @@ function OpenBCIFactory() {
         return new Promise((resolve,reject) => {
             if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
             if (this.streaming) return reject("Don't query for the poll time while streaming");
-            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
             // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
             //  important if the module was connected, not streaming and using the old firmware
             badCommsTimeout = setTimeout(() => {
@@ -709,7 +702,7 @@ function OpenBCIFactory() {
         return new Promise((resolve,reject) => {
             if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
             if (this.streaming) return reject("Don't change the poll time while streaming");
-            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
             if (pollTime === undefined || pollTime === null) return reject("Must input a new poll time to switch too!");
             if (!k.isNumber(pollTime)) return reject("Must input type Number");
             if (pollTime > k.OBCIRadioPollTimeMax) return reject(`New polltime must be less than ${k.OBCIRadioPollTimeMax}`);
@@ -761,8 +754,8 @@ function OpenBCIFactory() {
         var badCommsTimeout;
         return new Promise((resolve,reject) => {
             if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
-            if (this.streaming) return reject("Don't query for the poll time while streaming");
-            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (this.streaming) return reject("Don't change the baud rate while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
             if (!k.isString(speed)) return reject("Must input type String");
             // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
             //  important if the module was connected, not streaming and using the old firmware

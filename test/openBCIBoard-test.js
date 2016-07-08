@@ -1194,7 +1194,7 @@ describe('openbci-sdk',function() {
             });
 
         });
-        
+
         describe("#OBCIParsingNormal",function() {
             before(() => {
                 ourBoard.curParsingMode = k.OBCIParsingNormal;
@@ -1509,7 +1509,7 @@ describe('openbci-sdk',function() {
 
             expect(ourBoard.usingVersionTwoFirmware()).to.be.false;
         });
-        
+
     });
 
     describe('#radioChannelSet', function() {
@@ -1648,9 +1648,8 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelSet(newChannelNumber).then(res => {
-                            expect(res.channelNumber).to.be.equal(newChannelNumber);
-                            expect(res.err).to.not.be.undefined;
+                        ourBoard.radioChannelSet(newChannelNumber).then(channelNumber => {
+                            expect(channelNumber).to.be.equal(newChannelNumber);
                             done();
                         }).catch(err => done(err));
                     });
@@ -1718,8 +1717,8 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelGet().then(res => {
-                            expect(res.channelNumber).to.be.within(k.OBCIRadioChannelMin,k.OBCIRadioChannelMax);
+                        ourBoard.radioChannelGet().then(channelNumber => {
+                            expect(channelNumber).to.be.within(k.OBCIRadioChannelMin,k.OBCIRadioChannelMax);
                             done();
                         }).catch(err => done(err));
                     });
@@ -2303,7 +2302,7 @@ describe('openbci-sdk',function() {
 });
 
 // Need a better test
-describe.only('#sync', function() {
+describe('#sync', function() {
     var ourBoard;
     this.timeout(4000);
     before(function (done) {
