@@ -750,7 +750,7 @@ describe('OpenBCIConstants', function() {
     });
     describe("Radio Channel Limits", function() {
         it("should get the right channel number max",function () {
-            expect(k.OBCIRadioChannelMax).to.be.equal(25); 
+            expect(k.OBCIRadioChannelMax).to.be.equal(25);
         });
         it("should get the right channel number min",function () {
             expect(k.OBCIRadioChannelMin).to.be.equal(0);
@@ -1061,6 +1061,14 @@ describe('OpenBCIConstants', function() {
             var expectation = 'd';
             var result = k.getTestSignalCommand('none');
             return expect(result).to.eventually.equal(expectation);
+        });
+    });
+    describe('#getVersionNumber', function() {
+        it('should get the major version number from a github standard version string',() => {
+            var expectedVersion = 6;
+            var inputStringVersion = 'v6.0.0';
+
+            expect(k.getVersionNumber(inputStringVersion)).to.equal(expectedVersion);
         });
     });
     describe('#getImpedanceSetter', function() {

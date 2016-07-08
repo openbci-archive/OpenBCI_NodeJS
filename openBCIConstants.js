@@ -849,7 +849,8 @@ module.exports = {
     OBCIRadioBaudRateDefault,
     OBCIRadioBaudRateDefaultStr,
     OBCIRadioBaudRateFast,
-    OBCIRadioBaudRateFastStr
+    OBCIRadioBaudRateFastStr,
+    getVersionNumber
 };
 
 /**
@@ -1128,4 +1129,13 @@ function channelSettingsObjectDefault(channelNumber) {
         srb2: true,
         srb1: false
     };
+}
+
+/**
+ * @description This function is used to extract the major version from a github
+ *  version string.
+ * @returns {Number} The major version number
+ */
+function getVersionNumber(versionStr) {
+    return Number(versionStr[1]);
 }

@@ -1561,7 +1561,7 @@ function OpenBCIFactory() {
                     /** We just qualified a raw packet */
                     // Grab the raw packet, make a copy of it.
                     var rawPacket;
-                    if (process.version > 6) {
+                    if (k.getVersionNumber(process.version) >= 6) {
                         // From introduced in node version 6.x.x
                         rawPacket = Buffer.from(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
                     } else {
@@ -1582,7 +1582,7 @@ function OpenBCIFactory() {
                     if (tempBuf.length === 0) {
                         dataBuffer = null;
                     } else {
-                        if (process.version > 6) {
+                        if (k.getVersionNumber(process.version) >= 6) {
                             dataBuffer = Buffer.from(tempBuf);
                         } else {
                             dataBuffer = new Buffer(tempBuf);

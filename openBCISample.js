@@ -367,7 +367,7 @@ var sampleModule = {
         var b2 = new Array(numberOfChannels).fill(0);
 
         /**
-         * @description Use a 1/f filter 
+         * @description Use a 1/f filter
          * @param previousSampleNumber {Number} - The previous sample number
          */
         return previousSampleNumber => {
@@ -596,7 +596,7 @@ function parsePacketStandardAccel(dataBuf, channelSettingsArray) {
             .then(channelSettingArray => {
                 sampleObject.channelData = channelSettingArray;
                 // Get the raw aux values
-                if (process.version > 6) {
+                if (k.getVersionNumber(process.version) >= 6) {
                     // From introduced in node version 6.x.x
                     sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
                 } else {
@@ -640,7 +640,7 @@ function parsePacketStandardRawAux(dataBuf, channelSettingsArray) {
         getChannelDataArray(dataBuf, channelSettingsArray)
             .then(channelSettingArray => {
                 // Slice the buffer for the aux data
-                if (process.version > 6) {
+                if (k.getVersionNumber(process.version) >= 6) {
                     // From introduced in node version 6.x.x
                     sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux,k.OBCIPacketPositionStopAux+1));
                 } else {
@@ -830,7 +830,7 @@ function getFromTimePacketAccel(dataBuf, accelArray) {
 function getFromTimePacketRawAux(dataBuf) {
     return new Promise((resolve, reject) => {
         if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketRawAux]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-        if (process.version >= 6) {
+        if (k.getVersionNumber(process.version) >= 6) {
             resolve(Buffer.from(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
         } else {
             resolve(new Buffer(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
@@ -879,7 +879,7 @@ function getChannelDataArray(dataBuf, channelSettingsArray) {
         for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
             if (!channelSettingsArray[i].hasOwnProperty("gain")) reject(`Error [getChannelDataArray]: Invalid channel settings object at index ${i}`);
             if (!k.isNumber(channelSettingsArray[i].gain)) reject('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
-            
+
             var scaleFactor = 0;
             if(isEven(sampleNumber) && daisy) {
                 scaleFactor = ADS1299_VREF / channelSettingsArray[i + k.OBCINumberOfChannelsDefault].gain / (Math.pow(2,23) - 1);
