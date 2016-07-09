@@ -1180,7 +1180,7 @@ describe('openbci-sdk',function() {
                         // ourBoard.buffer.length.should.equal(buf1.length);
                         ourBoard.removeListener("sample", newSample);
                         ourBoard.curParsingMode.should.equal(k.OBCIParsingNormal);
-                        ourBoard.sync.timeSent.should.be.greaterThan(0);
+                        ourBoard.sync.timeGotPacketSent.should.be.greaterThan(0);
                         done();
                     }
                     sampleCounter++;
@@ -1717,8 +1717,8 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelGet().then(channelNumber => {
-                            expect(channelNumber).to.be.within(k.OBCIRadioChannelMin,k.OBCIRadioChannelMax);
+                        ourBoard.radioChannelGet().then(res => {
+                            expect(res.channelNumber).to.be.within(k.OBCIRadioChannelMin,k.OBCIRadioChannelMax);
                             done();
                         }).catch(err => done(err));
                     });
@@ -1734,11 +1734,7 @@ describe('openbci-sdk',function() {
             ourBoard.connect(k.OBCISimulatorPortName)
                 .then(() => {
                     ourBoard.once('ready', () => {
-                        ourBoard.radioChannelGet().then(res => {
-                            expect(res.channelNumber).to.be.within(k.OBCIRadioChannelMin,k.OBCIRadioChannelMax);
-                            expect(res.err).to.not.be.undefined;
-                            done();
-                        }).catch(err => done(err));
+                        ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
         });

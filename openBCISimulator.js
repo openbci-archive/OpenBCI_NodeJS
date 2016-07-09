@@ -71,9 +71,9 @@ function OpenBCISimulatorFactory() {
         this.synced = false;
         // Buffers
         this.buffer = new Buffer(500);
-        this.eotBuf = new Buffer("$$$");
         // Numbers
         this.channelNumber = 1;
+        this.pollTime = 80;
         this.sampleNumber = -1; // So the first sample is 0
         // Objects
         this.time = {
@@ -141,9 +141,11 @@ function OpenBCISimulatorFactory() {
                         this.emit('data', new Buffer(`Total Elapsed Time: ${now() - this.sd.startTime} ms\n`));
                         this.emit('data', new Buffer(`Max write time: ${Math.random()*500} us\n`));
                         this.emit('data', new Buffer(`Min write time: ${Math.random()*200} us\n`));
-                        this.emit('data', new Buffer(`Overruns: 0\n$$$`));
+                        this.emit('data', new Buffer(`Overruns: 0\n`));
+                        this._printEOT();
                     } else {
-                        this.emit('data', new Buffer('No open file to close\n$$$'));
+                        this.emit('data', new Buffer('No open file to close\n'));
+                        this._printEOT();
                     }
                 }
                 this.SDLogActive = false;
@@ -218,77 +220,109 @@ function OpenBCISimulatorFactory() {
         this.emit('data',timeSyncSetPacket);
     };
 
+    OpenBCISimulator.prototype._printEOT = function () {
+        this.emit('data', new Buffer("$$$"));
+    };
+
+    OpenBCISimulator.prototype._printFailure = function () {
+        this.emit('data', new Buffer("Failure: "));
+    };
+
+    OpenBCISimulator.prototype._printSuccess = function () {
+        this.emit('data', new Buffer("Success: "));
+    };
+
+    OpenBCISimulator.prototype._printValidatedCommsTimeout = function () {
+        this._printFailure();
+        this.emit('data', new Buffer("Communications timeout - Device failed to poll Host"));
+        this._printEOT();
+    };
+
     OpenBCISimulator.prototype._processPrivateRadioMessage = function(dataBuffer) {
         switch (dataBuffer[1]) {
             case k.OBCIRadioCmdChannelGet:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     if (!this.options.boardFailure) {
-                        this.emit('data', new Buffer("Success: Channel changed to 0x"));
+                        this._printSuccess();
+                        this.emit('data', new Buffer(`Host and Device on Channel Number ${this.channelNumber}`));
                         this.emit('data', new Buffer([this.channelNumber]));
-                        this.emit('data', this.eotBuf);
-                    } else {
-                        this.emit('data', new Buffer("Failure: No Board communications; Dongle on channel number: 0x"));
+                        this._printEOT();
+                    } else if (!this.serialPortFailure) {
+                        this._printFailure();
+                        this.emit('data', new Buffer(`Host on Channel Number ${this.channelNumber}`));
                         this.emit('data', new Buffer([this.channelNumber]));
-                        this.emit('data', this.eotBuf);
+                        this._printEOT();
                     }
                 }
                 break;
             case k.OBCIRadioCmdChannelSet:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     if (!this.options.boardFailure) {
-                        this.channelNumber = dataBuffer[2];
-                        this.emit('data', new Buffer("Success: Channel changed to 0x"));
-                        this.emit('data', new Buffer([this.channelNumber]));
-                        this.emit('data', this.eotBuf);
-                    } else {
-                        this.emit('data', new Buffer("Failure: No communications from Board. Is your Board on the right channel? Is your Board powered up?"));
-                        this.emit('data', this.eotBuf);
-                    }
-                }
-                break;
-            case k.OBCIRadioCmdPollTimeSet:
-                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
-                    if (!this.options.boardFailure) {
-                        this.emit('data', new Buffer("Success: Poll time set"));
-                        this.emit('data', this.eotBuf);
-                    } else {
-                        this.emit('data', new Buffer("Failure: No communications from Board. Is your Board on the right channel? Is your Board powered up?"));
-                        this.emit('data', this.eotBuf);
+                        if (dataBuffer[2] < k.OBCIRadioChannelMax) {
+                            this.channelNumber = dataBuffer[2];
+                            this._printSuccess();
+                            this.emit('data', new Buffer(`Channel Number ${this.channelNumber}`));
+                            this.emit('data', new Buffer([this.channelNumber]));
+                            this._printEOT();
+                        } else {
+                            this._printFailure();
+                            this.emit('data', new Buffer("Verify channel number is less than 25"));
+                            this._printEOT();
+                        }
+                    } else if (!this.serialPortFailure) {
+                       this._printValidatedCommsTimeout();
                     }
                 }
                 break;
             case k.OBCIRadioCmdPollTimeGet:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     if (!this.options.boardFailure) {
-                        this.emit('data', new Buffer("Success: Poll Time 0x"));
-                        this.emit('data', new Buffer([70]));
-                        this.emit('data', this.eotBuf);
+                        this._printSuccess();
+                        this.emit('data', new Buffer(`Poll Time ${this.pollTime}`));
+                        this.emit('data', new Buffer([this.pollTime]));
+                        this._printEOT();
                     } else {
-                        this.emit('data', new Buffer("Failure: Could not get poll time"));
-                        this.emit('data', this.eotBuf);
+                        this._printValidatedCommsTimeout();
+                    }
+                }
+                break;
+            case k.OBCIRadioCmdPollTimeSet:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (!this.options.boardFailure) {
+                        this.pollTime = dataBuffer[2];
+                        this._printSuccess();
+                        this.emit('data', new Buffer(`Poll Time ${this.pollTime}`));
+                        this.emit('data', new Buffer([this.pollTime]));
+                        this._printEOT();
+                    } else {
+                        this._printValidatedCommsTimeout();
                     }
                 }
                 break;
             case k.OBCIRadioCmdBaudRateSetDefault:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
-                    this.emit('data', new Buffer("Success: Switch your baud rate to 115200"));
-                    this.emit('data', this.eotBuf);
+                    this._printSuccess();
+                    this.emit('data', new Buffer("Switch your baud rate to 115200"));
+                    this._printEOT();
                 }
                 break;
             case k.OBCIRadioCmdBaudRateSetFast:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
-                    this.emit('data', new Buffer("Success: Switch your baud rate to 230400"));
-                    this.emit('data', this.eotBuf);
+                    this._printSuccess();
+                    this.emit('data', new Buffer("Switch your baud rate to 230400"));
+                    this._printEOT();
                 }
                 break;
             case k.OBCIRadioCmdSystemStatus:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     if (!this.options.boardFailure) {
-                        this.emit('data', new Buffer("Success:"));
-                        this.emit('data', this.eotBuf);
+                        this._printSuccess();
+                        this.emit('data', new Buffer("System is Up"));
+                        this._printEOT();
                     } else {
-                        this.emit('data', new Buffer("Failure: System is Down"));
-                        this.emit('data', this.eotBuf);
+                        this._printFailure();
+                        this.emit('data', new Buffer("System is Down"));
+                        this._printEOT();
                     }
                 }
                 break;

@@ -616,19 +616,13 @@ function OpenBCIFactory() {
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
-
-                if (data.byteLength > 5) {
-                    // The channel number is right before the $$$
+                if (openBCISample.isSuccessInBuffer(data)) {
                     resolve({
                         channelNumber : data[data.length - 4],
-                        err:Error(data)
+                        data:data
                     });
-
                 } else {
-                    resolve({
-                        channelNumber : data[0],
-                        err : null
-                    }); // The channel number is in the first byte
+                    reject(`Error [radioChannelGet]: ${data.toString()}`);
                 }
             });
 

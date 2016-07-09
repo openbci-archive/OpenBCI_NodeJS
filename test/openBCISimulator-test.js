@@ -119,11 +119,306 @@ describe('openBCISimulator',function() {
 
     });
     describe("firmwareVersion2",function () {
+        var simulator;
+        beforeEach(() => {
+            simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName,{
+                firmwareVersion: 'v2'
+            });
+        });
+        afterEach(() => {
+            simulator = null;
+        });
+        describe('_processPrivateRadioMessage',function () {
+            describe('OBCIRadioCmdChannelGet',function () {
+                it('should emit success if firmware version 2', done => {
+                    simulator.channelNumber = 0;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            expect(buf[buf.length - 4]).to.equal(0);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
 
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelGet]));
+                });
+                it('should emit failure if board failure and host channel number', done => {
+                    // Turn board failure mode
+                    simulator.options.boardFailure = true;
+                    simulator.channelNumber = 9;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.false;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.true;
+                            expect(buf[buf.length - 4]).to.equal(9);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelGet]));
+                });
+            });
+            describe('OBCIRadioCmdChannelSet',function () {
+                it('should set the channel number if in bounds', done => {
+                    var newChanNum = 20;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            expect(buf[buf.length - 4]).to.equal(newChanNum);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSet,newChanNum]));
+                });
+                it('should not set the channel number if out of bounds', done => {
+                    var newChanNum = 26;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.false;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.true;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSet,newChanNum]));
+                });
+                it('should emit failure if board failure', done => {
+                    // Turn board failure mode
+                    simulator.options.boardFailure = true;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.false;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.true;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSet,7]));
+                });
+            });
+            describe('OBCIRadioCmdPollTimeGet',function () {
+                it('should emit success if firmware version 2 with poll time', done => {
+                    var expectedPollTime = 80;
+                    simulator.pollTime = expectedPollTime;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            expect(buf[buf.length - 4]).to.equal(expectedPollTime);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeGet]));
+                });
+                it('should emit failure if board failure', done => {
+                    // Turn board failure mode
+                    simulator.options.boardFailure = true;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.false;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.true;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeGet]));
+                });
+            });
+            describe('OBCIRadioCmdPollTimeSet',function () {
+                it('should set the poll time if in bounds', done => {
+                    var newPollTime = 20;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            expect(buf[buf.length - 4]).to.equal(newPollTime);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeSet,newPollTime]));
+                });
+                it('should emit failure if board failure', done => {
+                    // Turn board failure mode
+                    simulator.options.boardFailure = true;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.false;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.true;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeSet,7]));
+                });
+            });
+            describe('OBCIRadioCmdBaudRateSetDefault',function () {
+                it('should emit success if firmware version 2 with proper baud rate', done => {
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            var newBaudRateBuf = buf.slice(buf.length - 9, buf.length - 3);
+                            var newBaudRateNum = Number(newBaudRateBuf.toString());
+                            expect(newBaudRateNum).to.equal(k.OBCIRadioBaudRateDefault);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetDefault]));
+                });
+                it('should emit success if board failure', done => {
+                    // Turn board failure mode
+                    simulator.options.boardFailure = true;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetDefault]));
+                });
+            });
+            describe('OBCIRadioCmdBaudRateSetFast',function () {
+                it('should emit success if firmware version 2 with proper baud rate', done => {
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            var newBaudRateBuf = buf.slice(buf.length - 9, buf.length - 3);
+                            var newBaudRateNum = Number(newBaudRateBuf.toString());
+                            expect(newBaudRateNum).to.equal(k.OBCIRadioBaudRateFast);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetFast]));
+                });
+                it('should emit success if board failure', done => {
+                    // Turn board failure mode
+                    simulator.options.boardFailure = true;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetFast]));
+                });
+            });
+            describe('OBCIRadioCmdSystemStatus',function () {
+                it('should emit success if firmware version 2', done => {
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdSystemStatus]));
+                });
+                it('should emit failure if board failure', done => {
+                    // Turn board failure mode
+                    simulator.options.boardFailure = true;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.false;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.true;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdSystemStatus]));
+                });
+            });
+        });
     });
     describe("boardFailure",function () {
 
     });
+
     describe("#sync",function () {
         var simulator;
         beforeEach(done => {
