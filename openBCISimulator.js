@@ -73,6 +73,7 @@ function OpenBCISimulatorFactory() {
         this.buffer = new Buffer(500);
         // Numbers
         this.channelNumber = 1;
+        this.hostChannelNumber = this.channelNumber;
         this.pollTime = 80;
         this.sampleNumber = -1; // So the first sample is 0
         // Objects
@@ -260,6 +261,7 @@ function OpenBCISimulatorFactory() {
                     if (!this.options.boardFailure) {
                         if (dataBuffer[2] < k.OBCIRadioChannelMax) {
                             this.channelNumber = dataBuffer[2];
+                            this.hostChannelNumber = this.channelNumber;
                             this._printSuccess();
                             this.emit('data', new Buffer(`Channel Number ${this.channelNumber}`));
                             this.emit('data', new Buffer([this.channelNumber]));
@@ -271,6 +273,26 @@ function OpenBCISimulatorFactory() {
                         }
                     } else if (!this.serialPortFailure) {
                        this._printValidatedCommsTimeout();
+                    }
+                }
+                break;
+            case k.OBCIRadioCmdChannelSetOverride:
+                if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    if (dataBuffer[2] < k.OBCIRadioChannelMax) {
+                        if (dataBuffer[2] === this.channelNumber) {
+                            this.options.boardFailure = false;
+                        } else {
+                            this.options.boardFailure = true;
+                        }
+                        this.hostChannelNumber = dataBuffer[2];
+                        this._printSuccess();
+                        this.emit('data', new Buffer(`Host override - Channel Number ${this.hostChannelNumber}`));
+                        this.emit('data', new Buffer([this.hostChannelNumber]));
+                        this._printEOT();
+                    } else {
+                        this._printFailure();
+                        this.emit('data', new Buffer("Verify channel number is less than 25"));
+                        this._printEOT();
                     }
                 }
                 break;
@@ -303,14 +325,14 @@ function OpenBCISimulatorFactory() {
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     this._printSuccess();
                     this.emit('data', new Buffer("Switch your baud rate to 115200"));
-                    this._printEOT();
+                    this.emit('data', new Buffer([0x24,0x24,0x24,0xFF])); // The board really does this
                 }
                 break;
             case k.OBCIRadioCmdBaudRateSetFast:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
                     this._printSuccess();
                     this.emit('data', new Buffer("Switch your baud rate to 230400"));
-                    this._printEOT();
+                    this.emit('data', new Buffer([0x24,0x24,0x24,0xFF])); // The board really does this
                 }
                 break;
             case k.OBCIRadioCmdSystemStatus:

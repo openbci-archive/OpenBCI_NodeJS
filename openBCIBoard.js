@@ -251,11 +251,11 @@ function OpenBCIFactory() {
 
             if(this.options.verbose) console.log('Serial port connected');
 
-            boardSerial.on('data',(data) => {
+            boardSerial.on('data',data => {
                 this._processBytes(data);
             });
             this.connected = true;
-            boardSerial.on('open',() => {
+            boardSerial.once('open',() => {
                 var timeoutLength = this.options.simulate ? 50 : 300;
                 if(this.options.verbose) console.log('Serial port open');
                 setTimeout(() => {
@@ -271,12 +271,12 @@ function OpenBCIFactory() {
 
                 },timeoutLength + 250);
             });
-            boardSerial.on('close',() => {
+            boardSerial.once('close',() => {
                 if (this.options.verbose) console.log('Serial Port Closed');
                 this.emit('close')
             });
             /* istanbul ignore next */
-            boardSerial.on('error',(err) => {
+            boardSerial.once('error',(err) => {
                 if (this.options.verbose) console.log('Serial Port Error');
                 this.emit('error',err);
             });
@@ -545,7 +545,7 @@ function OpenBCIFactory() {
      *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
-     * @returns {Number} - The new channel number.
+     * @returns {Promise} - Resolves with the new channel number, rejects with err.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioChannelSet = function(channelNumber) {
@@ -567,6 +567,7 @@ function OpenBCIFactory() {
 
             // Subscribe to the EOT event
             this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
@@ -582,6 +583,53 @@ function OpenBCIFactory() {
 
             // Send the radio channel query command
             this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSet,channelNumber]));
+        });
+    };
+
+    /**
+     * @description Used to query the OpenBCI system for its radio channel number. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves with the new channel number, rejects with err.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioChannelSetHostOverride = function(channelNumber) {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the radio while streaming");
+            if (channelNumber === undefined || channelNumber === null) return reject("Must input a new channel number to switch too!");
+            if (!k.isNumber(channelNumber)) return reject("Must input type Number");
+            if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
+            if (channelNumber < k.OBCIRadioChannelMin) return reject(`New channel number must be greater than ${k.OBCIRadioChannelMin}`);
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                if (this.options.verbose) console.log(`${data.toString()}`);
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    resolve(data[data.length - 4]);
+                } else {
+                    reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSetOverride,channelNumber]));
         });
     };
 
@@ -613,6 +661,7 @@ function OpenBCIFactory() {
 
             // Subscribe to the EOT event
             this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
@@ -659,13 +708,13 @@ function OpenBCIFactory() {
 
             // Subscribe to the EOT event
             this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
 
                 if (openBCISample.isSuccessInBuffer(data)) {
-                    var pollTime = data[data.length - 3];
-                    console.log(`pollTime is ${pollTime}`);
+                    var pollTime = data[data.length - 4];
                     resolve(pollTime);
                 } else {
                     reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
@@ -688,7 +737,7 @@ function OpenBCIFactory() {
      *      function should resolve.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
-     * @returns {Promise} - With a {Buffer} that contains the success message.
+     * @returns {Promise} - Resolves with new poll time, rejects with error message.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioPollTimeSet = function (pollTime) {
@@ -710,12 +759,13 @@ function OpenBCIFactory() {
 
             // Subscribe to the EOT event
             this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
 
                 if (openBCISample.isSuccessInBuffer(data)) {
-                    resolve(data);
+                    resolve(data[data.length - 4]); // Ditch the eot $$$
                 } else {
                     reject(`Error [radioPollTimeSet]: ${data}`); // The channel number is in the first byte
                 }
@@ -759,10 +809,18 @@ function OpenBCIFactory() {
 
             // Subscribe to the EOT event
             this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
-                var newBaudRateBuf = data.slice(data.length - 9, data.length - 3);
+                var eotBuf = new Buffer('$$$');
+                var newBaudRateBuf;
+                for (var i = data.length; i > 3; i--) {
+                    if (bufferEqual(data.slice(i - 3, i),eotBuf)) {
+                        newBaudRateBuf = data.slice(i - 9, i - 3);
+                        break;
+                    }
+                }
                 var newBaudRateNum = Number(newBaudRateBuf.toString());
                 if (newBaudRateNum !== k.OBCIRadioBaudRateDefault && newBaudRateNum !== k.OBCIRadioBaudRateFast) {
                     return reject("Error parse mismatch, restart your system!");
@@ -770,22 +828,15 @@ function OpenBCIFactory() {
                 if (openBCISample.isSuccessInBuffer(data)) {
                     // Change the sample rate here
                     if (this.options.simulate === false) {
-                        if (this.serial.isOpen()) {
-                            this.serial.close(() => {
-                                this.serial = new serialPort.SerialPort(this.portName, {
-                                    baudRate: newBaudRateNum
-                                },(err) => {
-                                    if (err) {
-                                        this.connected = false;
-                                        reject(err);
-                                    } else {
-                                        this.connected = true;
-                                        this.options.baudRate = newBaudRateNum;
-                                        resolve(newBaudRateNum);
-                                    }
-                                });
-                            });
-                        }
+                        this.serial.update({
+                            baudRate: newBaudRateNum
+                        }, err => {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve(newBaudRateNum);
+                            }
+                        });
                     } else {
                         resolve(newBaudRateNum);
                     }
@@ -834,6 +885,8 @@ function OpenBCIFactory() {
                 // Remove the timeout!
                 clearTimeout(badCommsTimeout);
                 badCommsTimeout = null;
+
+                if (this.options.verbose) console.log(data.toString());
 
                 if (openBCISample.isSuccessInBuffer(data)) {
                     resolve(true);

@@ -1552,7 +1552,6 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-
         it("should reject if not firmware version 2", done => {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
@@ -1565,7 +1564,6 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-
         it("should reject if a number is not sent as input", done => {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
@@ -1578,7 +1576,6 @@ describe('openbci-sdk',function() {
                         ourBoard.radioChannelSet('1').should.be.rejected.and.notify(done);
                     });
                 }).catch(err => done(err));
-
         });
 
         it("should reject if no channel number is presented as arg", done => {
@@ -1656,7 +1653,114 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
     });
-
+    describe('#radioChannelSetHostOverride', function() {
+        afterEach(done => {
+            if (ourBoard.connected) {
+                ourBoard.disconnect().then(() => {
+                    done();
+                }).catch(() => done);
+            } else {
+                done()
+            }
+        });
+        it("should not change the channel number if not connected", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.radioChannelSetHostOverride().should.be.rejected.and.notify(done);
+        });
+        it("should reject if streaming", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.streamStart()
+                            .then(() => {
+                                ourBoard.radioChannelSetHostOverride(1).then(() => {
+                                    done("should have rejected");
+                                }).catch(() => {
+                                    done(); // Test pass
+                                })
+                            }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+        it("should reject if a number is not sent as input", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioChannelSetHostOverride('1').should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+        it("should reject if no channel number is presented as arg", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioChannelSetHostOverride().should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+        it("should reject if the requested new channel number is lower than 0", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioChannelSetHostOverride(-1).should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+        it("should reject if the requested new channel number is higher than 25", done => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioChannelSetHostOverride(26).should.be.rejected.and.notify(done);
+                    });
+                }).catch(err => done(err));
+        });
+        it("should change the channel if connected, not steaming, and using firmware version 2+",done => {
+            var newChannelNumber = 2;
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose : true,
+                simulate : true,
+                simulatorFirmwareVersion: 'v2'
+            });
+            ourBoard.connect(k.OBCISimulatorPortName)
+                .then(() => {
+                    ourBoard.once('ready', () => {
+                        ourBoard.radioChannelSetHostOverride(newChannelNumber).then(channelNumber => {
+                            expect(channelNumber).to.be.equal(newChannelNumber);
+                            done();
+                        }).catch(err => done(err));
+                    });
+                }).catch(err => done(err));
+        });
+    });
     describe('#radioChannelGet', function() {
         afterEach(done => {
             if (ourBoard.connected) {
@@ -2150,10 +2254,9 @@ describe('openbci-sdk',function() {
     });
 
     describe('#radioTestsWithBoard',function() {
-        this.timeout(2000);
+        this.timeout(3000);
         before(done => {
             ourBoard = new openBCIBoard.OpenBCIBoard({
-                simulate: !realBoard,
                 verbose: true
             });
             ourBoard.connect(masterPortName).catch(err => done(err));
@@ -2175,28 +2278,104 @@ describe('openbci-sdk',function() {
             // Don't test if not using real board
             if (!realBoard) return done();
             // The channel number should be between 0 and 25. Those are hard limits.
-            ourBoard.radioChannelGet().should.eventually.be.between(0,25);
+            ourBoard.radioChannelGet().then(res => {
+                expect(res.channelNumber).to.be.within(0,25);
+                done();
+            }).catch(err => done(err));
+        });
+        it("should be able to set the channel to 1", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioChannelSet(1).then(channelNumber => {
+                expect(channelNumber).to.equal(1);
+                done();
+            }).catch(err => done(err));
+        });
+        it("should be able to set the channel to 2", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioChannelSet(2).then(channelNumber => {
+                expect(channelNumber).to.equal(2);
+                done();
+            }).catch(err => done(err));
+        });
+        it("should be able to set the channel to 25", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioChannelSet(25).then(channelNumber => {
+                expect(channelNumber).to.equal(25);
+                done();
+            }).catch(err => done(err));
+        });
+        it("should be able to set the channel to 0", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            ourBoard.radioChannelSet(0).then(channelNumber => {
+                expect(channelNumber).to.equal(0);
+                done();
+            }).catch(err => done(err));
+        });
+        it("should be able to override host channel number, verify system is down, set the host back and verify system is up", done => {
+            // Don't test if not using real board
+            if (!realBoard) return done();
+            var systemChanNumber = 0;
+            var newChanNum = 0;
+            // Get the current system channel
+            ourBoard.radioChannelGet()
+                .then(res => {
+                    // Store it
+                    systemChanNumber = res.channelNumber;
+                    if (systemChanNumber == 25) {
+                        newChanNum = 24;
+                    } else {
+                        newChanNum = systemChanNumber + 1;
+                    }
+                    // Call to change just the host
+                    return ourBoard.radioChannelSetHostOverride(newChanNum);
+                })
+                .then(newChanNumActual => {
+                    expect(newChanNumActual).to.equal(newChanNum);
+                    return ourBoard.radioSystemStatusGet();
+                })
+                .then(isUp => {
+                    expect(isUp).to.be.false;
+                    return ourBoard.radioChannelSetHostOverride(systemChanNumber); // Set back to good
+                })
+                .then(newChanNumActual => {
+                    // Verify we set it back to normal
+                    expect(newChanNumActual).to.equal(systemChanNumber);
+                    return ourBoard.radioSystemStatusGet();
+                })
+                .then(isUp => {
+                    expect(isUp).to.be.true;
+                    done();
+                })
+                .catch(err => done(err));
         });
         it("should be able to get the poll time", done => {
             // Don't test if not using real board
             if (!realBoard) return done();
-            ourBoard.radioPollTimeGet().should.eventually.be.greaterThan(0);
+            ourBoard.radioPollTimeGet().should.eventually.be.greaterThan(0).and.notify(done);
         });
         it("should be able to set the poll time", done => {
             // Don't test if not using real board
             if (!realBoard) return done();
-            ourBoard.radioPollTimeSet(80).should.become(80);
+            ourBoard.radioPollTimeSet(80).should.become(80).and.notify(done);
         });
         it("should be able to change to default baud rate", done => {
             // Don't test if not using real board
             if (!realBoard) return done();
-            ourBoard.radioBaudRateSet('default').should.become(115200);
+            ourBoard.radioBaudRateSet('default').should.become(115200).and.notify(done);
         });
         it("should be able to change to fast baud rate", done => {
             // Don't test if not using real board
             if (!realBoard) return done();
-            ourBoard.radioBaudRateSet('fast').should.become(230400);
-
+            ourBoard.radioBaudRateSet('fast').then(newBaudRate => {
+                expect(newBaudRate).to.equal(230400);
+                return ourBoard.radioBaudRateSet('default');
+            }).then(() => {
+                done();
+            }).catch(err => done(err));
         });
         it("should be able to set the system status", done => {
             // Don't test if not using real board

@@ -179,6 +179,8 @@ describe('openBCISimulator',function() {
                             expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
                             expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
                             expect(buf[buf.length - 4]).to.equal(newChanNum);
+                            expect(simulator.channelNumber).to.equal(newChanNum);
+                            expect(simulator.hostChannelNumber).to.equal(newChanNum);
                             simulator.removeListener('data',dataEmit);
                             done();
                         }
@@ -221,6 +223,72 @@ describe('openBCISimulator',function() {
 
                     simulator.on('data',dataEmit);
                     simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSet,7]));
+                });
+            });
+            describe('OBCIRadioCmdChannelSetOverride',function () {
+                it('should change just the hosts channel number and not the systems channel number and force a board comms failure', done => {
+                    var systemChannelNumber = 0;
+                    var newHostChannelNumber = 1;
+                    simulator.channelNumber = systemChannelNumber;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            expect(buf[buf.length - 4]).to.equal(newHostChannelNumber);
+                            expect(simulator.options.boardFailure).to.be.true;
+                            expect(simulator.channelNumber).to.equal(systemChannelNumber);
+                            expect(simulator.hostChannelNumber).to.equal(newHostChannelNumber);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSetOverride,newHostChannelNumber]));
+                });
+                it('should change just the hosts channel number and not the systems channel number and fix a board failure', done => {
+                    var systemChannelNumber = 0;
+                    var oldHostChannelNumber = 1;
+                    simulator.channelNumber = systemChannelNumber;
+                    simulator.hostChannelNumber = oldHostChannelNumber;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
+                            expect(buf[buf.length - 4]).to.equal(systemChannelNumber);
+                            expect(simulator.options.boardFailure).to.be.false;
+                            expect(simulator.channelNumber).to.equal(systemChannelNumber);
+                            expect(simulator.hostChannelNumber).to.equal(systemChannelNumber);
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSetOverride,systemChannelNumber]));
+                });
+                it('should not set the channel number if out of bounds', done => {
+                    var newChanNum = 26;
+                    var buf = new Buffer(0);
+                    var dataEmit = data => {
+                        buf = Buffer.concat([buf,data]);
+                        if (openBCISample.doesBufferHaveEOT(buf)) {
+                            expect(openBCISample.isSuccessInBuffer(buf)).to.be.false;
+                            expect(openBCISample.isFailureInBuffer(buf)).to.be.true;
+                            simulator.removeListener('data',dataEmit);
+                            done();
+                        }
+                    };
+
+                    simulator.on('data',dataEmit);
+
+                    simulator._processPrivateRadioMessage(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSetOverride,newChanNum]));
                 });
             });
             describe('OBCIRadioCmdPollTimeGet',function () {
@@ -307,7 +375,14 @@ describe('openBCISimulator',function() {
                         if (openBCISample.doesBufferHaveEOT(buf)) {
                             expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
                             expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
-                            var newBaudRateBuf = buf.slice(buf.length - 9, buf.length - 3);
+                            var eotBuf = new Buffer('$$$');
+                            var newBaudRateBuf;
+                            for (var i = buf.length; i > 3; i--) {
+                                if (bufferEqual(buf.slice(i - 3, i),eotBuf)) {
+                                    newBaudRateBuf = buf.slice(i - 9, i - 3);
+                                    break;
+                                }
+                            }
                             var newBaudRateNum = Number(newBaudRateBuf.toString());
                             expect(newBaudRateNum).to.equal(k.OBCIRadioBaudRateDefault);
                             simulator.removeListener('data',dataEmit);
@@ -346,7 +421,14 @@ describe('openBCISimulator',function() {
                         if (openBCISample.doesBufferHaveEOT(buf)) {
                             expect(openBCISample.isSuccessInBuffer(buf)).to.be.true;
                             expect(openBCISample.isFailureInBuffer(buf)).to.be.false;
-                            var newBaudRateBuf = buf.slice(buf.length - 9, buf.length - 3);
+                            var eotBuf = new Buffer("$$$");
+                            var newBaudRateBuf;
+                            for (var i = buf.length; i > 3; i--) {
+                                if (bufferEqual(buf.slice(i - 3, i),eotBuf)) {
+                                    newBaudRateBuf = buf.slice(i - 9, i - 3);
+                                    break;
+                                }
+                            }
                             var newBaudRateNum = Number(newBaudRateBuf.toString());
                             expect(newBaudRateNum).to.equal(k.OBCIRadioBaudRateFast);
                             simulator.removeListener('data',dataEmit);
