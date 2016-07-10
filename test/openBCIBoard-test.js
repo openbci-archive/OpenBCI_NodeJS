@@ -372,6 +372,8 @@ describe('openbci-sdk',function() {
         });
     });
 
+
+
     describe('#boardTests', function() {
         this.timeout(2000);
         before(function() {
@@ -2474,6 +2476,81 @@ describe('openbci-sdk',function() {
         });
     });
 
+});
+
+describe('#daisy', function () {
+    var ourBoard;
+    this.timeout(4000);
+    before(function (done) {
+        ourBoard = new openBCIBoard.OpenBCIBoard({
+            verbose:true,
+            simulatorFirmwareVersion: 'v2',
+            simulatorDaisyModuleAttached: true,
+        });
+
+        var useSim = () => {
+            ourBoard.simulatorEnable()
+                .then(() => {
+                    console.log(`has daisy module: ${ourBoard.options.simulatorDaisyModuleAttached}`);
+                    return ourBoard.connect(k.OBCISimulatorPortName);
+                })
+                .then(() => {
+                    return ourBoard.softReset();
+                })
+                .catch(err => console.log(err));
+        };
+        ourBoard.autoFindOpenBCIBoard()
+            .then(portName => {
+                return setTimeout(() => {
+                    console.log('Issuing connect');
+                    ourBoard.connect(portName);
+                },500);
+            })
+            .catch((err) => {
+                useSim();
+            })
+            .then(() => {
+                //console.log('connected');
+            })
+            .catch(err => {
+                console.log('Error: ' + err);
+            });
+
+
+        ourBoard.once('ready', () => {
+            done();
+        });
+    });
+    after(done => {
+        if (ourBoard.connected) {
+            ourBoard.disconnect().then(() => {
+                done();
+            }).catch(() => done);
+        } else {
+            done();
+        }
+    });
+    it("can get samples with channel array of length 16", done => {
+        var numberOfSamples = 130;
+        var sampleCount = 0;
+        var samp = sample => {
+            console.log(`sample`, sample);
+            // expect(sample.sampleNumber).to.equal(sampleCount);
+            expect(sample.channelData.length).to.equal(k.OBCINumberOfChannelsDaisy);
+            if (sampleCount <= numberOfSamples) {
+                sampleCount++;
+            } else {
+                ourBoard.disconnect()
+                    .then(() => {
+                        done();
+                    });
+                ourBoard.removeListener('sample',samp);
+            }
+        };
+        ourBoard.on('sample',samp);
+        ourBoard.streamStart().catch(err => done);
+        // Attached the emitted
+    });
 });
 
 // Need a better test

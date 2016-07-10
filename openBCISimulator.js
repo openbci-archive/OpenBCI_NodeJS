@@ -50,11 +50,7 @@ function OpenBCISimulatorFactory() {
         if (options.sampleRate) {
             opts.sampleRate = options.sampleRate;
         } else {
-            if (opts.daisy) {
-                opts.sampleRate = k.OBCISampleRate125;
-            } else {
-                opts.sampleRate = k.OBCISampleRate250;
-            }
+            opts.sampleRate = k.OBCISampleRate250;
         }
         opts.serialPortFailure = options.serialPortFailure || _options.serialPortFailure;
         opts.verbose = options.verbose || _options.verbose;

@@ -50,7 +50,7 @@ describe('openBCISimulator',function() {
             simulator = new openBCISimulator.OpenBCISimulator(portName,{
                 daisy: true
             });
-            expect(simulator.options.sampleRate).to.equal(125);
+            expect(simulator.options.sampleRate).to.equal(250); // produce samples at same rate
         });
         it('should use provided sample rate even if daisy is true',function () {
             simulator = new openBCISimulator.OpenBCISimulator(portName,{
