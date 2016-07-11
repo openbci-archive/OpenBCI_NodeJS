@@ -35,7 +35,7 @@ describe('openbci-sdk',function() {
                 done();
             })
     });
-    after(done => {
+    after(function(done) {
         if(ourBoard["connected"]) {
             ourBoard.disconnect()
                 .then(() => {
@@ -336,7 +336,7 @@ describe('openbci-sdk',function() {
                 done();
             });
         });
-        it('should be able to propagate constructor options to simulator', done => {
+        it('should be able to propagate constructor options to simulator', function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true,
                 simulate: true,
@@ -375,7 +375,7 @@ describe('openbci-sdk',function() {
 
 
     describe('#boardTests', function() {
-        this.timeout(2000);
+        this.timeout(3000);
         before(function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 simulate: !realBoard,
@@ -396,7 +396,7 @@ describe('openbci-sdk',function() {
             if (spy) spy.reset();
         });
         describe('#connect/disconnect/streamStart/streamStop', function () {
-            it('sends a stop streaming command before disconnecting', function(done) {
+            it('gets the ready signal from the board and sends a stop streaming command before disconnecting', function(done) {
                 //spy = sinon.spy(ourBoard,"_writeAndDrain");
 
                 ourBoard.connect(masterPortName).catch(err => done(err));
@@ -405,7 +405,6 @@ describe('openbci-sdk',function() {
                     ourBoard.streamStart().catch(err => done(err)); // start streaming
 
                     ourBoard.once('sample',(sample) => { // wait till we get a sample
-                        //console.log('got a sample');
                         ourBoard.disconnect().then(() => { // call disconnect
                             //console.log('Device is streaming: ' + ourBoard.streaming ? 'true' : 'false');
                             setTimeout(() => {
@@ -419,24 +418,6 @@ describe('openbci-sdk',function() {
                     });
                 });
             });
-            it('gets the ready ($$$) signal from board', function(done) {
-                ourBoard.connect(masterPortName).catch(err => done(err));
-                // for the ready signal test
-                ourBoard.once('ready', function() {
-                    //console.log('got here');
-                    ourBoard.disconnect()
-                        .then(() => {
-                            //console.log('disconnected');
-                            var conditionalTimeout = realBoard ? 300 : 0;
-                            setTimeout(() => {
-                                done();
-                            }, conditionalTimeout);
-                        }).catch(err => {
-                            console.log(err);
-                            done(err);
-                        });
-                });
-            });
             it('rawDataPacket is emitted', function(done) {
                 ourBoard.connect(masterPortName).catch(err => done(err));
                 // for the ready signal test
@@ -444,8 +425,9 @@ describe('openbci-sdk',function() {
                     ourBoard.streamStart().catch(err => done(err)); // start streaming
 
                     ourBoard.once('rawDataPacket',(rawDataPacket) => { // wait till we get a raw data packet
-                        console.log('got a sample');
-                        done();
+                        ourBoard.disconnect().then(() => { // call disconnect
+                            done();
+                        }).catch(err => done(err));
                     });
                 });
             });
@@ -482,7 +464,7 @@ describe('openbci-sdk',function() {
         });
         describe('#sdStart',function() {
             before(function(done) {
-                ourBoard.connect(masterPortName)
+                ourBoard.connect(k.OBCISimulatorPortName)
                     .then(() => {
                         ourBoard.once('ready',done);
                     })
@@ -566,7 +548,7 @@ describe('openbci-sdk',function() {
         });
         describe('#sdStop',function() {
             before(function(done) {
-                ourBoard.connect(masterPortName).catch(err => done(err));
+                ourBoard.connect(k.OBCISimulatorPortName).catch(err => done(err));
                 ourBoard.once('ready',done);
             });
             it('can stop logging with sd',function(done) {
@@ -1111,7 +1093,7 @@ describe('openbci-sdk',function() {
                 ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
                 // spy.reset();
             });
-            it("should call to find the time sync set character in the buffer", done => {
+            it("should call to find the time sync set character in the buffer", function(done) {
                 // Verify the log event is called
                 var buf = new Buffer(",");
                 // Call the processBytes function
@@ -1130,7 +1112,7 @@ describe('openbci-sdk',function() {
                 // Send the buffer in
                 ourBoard._processBytes(buf1);
             });
-            it("should clear the buffer after a time sync set packet", done => {
+            it("should clear the buffer after a time sync set packet", function(done) {
                 // Verify the log event is called
                 var buf = new Buffer(",");
                 // Call the processBytes function
@@ -1161,7 +1143,7 @@ describe('openbci-sdk',function() {
                 // expect(ourBoard.buffer).to.be.null;
                 // ourBoard.buffer.length.should.equal(0);
             });
-            it("should find time sync and emit two samples", done => {
+            it("should find time sync and emit two samples", function(done) {
 
                 var buf1 = openBCISample.samplePacket(250);
                 var buf2 = new Buffer(",");
@@ -1201,7 +1183,7 @@ describe('openbci-sdk',function() {
             before(() => {
                 ourBoard.curParsingMode = k.OBCIParsingNormal;
             });
-            it("should emit a sample when inserted",done => {
+            it("should emit a sample when inserted",function(done) {
                 var expectedSampleNumber = 0;
                 var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
 
@@ -1216,7 +1198,7 @@ describe('openbci-sdk',function() {
                 // Now call the function which should call the "sample" event
                 ourBoard._processBytes(buf1);
             });
-            it("should get three packets even if one was sent in the last data emit", done => {
+            it("should get three packets even if one was sent in the last data emit", function(done) {
                 var expectedSampleNumber = 0;
                 var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
                 var buf2 = openBCISample.samplePacketReal(expectedSampleNumber+1);
@@ -1252,7 +1234,7 @@ describe('openbci-sdk',function() {
                 // Now call the function which should call the "sample" event
                 ourBoard._processBytes(dataBuf);
             });
-            it("should keep extra data in the buffer", done => {
+            it("should keep extra data in the buffer", function(done) {
                 var expectedSampleNumber = 0;
                 var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
                 var buf2 = openBCISample.samplePacketReal(expectedSampleNumber+1);
@@ -1294,7 +1276,7 @@ describe('openbci-sdk',function() {
                 // Now verify there is data still in the global buffer by calling _processBytes on the last half
                 ourBoard._processBytes(bufLastHalf);
             });
-            it("should throw out old data if it is incomplete and add to badPackets count",done => {
+            it("should throw out old data if it is incomplete and add to badPackets count",function(done) {
                 // Some how this packet go messed up and lodged in... This is the worst case, that the buffer has
                 //  an incomplete packet.
                 ourBoard.buffer = new Buffer([0xA0,0,0,0,0,0,0,0,0,0,0,0xC0]);
@@ -1335,7 +1317,7 @@ describe('openbci-sdk',function() {
             beforeEach(() => {
                 ourBoard.curParsingMode = k.OBCIParsingEOT;
             });
-            it("should emit the 'eot' event",done => {
+            it("should emit the 'eot' event",function(done) {
                 var buf = new Buffer("Tacos are amazing af$$$");
 
                 var eotEvent = data => {
@@ -1348,7 +1330,7 @@ describe('openbci-sdk',function() {
 
                 ourBoard._processBytes(buf);
             });
-            it("should emit the 'eot' event even if stuff comes in two serial flushes",done => {
+            it("should emit the 'eot' event even if stuff comes in two serial flushes",function(done) {
                 var buf1 = new Buffer("Tacos are ");
                 var buf2 = new Buffer("amazing af$$$");
 
@@ -1422,7 +1404,7 @@ describe('openbci-sdk',function() {
             // Check to make sure the variable is stored
             expect(ourBoard._lowerChannelsSampleObject).to.equal(oddSample);
         });
-        it("should emit a sample on even sample if odd was before", done => {
+        it("should emit a sample on even sample if odd was before", function(done) {
             var oddSample = randomSampleGenerator(0); // Previous was 0, so the next one will be 1 (odd)
             var evenSample = randomSampleGenerator(1); // Previous was 1, so the next one will be 2 (even)
 
@@ -1446,7 +1428,7 @@ describe('openbci-sdk',function() {
                 done("didn't emit a sample");
             }, 5); // 5ms should be plenty of time
         });
-        it("should not emit a sample if there is no lower sample object and this is an even sample number", done => {
+        it("should not emit a sample if there is no lower sample object and this is an even sample number", function(done) {
             var evenSample = randomSampleGenerator(1); // Previous was 1, so the next one will be 2 (even)
 
             // The function to be called when sample event is fired
@@ -1471,7 +1453,7 @@ describe('openbci-sdk',function() {
                 done(); // Test pass here
             }, 5); // 5ms should be plenty of time
         });
-        it("should not emit a sample if back to back odd samples", done => {
+        it("should not emit a sample if back to back odd samples", function(done) {
             var oddSample1 = randomSampleGenerator(0); // Previous was 0, so the next one will be 1 (odd)
             var oddSample2 = randomSampleGenerator(2); // Previous was 0, so the next one will be 1 (odd)
 
@@ -1515,7 +1497,7 @@ describe('openbci-sdk',function() {
     });
 
     describe('#radioChannelSet', function() {
-        afterEach(done => {
+        afterEach(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -1525,7 +1507,7 @@ describe('openbci-sdk',function() {
             }
         });
 
-        it("should not change the channel number if not connected", done => {
+        it("should not change the channel number if not connected", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1534,7 +1516,7 @@ describe('openbci-sdk',function() {
             ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
         });
 
-        it("should reject if streaming", done => {
+        it("should reject if streaming", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1554,7 +1536,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should reject if not firmware version 2", done => {
+        it("should reject if not firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -1566,7 +1548,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should reject if a number is not sent as input", done => {
+        it("should reject if a number is not sent as input", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1580,7 +1562,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should reject if no channel number is presented as arg", done => {
+        it("should reject if no channel number is presented as arg", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1594,7 +1576,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should reject if the requested new channel number is lower than 0", done => {
+        it("should reject if the requested new channel number is lower than 0", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1608,7 +1590,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should reject if the requested new channel number is higher than 25", done => {
+        it("should reject if the requested new channel number is higher than 25", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1622,7 +1604,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should not change the channel if the board is not communicating with the host", done => {
+        it("should not change the channel if the board is not communicating with the host", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1637,7 +1619,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should change the channel if connected, not steaming, and using firmware version 2+",done => {
+        it("should change the channel if connected, not steaming, and using firmware version 2+",function(done) {
             var newChannelNumber = 2;
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
@@ -1656,7 +1638,7 @@ describe('openbci-sdk',function() {
         });
     });
     describe('#radioChannelSetHostOverride', function() {
-        afterEach(done => {
+        afterEach(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -1665,7 +1647,7 @@ describe('openbci-sdk',function() {
                 done()
             }
         });
-        it("should not change the channel number if not connected", done => {
+        it("should not change the channel number if not connected", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1673,7 +1655,7 @@ describe('openbci-sdk',function() {
             });
             ourBoard.radioChannelSetHostOverride().should.be.rejected.and.notify(done);
         });
-        it("should reject if streaming", done => {
+        it("should reject if streaming", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1693,7 +1675,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should reject if a number is not sent as input", done => {
+        it("should reject if a number is not sent as input", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1706,7 +1688,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should reject if no channel number is presented as arg", done => {
+        it("should reject if no channel number is presented as arg", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1719,7 +1701,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should reject if the requested new channel number is lower than 0", done => {
+        it("should reject if the requested new channel number is lower than 0", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1732,7 +1714,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should reject if the requested new channel number is higher than 25", done => {
+        it("should reject if the requested new channel number is higher than 25", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1745,7 +1727,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should change the channel if connected, not steaming, and using firmware version 2+",done => {
+        it("should change the channel if connected, not steaming, and using firmware version 2+",function(done) {
             var newChannelNumber = 2;
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
@@ -1764,7 +1746,7 @@ describe('openbci-sdk',function() {
         });
     });
     describe('#radioChannelGet', function() {
-        afterEach(done => {
+        afterEach(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -1774,14 +1756,14 @@ describe('openbci-sdk',function() {
             }
         });
 
-        it("should not query if not connected", done => {
+        it("should not query if not connected", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
             });
             ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
         });
-        it("should not query if streaming", done => {
+        it("should not query if streaming", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -1801,7 +1783,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should not query if not firmware version 2", done => {
+        it("should not query if not firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -1814,7 +1796,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should query if firmware version 2", done => {
+        it("should query if firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1830,7 +1812,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should get message even if the board is not communicating with dongle", done => {
+        it("should get message even if the board is not communicating with dongle", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1847,7 +1829,7 @@ describe('openbci-sdk',function() {
     });
 
     describe("#radioPollTimeSet",function() {
-        afterEach(done => {
+        afterEach(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -1856,7 +1838,7 @@ describe('openbci-sdk',function() {
                 done()
             }
         });
-        it("should not change the channel number if not connected", done => {
+        it("should not change the channel number if not connected", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1865,7 +1847,7 @@ describe('openbci-sdk',function() {
             ourBoard.radioPollTimeSet().should.be.rejected.and.notify(done);
         });
 
-        it("should reject if streaming", done => {
+        it("should reject if streaming", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1886,7 +1868,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should reject if not firmware version 2", done => {
+        it("should reject if not firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -1899,7 +1881,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should reject if a number is not sent as input", done => {
+        it("should reject if a number is not sent as input", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1914,7 +1896,7 @@ describe('openbci-sdk',function() {
 
         });
 
-        it("should reject if no poll time is presented as arg", done => {
+        it("should reject if no poll time is presented as arg", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1928,7 +1910,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should reject if the requested new poll time is lower than 0", done => {
+        it("should reject if the requested new poll time is lower than 0", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1942,7 +1924,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should reject if the requested new poll time is higher than 255", done => {
+        it("should reject if the requested new poll time is higher than 255", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1956,7 +1938,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should not change the poll time if the board is not communicating with the host", done => {
+        it("should not change the poll time if the board is not communicating with the host", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -1971,7 +1953,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
 
-        it("should change the poll time if connected, not steaming, and using firmware version 2+",done => {
+        it("should change the poll time if connected, not steaming, and using firmware version 2+",function(done) {
             var newPollTime = 69;
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
@@ -1988,7 +1970,7 @@ describe('openbci-sdk',function() {
     });
 
     describe('#radioPollTimeGet', function() {
-        afterEach(done => {
+        afterEach(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -1998,14 +1980,14 @@ describe('openbci-sdk',function() {
             }
         });
 
-        it("should not query if not connected", done => {
+        it("should not query if not connected", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
             });
             ourBoard.radioPollTimeGet().should.be.rejected.and.notify(done);
         });
-        it("should not query if streaming", done => {
+        it("should not query if streaming", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -2025,7 +2007,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should not query if not firmware version 2", done => {
+        it("should not query if not firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -2038,7 +2020,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should query if firmware version 2", done => {
+        it("should query if firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -2054,7 +2036,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should get failure message if the board is not communicating with dongle", done => {
+        it("should get failure message if the board is not communicating with dongle", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -2071,7 +2053,7 @@ describe('openbci-sdk',function() {
     });
 
     describe('#radioBaudRateSet', function() {
-        afterEach(done => {
+        afterEach(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -2081,28 +2063,28 @@ describe('openbci-sdk',function() {
             }
         });
 
-        it("should not try to set baud rate if not connected", done => {
+        it("should not try to set baud rate if not connected", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
             });
             ourBoard.radioBaudRateSet('default').should.be.rejected.and.notify(done);
         });
-        it("should reject if no input", done => {
+        it("should reject if no input", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
             });
             ourBoard.radioBaudRateSet().should.be.rejected.and.notify(done);
         });
-        it("should be rejected if input type incorrect", done => {
+        it("should be rejected if input type incorrect", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
             });
             ourBoard.radioBaudRateSet(1).should.be.rejected.and.notify(done);
         });
-        it("should not try to change the baud rate if streaming", done => {
+        it("should not try to change the baud rate if streaming", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -2122,7 +2104,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should not try to change the baud rate if not firmware version 2", done => {
+        it("should not try to change the baud rate if not firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -2135,7 +2117,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should set the baud rate to default if firmware version 2", done => {
+        it("should set the baud rate to default if firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -2151,7 +2133,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should set the baud rate to fast if firmware version 2", done => {
+        it("should set the baud rate to fast if firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -2170,7 +2152,7 @@ describe('openbci-sdk',function() {
     });
 
     describe('#radioSystemStatusGet', function() {
-        afterEach(done => {
+        afterEach(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -2180,14 +2162,14 @@ describe('openbci-sdk',function() {
             }
         });
 
-        it("should not get system status if not connected", done => {
+        it("should not get system status if not connected", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
             });
             ourBoard.radioSystemStatusGet().should.be.rejected.and.notify(done);
         });
-        it("should not get system status if streaming", done => {
+        it("should not get system status if streaming", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -2207,7 +2189,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should not get system status if not firmware version 2", done => {
+        it("should not get system status if not firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true
@@ -2220,7 +2202,7 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
 
         });
-        it("should get up system status if firmware version 2", done => {
+        it("should get up system status if firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -2236,7 +2218,7 @@ describe('openbci-sdk',function() {
                     });
                 }).catch(err => done(err));
         });
-        it("should get down system status if firmware version 2", done => {
+        it("should get down system status if firmware version 2", function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose : true,
                 simulate : true,
@@ -2257,7 +2239,7 @@ describe('openbci-sdk',function() {
 
     describe('#radioTestsWithBoard',function() {
         this.timeout(3000);
-        before(done => {
+        before(function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true
             });
@@ -2267,7 +2249,7 @@ describe('openbci-sdk',function() {
                 done();
             });
         });
-        after(done => {
+        after(function(done) {
             if (ourBoard.connected) {
                 ourBoard.disconnect().then(() => {
                     done();
@@ -2276,7 +2258,7 @@ describe('openbci-sdk',function() {
                 done()
             }
         });
-        it("should be able to get the channel number", done => {
+        it("should be able to get the channel number", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             // The channel number should be between 0 and 25. Those are hard limits.
@@ -2285,7 +2267,7 @@ describe('openbci-sdk',function() {
                 done();
             }).catch(err => done(err));
         });
-        it("should be able to set the channel to 1", done => {
+        it("should be able to set the channel to 1", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioChannelSet(1).then(channelNumber => {
@@ -2293,7 +2275,7 @@ describe('openbci-sdk',function() {
                 done();
             }).catch(err => done(err));
         });
-        it("should be able to set the channel to 2", done => {
+        it("should be able to set the channel to 2", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioChannelSet(2).then(channelNumber => {
@@ -2301,7 +2283,7 @@ describe('openbci-sdk',function() {
                 done();
             }).catch(err => done(err));
         });
-        it("should be able to set the channel to 25", done => {
+        it("should be able to set the channel to 25", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioChannelSet(25).then(channelNumber => {
@@ -2309,7 +2291,7 @@ describe('openbci-sdk',function() {
                 done();
             }).catch(err => done(err));
         });
-        it("should be able to set the channel to 0", done => {
+        it("should be able to set the channel to 0", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioChannelSet(0).then(channelNumber => {
@@ -2317,7 +2299,7 @@ describe('openbci-sdk',function() {
                 done();
             }).catch(err => done(err));
         });
-        it("should be able to override host channel number, verify system is down, set the host back and verify system is up", done => {
+        it("should be able to override host channel number, verify system is down, set the host back and verify system is up", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             var systemChanNumber = 0;
@@ -2354,22 +2336,22 @@ describe('openbci-sdk',function() {
                 })
                 .catch(err => done(err));
         });
-        it("should be able to get the poll time", done => {
+        it("should be able to get the poll time", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioPollTimeGet().should.eventually.be.greaterThan(0).and.notify(done);
         });
-        it("should be able to set the poll time", done => {
+        it("should be able to set the poll time", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioPollTimeSet(80).should.become(80).and.notify(done);
         });
-        it("should be able to change to default baud rate", done => {
+        it("should be able to change to default baud rate", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioBaudRateSet('default').should.become(115200).and.notify(done);
         });
-        it("should be able to change to fast baud rate", done => {
+        it("should be able to change to fast baud rate", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioBaudRateSet('fast').then(newBaudRate => {
@@ -2379,7 +2361,7 @@ describe('openbci-sdk',function() {
                 done();
             }).catch(err => done(err));
         });
-        it("should be able to set the system status", done => {
+        it("should be able to set the system status", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
             ourBoard.radioSystemStatusGet().then(isUp => {
@@ -2521,7 +2503,7 @@ describe('#daisy', function () {
             done();
         });
     });
-    after(done => {
+    after(function(done) {
         if (ourBoard.connected) {
             ourBoard.disconnect().then(() => {
                 done();
@@ -2530,12 +2512,14 @@ describe('#daisy', function () {
             done();
         }
     });
-    it("can get samples with channel array of length 16", done => {
+    it("can get samples with channel array of length 16 if daisy", function(done) {
         var numberOfSamples = 130;
         var sampleCount = 0;
+
+        if (ourBoard.info.boardType !== k.OBCIBoardDaisy) {
+            done();
+        }
         var samp = sample => {
-            console.log(`sample`, sample);
-            // expect(sample.sampleNumber).to.equal(sampleCount);
             expect(sample.channelData.length).to.equal(k.OBCINumberOfChannelsDaisy);
             if (sampleCount <= numberOfSamples) {
                 sampleCount++;
@@ -2597,7 +2581,7 @@ describe('#sync', function() {
             done();
         });
     });
-    after(done => {
+    after(function(done) {
         if (ourBoard.connected) {
             ourBoard.disconnect().then(() => {
                 done();
@@ -2610,7 +2594,7 @@ describe('#sync', function() {
         this.buffer = null;
     });
     describe('#syncClocks', function() {
-        it('can get time sync set packet', done => {
+        it('can get time sync set packet', function(done) {
             ourBoard.syncClocks()
                 .catch(err => {
                     done(err);
@@ -2619,7 +2603,7 @@ describe('#sync', function() {
                 done();
             });
         });
-        it('can sync multiple times and compute average', done => {
+        it('can sync multiple times and compute average', function(done) {
             var trials = 5;
             var trialCount = 0;
 
@@ -2654,7 +2638,7 @@ describe('#sync', function() {
                     done(err);
                 });
         });
-        it('can sync while streaming', done => {
+        it('can sync while streaming', function(done) {
             var syncAfterSamples = 50;
 
             var samp = sample => {
