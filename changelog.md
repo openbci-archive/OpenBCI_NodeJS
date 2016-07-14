@@ -1,6 +1,6 @@
 # 1.0.0
 
-The second major release for the OpenBCI Node.js SDK brings major changes, improvements and stability, on top of a push to increase automated test coverage. 
+The second major release for the OpenBCI Node.js SDK brings major changes, improvements and stability, on top of a push to increase automated test coverage.
 
 ### New Features
 
@@ -11,18 +11,20 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 * `eot` event that is emitted when a user sends a command that results in an EOT ("$$$") being sent from the board
 * Daisy (16 channel) support
 * Simulator overhaul, it completely mocks the board. Can now simulate board failure, where the board stops talking to the dongle. Can also mock a serial port failure.
+* `error` and `close` events from serialport now emtted events users can subscribe to.
 
 ### Breaking Changes
 
 * NPM package is not called `openbci-sdk` anymore, now called `openbci`
 * Accelerometer data now goes into `.accelData` array instead of `.auxData` array.
-* In openBCISample.js 
+* In openBCISample.js
   * `parseRawPacket()` is now called `parseRawPacketStandard()`
 * `ready` event only triggered after soft reset. `eot` event emitted in all other conditions resulting in the board sending EOT ("$$$")
 * Must use camel case on the OpenBCISimulator object.
 * Renamed constructor options for readability:
   * `simulatorAlpha` to `simulatorInjectAlpha`
   * `simulatorLineNoise` to `simulatorInjectLineNoise`
+* `connect()` no longer rejects on `close` or `error` event from the serialport.
 
 # 0.3.9
 
@@ -62,8 +64,8 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 
 ### New Features
 
-* SD card support! Now logging to an SD card is easier than ever. 
- 
+* SD card support! Now logging to an SD card is easier than ever.
+
 ### Bug Fixes
 
 * Sample rate does not return correct sample rate for custom rate on simulator. #58
@@ -112,7 +114,7 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 * OpenBCI Radio Test File
 * Added Sntp npm module with helper functions
 * Removed stopByte and startByte from sampleObjects
-    
+
 ### Breaking Changes
 
 * Changed simulator name to `OpenBCISimulator`
@@ -123,15 +125,15 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 
 * NTP Time Synchronization
 * Goertzel algorithm to get voltage for impedance calculation
-    
+
 ### Bug fixes
 
 * Impedance calculations
 * Readme updates
 * Serial buffer had the chance to become permanently unaligned, optimized and completely transformed and refactored the way bytes are processed.
 * Changes to gain of channels not working correctly.
-* Node 5 compatibility 
-    
+* Node 5 compatibility
+
 ### Github Issues Addressed
 
 * #25, #26, #27, #29, #30, #31, #33, #34

@@ -62,7 +62,7 @@ function OpenBCIFactory() {
      *                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
      *                  attached and the user only wants to use 8 channels. (Default `false`)
      *
-     *     - `simulatorFirmwareVersion` {String} - Starts the simulator in with firmware version 2 features
+     *     - `simulatorFirmwareVersion` {String} - Allows simulator to be started with firmware version 2 features
      *          2 Possible Options:
      *              `v1` - Firmware Version 1 (Default)
      *              `v2` - Firmware Version 2
@@ -284,7 +284,8 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Closes the serial port
+     * @description Closes the serial port. Waits for stop streaming command to
+     *  be sent if currently streaming.
      * @returns {Promise} - fulfilled by a successful close of the serial port object, rejected otherwise.
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -295,7 +296,7 @@ function OpenBCIFactory() {
         if (this.streaming) {
             this.streamStop();
             if(this.options.verbose) console.log('stop streaming');
-            timeout = 70; // Avg poll time
+            timeout = 15; // Avg time is takes for message to propagate
         }
 
         return new Promise((resolve, reject) => {
@@ -332,7 +333,7 @@ function OpenBCIFactory() {
                 .then(() => {
                     setTimeout(() => {
                         resolve();
-                    }, 50); // allow time for command to get sent
+                    }, 10); // allow time for command to get sent
                 })
                 .catch(err => reject(err));
         });
@@ -490,8 +491,8 @@ function OpenBCIFactory() {
      *           connect to a board. If you find a case (i.e. a platform (linux,
      *           windows...) that this does not work, please open an issue and
      *           we will add support!
-     * @author AJ Keller (@pushtheworldllc)
      * @returns {Promise} - Fulfilled with portName, rejected when can't find the board.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.autoFindOpenBCIBoard = function() {
         var macSerialPrefix = 'usbserial-D';
@@ -526,9 +527,12 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Convience method to determine if you can use firmware v2.x.x
+     * @description Convenience method to determine if you can use firmware v2.x.x
      *  capabilities.
-     * @returns {boolean}
+     * @returns {boolean} - True if using firmware version 2 or greater. Should
+     *  be called after a `.softReset()` because we can parse the output of that
+     *  to determine if we are using firmware version 2.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.usingVersionTwoFirmware = function() {
         if (this.options.simulate) {
@@ -539,11 +543,12 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Used to query the OpenBCI system for its radio channel number. The function will reject if not
+     * @description Used to set the system radio channel number. The function will reject if not
      *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
      *      Lastly and more important, if the board is not running the new firmware then this functionality does not
      *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
      * @since 1.0.0
      * @returns {Promise} - Resolves with the new channel number, rejects with err.
      * @author AJ Keller (@pushtheworldllc)
@@ -587,11 +592,14 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Used to query the OpenBCI system for its radio channel number. The function will reject if not
+     * @description Used to set the ONLY the radio dongle Host channel number. This will fix your radio system if
+     *      your dongle and board are not on the right channel and bring down your radio system if you take your
+     *      dongle and board are not on the same channel. Use with caution! The function will reject if not
      *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
      *      Lastly and more important, if the board is not running the new firmware then this functionality does not
      *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
      * @since 1.0.0
      * @returns {Promise} - Resolves with the new channel number, rejects with err.
      * @author AJ Keller (@pushtheworldllc)
@@ -641,8 +649,9 @@ function OpenBCIFactory() {
      *      an Object. See `returns` below.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
-     * @returns {Promise} - An object with keys `channelNumber` which is a Number and `err` which contains an error in
+     * @returns {Promise} - Resolve an object with keys `channelNumber` which is a Number and `err` which contains an error in
      *      the condition that there system is experiencing board communications failure.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioChannelGet = function() {
         // The function to run on timeout
@@ -693,6 +702,7 @@ function OpenBCIFactory() {
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
      * @returns {Promise} - Resolves with the poll time, rejects with an error message.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioPollTimeGet = function() {
         var badCommsTimeout;
@@ -736,6 +746,7 @@ function OpenBCIFactory() {
      *      functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this
      *      function should resolve.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @param `pollTime` {Number} - The poll time you want to set for the system. 0-255
      * @since 1.0.0
      * @returns {Promise} - Resolves with new poll time, rejects with error message.
      * @author AJ Keller (@pushtheworldllc)
@@ -791,7 +802,7 @@ function OpenBCIFactory() {
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
      * @param speed {String} - The baud rate that to switch to. Can be either `default` (115200) or `fast` (230400)
-     * @returns {Promise} - Resolve a {Number} that is the new baud rate
+     * @returns {Promise} - Resolves a {Number} that is the new baud rate, rejects on error.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioBaudRateSet = function(speed) {
@@ -853,7 +864,7 @@ function OpenBCIFactory() {
 
     /**
      * @description Used to ask the Host if it's radio system is up. This is useful to quickly determine if you are
-     *      infact ready to start trying to connect and such. The function will reject if not connected to the serial
+     *      in fact ready to start trying to connect and such. The function will reject if not connected to the serial
      *      port of the dongle. Further the function should reject if currently streaming.
      *      Lastly and more important, if the board is not running the new firmware then this functionality does not
      *      exist and thus this method will reject. If the board is using firmware +v2.0.0 and the radios are both on the
@@ -861,6 +872,7 @@ function OpenBCIFactory() {
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
      * @returns {Promise} - Resolves true if both radios are powered and on the same channel; false otherwise.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.radioSystemStatusGet = function() {
         var badCommsTimeout;
@@ -1148,6 +1160,7 @@ function OpenBCIFactory() {
      *          For 8 channel board: ['-','N','n','p','P','-','b','b']
      *              (Note: it doesn't matter if capitalized or not)
      * @returns {Promise} - Fulfilled with a loaded impedance object.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.impedanceTestChannels = function(arrayOfChannels) {
         if (!Array.isArray(arrayOfChannels)) return Promise.reject('Input must be array of channels... See Docs!');
@@ -1277,6 +1290,7 @@ function OpenBCIFactory() {
      * @param pInput - A bool true if you want to apply the test signal to the P input, false to not apply the test signal.
      * @param nInput - A bool true if you want to apply the test signal to the N input, false to not apply the test signal.
      * @returns {Promise} - With Number value of channel number
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._impedanceTestSetChannel = function(channelNumber, pInput, nInput) {
@@ -1334,6 +1348,7 @@ function OpenBCIFactory() {
      * @param pInput - A bool true if you want to calculate impedance on the P input, false to not calculate.
      * @param nInput - A bool true if you want to calculate impedance on the N input, false to not calculate.
      * @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._impedanceTestCalculateChannel = function(channelNumber,pInput,nInput) {
@@ -1386,6 +1401,7 @@ function OpenBCIFactory() {
      * @param pInput - A bool true if you want to finalize impedance on the P input, false to not finalize.
      * @param nInput - A bool true if you want to finalize impedance on the N input, false to not finalize.
      * @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._impedanceTestFinalizeChannel = function(channelNumber,pInput,nInput) {
@@ -1422,6 +1438,7 @@ function OpenBCIFactory() {
      * @param recordingDuration {String} - The duration you want to log SD information for. Limited to:
      *      '14sec', '5min', '15min', '30min', '1hour', '2hour', '4hour', '12hour', '24hour'
      * @returns {Promise} - Resolves if the command was added to write queue.
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sdStart = function(recordingDuration) {
@@ -1444,7 +1461,8 @@ function OpenBCIFactory() {
     /**
      * @description Sends the stop SD logging command to the board. If not streaming then `eot` event will be emitted
      *      with request response from the board.
-     * @returns {Promise}
+     * @returns {Promise} - Resovles if added to the write queue
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sdStop = function() {
         return new Promise((resolve,reject) => {
@@ -1466,20 +1484,16 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.sampleRate = function() {
         if (this.options.simulate) {
-            console.log('sampleRate2',this.options.simulatorSampleRate);
             return this.options.simulatorSampleRate;
         } else {
             if (this.info) {
-                console.log('sampleRate3',this.info.sampleRate);
                 return this.info.sampleRate;
             } else {
                 switch (this.boardType) {
                     case k.OBCIBoardDaisy:
-                        console.log('sampleRate4',this.info.sampleRate);
                         return k.OBCISampleRate125;
                     case k.OBCIBoardDefault:
                     default:
-                        console.log('sampleRate5',this.info.sampleRate);
                         return k.OBCISampleRate250;
                 }
             }
@@ -1508,12 +1522,17 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Send the command to tell the board to start the syncing protocol.
+     * @description Send the command to tell the board to start the syncing protocol. Must be connected,
+     *      streaming and using version +2 firmware.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves if sent, rejects if not connected or using firmware verison +2.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.syncClocks = function() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
-            //if (this.streaming) reject('Cannot be streaming to sync clocks');
+            if (!this.streaming) reject('Must be streaming to sync clocks');
             if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on V1 firmware, please update');
             this.curParsingMode = k.OBCIParsingTimeSyncSent;
             this._writeAndDrain(k.OBCISyncTimeSet);
@@ -1530,6 +1549,7 @@ function OpenBCIFactory() {
      *              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
      *              we will need to store what we don't read for next time.
      * @param data - a buffer of unknown size
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
@@ -1591,6 +1611,8 @@ function OpenBCIFactory() {
      * @description Used to extract samples out of a buffer of unknown length
      * @param dataBuffer {Buffer} - A buffer to parse for samples
      * @returns {Buffer} - Any data that was not pulled out of the buffer
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processDataBuffer = function(dataBuffer) {
         if (!dataBuffer) return null;
@@ -1652,6 +1674,8 @@ function OpenBCIFactory() {
      *      numbers from 0-F in hex of 0-15 in decimal.
      * @param byte {Number} - The number to test
      * @returns {boolean} - True if `byte` follows the correct form
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._isStopByte = function(byte) {
         return (byte & 0xF0) === k.OBCIByteStop;
@@ -1661,6 +1685,7 @@ function OpenBCIFactory() {
      * @description Alters the global info object by parseing an incoming soft reset key
      * @param dataBuffer {Buffer} - The soft reset data buffer
      * @private
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
         if (openBCISample.countADSPresent(dataBuffer) === 2) {
@@ -1675,14 +1700,18 @@ function OpenBCIFactory() {
 
         if (openBCISample.findV2Firmware(dataBuffer)) {
             this.info.firmware = k.OBCIFirmwareV2;
+            this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
         } else {
             this.info.firmware = k.OBCIFirmwareV1;
+            this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
         }
     };
 
     /**
      * @description Used to route qualified packets to their proper parsers
      * @param rawDataPacketBuffer
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processQualifiedPacket = function(rawDataPacketBuffer) {
         if (!rawDataPacketBuffer) return;

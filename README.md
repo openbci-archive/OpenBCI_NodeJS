@@ -22,7 +22,7 @@ npm install openbci
 #### Get connected and start streaming
 
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName)
     .then(function() {
@@ -61,14 +61,14 @@ Initialization
 Initializing the board:
 
 ```js
-var OpenBCIBoard = require('openbci-sdk');
+var OpenBCIBoard = require('openbci');
 var ourBoard = new OpenBCIBoard.OpenBCIBoard();
 ```
 
 For initializing with options, such as verbose print outs:
 
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard({
     verbose: true
 });
@@ -77,7 +77,7 @@ var ourBoard = new OpenBCIBoard({
 Or if you don't have a board and want to use synthetic data:
 
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard({
     simulate: true
 });
@@ -85,7 +85,7 @@ var ourBoard = new OpenBCIBoard({
 
 Another useful way to start the simulator:
 ```js
-var openBCIBoard = require('openbci-sdk');
+var openBCIBoard = require('openbci');
 var k = openBCIBoard.OpenBCIConstants;
 var ourBoard = openBCIBoard.OpenBCIBoard();
 ourBoard.connect(k.OBCISimulatorPortName) // This will set `simulate` to true
@@ -106,7 +106,7 @@ You MUST wait for the 'ready' event to be emitted before streaming/talking with 
 so installing the 'sample' listener and writing before the ready event might result in... nothing at all.
 
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
@@ -139,7 +139,7 @@ To get a 'sample' event, you need to:
 3. In callback for 'ready' emitter, call `streamStart()`
 4. Install the 'sample' event emitter
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function() {
     ourBoard.on('ready',function() {
@@ -154,7 +154,7 @@ ourBoard.connect(portName).then(function() {
 ```
 Close the connection with `.streamStop()` and disconnect with `.disconnect()`
 ```js
-var ourBoard = new require('openbci-sdk').OpenBCIBoard();
+var ourBoard = new require('openbci').OpenBCIBoard();
 ourBoard.streamStop().then(ourBoard.disconnect());
 ```
 
@@ -165,7 +165,7 @@ You must have the OpenBCI board connected to the PC before trying to automatical
 If a port is not automatically found, then call `.listPorts()` to get a list of all serial ports this would be a good place to present a drop down picker list to the user, so they may manually select the serial port name.
 
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.autoFindOpenBCIBoard().then(portName => {
     if(portName) {
@@ -207,7 +207,7 @@ Where there are the same number of elements as channels and each element can be 
 
 Without further ado, here is an example:
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
@@ -264,7 +264,7 @@ To run an impedance test on all inputs, one channel at a time:
 For example:
 
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.streamStart();
@@ -289,22 +289,28 @@ Create new instance of an OpenBCI board.
 
 Board optional configurations.
 
-* `boardType` Specifies type of OpenBCI board (3 possible boards)
+* `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if firmware on board has been previously configured.
+* `boardType` {String} - Specifies type of OpenBCI board (3 possible boards)
   * `default` - 8 Channel OpenBCI board (Default)
-  * `daisy` - 8 Channel board with Daisy Module
-    (NOTE: THIS IS IN-OP AT THIS TIME DUE TO NO ACCESS TO ACCESSORY BOARD)
+  * `daisy` - 8 Channel board with Daisy Module - 16 Channels
   * `ganglion` - 4 Channel board
-    (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
-* `baudRate` Baud Rate, defaults to 115200. Manipulating this is allowed if firmware on board has been previously configured.
-* `verbose` To output more messages to the command line.
-* `simulate` Full functionality, just synthetic data.
-* `simulatorSampleRate` - The sample rate to use for the simulator (Default is `250`)
-* `simulatorAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
-* `simulatorLineNoise` - Injects line noise on channels.
-  * `60Hz` - 60Hz line noise (Default) (ex. __United States__)
-  * `50Hz` - 50Hz line noise (ex. __Europe__)
+    (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 08/2016)
+* `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
+* `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on the board is not polling the RFduino on the dongle. (Default `false`)
+* `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board. This is useful if you want to test how your application reacts to a user requesting 16 channels but there is no daisy module actually attached, or vice versa, where there is a daisy module attached and the user only wants to use 8 channels. (Default `false`)
+* `simulatorFirmwareVersion` {String} - Allows the simulator to use firmware version 2 features. (2 Possible Options)
+  * `v1` - Firmware Version 1 (Default)
+  * `v2` - Firmware Version 2
+* `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
+* `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+* `simulatorInjectLineNoise` {String} - Injects line noise on channels. (3 Possible Options)
+  * `60Hz` - 60Hz line noise (Default) [America]
+  * `50Hz` - 50Hz line noise [Europe]
   * `None` - Do not inject line noise.
-* `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup with the SNTP time. Adds a time stamp to the AUX channels. NOTE: (NOT FULLY IMPLEMENTED) [DO NOT USE]
+* `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that setting and this sample rate will be used. (Default is `250`)
+* `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely due to a OpenBCI dongle not being plugged in.
+* `timeSync` - {Boolean} Syncs the module up with an SNTP time server. Syncs the board on startup with the SNTP time. Adds a time stamp to the AUX channels.
+* `verbose` {Boolean} - Print out useful debugging events
 
 **Note, we have added support for either all lowercase OR camelcase of the options, use whichever style you prefer.**
 
@@ -384,7 +390,7 @@ The essential precursor method to be called initially to establish a serial conn
 
 The system path of the OpenBCI board serial port to open. For example, `/dev/tty` on Mac/Linux or `COM1` on Windows.
 
-**_Returns_** a promise, fulfilled by a successful serial connection to the board, the promise will be rejected at any time if the serial port has an 'error' or 'close' event emitted.
+**_Returns_** a promise, fulfilled by a successful serial connection to the board.
 
 ### .debugSession()
 
@@ -392,7 +398,7 @@ Calls all `.printPacketsBad()`, `.printPacketsRead()`, `.printBytesIn()`
 
 ### .disconnect()
 
-Closes the serial port opened by `.connect()`
+Closes the serial port opened by `.connect()`.  Waits for stop streaming command to be sent if currently streaming.
 
 **_Returns_** a promise, fulfilled by a successful close of the serial port object, rejected otherwise.
 
@@ -447,7 +453,7 @@ A Number, specifies which channel you want to test.
 
 Example:
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
@@ -489,7 +495,7 @@ A Number, specifies which channel you want to test.
 
 Example:
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
@@ -531,7 +537,7 @@ A Number, specifies which channel you want to test.
 
 Example:
 ```js
-var OpenBCIBoard = require('openbci-sdk').OpenBCIBoard;
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
 ourBoard.connect(portName).then(function(boardSerial) {
     ourBoard.on('ready',function() {
@@ -604,6 +610,78 @@ Prints the total number of packets that were read in this session to the console
 Prints all register settings for the ADS1299 and the LIS3DH on the OpenBCI board.
 
 **_Returns_** a promise, fulfilled if the command was sent to the write queue.
+
+### .radioBaudRateSet(speed)
+
+Used to set the OpenBCI Host (Dongle) baud rate. With the RFduino configuration, the Dongle is the Host and the Board is the Device. Only the Device can initiate a communication between the two entities. There exists a detrimental error where if the Host is interrupted by the radio during a Serial write, then all hell breaks loose. So this is an effort to eliminate that problem by increasing the rate at which serial data is sent from the Host to the Serial driver. The rate can either be set to default or fast. Further the function should reject if currently streaming. Lastly and more important, if the board is not running the new firmware then this functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve the new baud rate after closing the current serial port and reopening one.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_speed_**
+
+{String} - The baud rate that to switch to. Can be either `default` (115200) or `fast` (230400).
+
+**_Returns_** {Promise} - Resolves a {Number} that is the new baud rate, rejects on error.
+
+### .radioChannelGet()
+
+Used to query the OpenBCI system for it's radio channel number. The function will reject if not connected to the serial port of the dongle. Further the function should reject if currently streaming. Lastly and more important, if the board is not running the new firmware then this functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve an Object. See `returns` below.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_Returns_** {Promise} - Resolve an object with keys `channelNumber` which is a Number and `err` which contains an error in the condition that there system is experiencing board communications failure.
+
+### .radioChannelSet(channelNumber)
+
+Used to set the system radio channel number. The function will reject if not connected to the serial port of the dongle. Further the function should reject if currently streaming. Lastly and more important, if the board is not running the new firmware then this functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_channelNumber_**
+
+{Number} - The channel number you want to set to, 1-25.
+
+**_Returns_** {Promise} - Resolves with the new channel number, rejects with err.
+
+### .radioChannelSetHostOverride(channelNumber)
+
+Used to set the ONLY the radio dongle Host channel number. This will fix your radio system if your dongle and board are not on the right channel and bring down your radio system if you take your dongle and board are not on the same channel. Use with caution! The function will reject if not connected to the serial port of the dongle. Further the function should reject if currently streaming. Lastly and more important, if the board is not running the new firmware then this functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_channelNumber_**
+
+{Number} - The channel number you want to set to, 1-25.
+
+**_Returns_** {Promise} - Resolves with the new channel number, rejects with err.
+
+### .radioPollTimeGet()
+
+Used to query the OpenBCI system for it's device's poll time. The function will reject if not connected to the serial port of the dongle. Further the function should reject if currently streaming. Lastly and more important, if the board is not running the new firmware then this functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve the poll time when fulfilled. It's important to note that if the board is not on, this function will always be rejected with a failure message.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_Returns_** {Promise} - Resolves with the new poll time, rejects with err.
+
+### .radioPollTimeSet(pollTime)
+
+Used to set the OpenBCI poll time. With the RFduino configuration, the Dongle is the Host and the Board is the Device. Only the Device can initiate a communication between the two entities. Therefore this sets the interval at which the Device polls the Host for new information. Further the function should reject if currently streaming. Lastly and more important, if the board is not running the new firmware then this functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_pollTime_**
+
+{Number} - The poll time you want to set to, 0-255.
+
+**_Returns_** {Promise} - Resolves with the new channel number, rejects with err.
+
+### .radioSystemStatusGet()
+
+Used to ask the Host if it's radio system is up. This is useful to quickly determine if you are in fact ready to start trying to connect and such. The function will reject if not connected to the serial port of the dongle. Further the function should reject if currently streaming. Lastly and more important, if the board is not running the new firmware then this functionality does not exist and thus this method will reject. If the board is using firmware +v2.0.0 and the radios are both on the same channel and powered, then this will resolve true.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_Returns_** {Promise} - Resolves true if both radios are powered and on the same channel; false otherwise.
 
 ### .sampleRate()
 
@@ -713,6 +791,14 @@ Sends a stop streaming command to the board.
 
 **_Returns_** a promise, fulfilled if the command was sent to the write queue, rejected if unable.
 
+### .syncClocks()
+
+Send the command to tell the board to start the syncing protocol. Must be connected, streaming and using version +2 firmware.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_Returns_** {Promise} resolves if the command was sent to the write queue, rejects if unable.
+
 ### .testSignal(signal)
 
 Apply the internal test signal to all channels.
@@ -731,9 +817,17 @@ A String indicating which test signal to apply
 
 **_Returns_** a promise, if the commands were sent to write buffer.
 
+### .usingVersionTwoFirmware()
+
+Convenience method to determine if you can use firmware v2.x.x capabilities.
+
+**Note, should be called after a `.softReset()` because we can parse the output of that to determine if we are using firmware version 2.**
+
+**_Returns_** a boolean, true if using firmware version 2 or greater.
+
 ### .write(dataToWrite)
 
-Send commands to the board. Due to the OpenBCI board firmware, a 10ms spacing **must** be observed between every command sent to the board. This method handles the timing and spacing between characters by adding characters to a global write queue and pulling from it every 10ms.
+Send commands to the board. Due to the OpenBCI board firmware 1.0, a 10ms spacing **must** be observed between every command sent to the board. This method handles the timing and spacing between characters by adding characters to a global write queue and pulling from it every 10ms. If you are using firmware version +2.0 then you no spacing will be used.
 
 **_dataToWrite_**
 
@@ -807,7 +901,7 @@ A bool, true if streaming data from an OpenBCI board, false if not.
 
 To use the constants file simply:
 ```js
-var openBCIBoard = require('openbci-sdk');
+var openBCIBoard = require('openbci');
 var k = openBCIBoard.OpenBCIConstants;
 
 console.log(k.OBCISimulatorPortName); // prints OpenBCISimulator to the console.
