@@ -2404,7 +2404,7 @@ describe('openbci-sdk',function() {
         });
     });
 
-    xdescribe('#hardwareValidation', function() {
+    describe('#hardwareValidation', function() {
         this.timeout(20000); // long timeout for pleanty of stream time :)
         var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;
         var wstream;
