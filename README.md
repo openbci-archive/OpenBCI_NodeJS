@@ -7,7 +7,7 @@
 
 A Node.js module for OpenBCI ~ written with love by [Push The World!](http://www.pushtheworldllc.com)
 
-We are proud to support all functionality of the OpenBCI 8 Channel board (16 channel coming soon) and are actively developing and maintaining this module.
+We are proud to support all functionality of the OpenBCI 8 and 16 Channel boards and are actively developing and maintaining this module.
 
 The purpose of this module is to **get connected** and **start streaming** as fast as possible.
 
