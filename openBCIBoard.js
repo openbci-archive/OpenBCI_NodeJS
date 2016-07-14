@@ -1116,6 +1116,7 @@ function OpenBCIFactory() {
     /**
      * @description To apply test signals to the channels on the OpenBCI board used to test for impedance. This can take a
      *  little while to actually run (<8 seconds)!
+     * @returns {Promise} - Resovles when complete testing all the channels.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.impedanceTestAllChannels = function() {
