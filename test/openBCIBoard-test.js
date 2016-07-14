@@ -35,15 +35,19 @@ describe('openbci-sdk',function() {
                 done();
             })
     });
-    after(function(done) {
-        if(ourBoard["connected"]) {
-            ourBoard.disconnect()
-                .then(() => {
-                    done();
-                })
-                .catch(err => {
-                    done(err);
-                })
+    after(done => {
+        if (ourBoard) {
+            if(ourBoard["connected"]) {
+                ourBoard.disconnect()
+                    .then(() => {
+                        done();
+                    })
+                    .catch(err => {
+                        done(err);
+                    })
+            } else {
+                done();
+            }
         } else {
             done();
         }
@@ -868,7 +872,7 @@ describe('openbci-sdk',function() {
         var ourBoard;
         var funcSpyTimeSyncSet, funcSpyTimeSyncedAccel, funcSpyTimeSyncedRawAux, funcSpyStandardRawAux, funcSpyStandardAccel;
 
-        before(() => {
+        before(function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true
             });
@@ -879,19 +883,19 @@ describe('openbci-sdk',function() {
             funcSpyTimeSyncedAccel = sinon.spy(ourBoard,"_processPacketTimeSyncedAccel");
             funcSpyTimeSyncedRawAux = sinon.spy(ourBoard,"_processPacketTimeSyncedRawAux");
         });
-        beforeEach(() => {
+        beforeEach(function() {
             funcSpyStandardAccel.reset();
             funcSpyStandardRawAux.reset();
             funcSpyTimeSyncSet.reset();
             funcSpyTimeSyncedAccel.reset();
             funcSpyTimeSyncedRawAux.reset();
         });
-        after(() => {
-            ourBoard = null;
+        after(function() {
+            // ourBoard = null;
         });
 
 
-        it('should process a standard packet',() => {
+        it('should process a standard packet',function() {
             var buffer = openBCISample.samplePacket(0);
 
             // Call the function under test
@@ -900,7 +904,7 @@ describe('openbci-sdk',function() {
             // Ensure that we extracted only one buffer
             funcSpyStandardAccel.should.have.been.calledOnce;
         });
-        it('should process a standard packet with raw aux',() => {
+        it('should process a standard packet with raw aux',function() {
             var buffer = openBCISample.samplePacketStandardRawAux(0);
 
             // Call the function under test
@@ -909,7 +913,7 @@ describe('openbci-sdk',function() {
             // Ensure that we extracted only one buffer
             funcSpyStandardRawAux.should.have.been.calledOnce;
         });
-        it('should call nothing for a user defined packet type ',() => {
+        it('should call nothing for a user defined packet type ',function() {
             var buffer = openBCISample.samplePacketUserDefined();
 
             // Call the function under test
@@ -922,17 +926,21 @@ describe('openbci-sdk',function() {
             funcSpyTimeSyncedAccel.should.not.have.been.called;
             funcSpyTimeSyncedRawAux.should.not.have.been.called;
         });
-        it('should process a time sync set packet',() => {
-            var buffer = openBCISample.samplePacketTimeSyncSet();
+        it('should process a time sync set packet with accel',function() {
+            var buffer = openBCISample.samplePacketAccelTimeSyncSet();
 
             // Call the function under test
             ourBoard._processQualifiedPacket(buffer);
 
-            // Ensure that we extracted only one buffer
+            // We should call to sync up
             funcSpyTimeSyncSet.should.have.been.calledOnce;
+            funcSpyTimeSyncSet.should.have.been.calledWith(buffer);
+            // we should call to get a packet
+            funcSpyTimeSyncedAccel.should.have.been.calledOnce;
+            funcSpyTimeSyncedAccel.should.have.been.calledWith(buffer);
         });
-        it('should process a time synced packed with accel',() => {
-            var buffer = openBCISample.samplePacketTimeSyncedAccel(0);
+        it('should process a time synced packet with accel',function() {
+            var buffer = openBCISample.samplePacketAccelTimeSynced(0);
 
             // Call the function under test
             ourBoard._processQualifiedPacket(buffer);
@@ -940,8 +948,21 @@ describe('openbci-sdk',function() {
             // Ensure that we extracted only one buffer
             funcSpyTimeSyncedAccel.should.have.been.calledOnce;
         });
-        it('should process a time synced packed with raw aux',() => {
-            var buffer = openBCISample.samplePacketTimeSyncedRawAux(0);
+        it('should process a time sync set packet with raw aux',function() {
+            var buffer = openBCISample.samplePacketRawAuxTimeSyncSet(0);
+
+            // Call the function under test
+            ourBoard._processQualifiedPacket(buffer);
+
+            // We should call to sync up
+            funcSpyTimeSyncSet.should.have.been.calledOnce;
+            funcSpyTimeSyncSet.should.have.been.calledWith(buffer);
+            // we should call to get a packet
+            funcSpyTimeSyncedRawAux.should.have.been.calledOnce;
+            funcSpyTimeSyncedRawAux.should.have.been.calledWith(buffer);
+        });
+        it('should process a time synced packet with raw aux',function() {
+            var buffer = openBCISample.samplePacketRawAuxTimeSynced(0);
 
             // Call the function under test
             ourBoard._processQualifiedPacket(buffer);
@@ -949,7 +970,7 @@ describe('openbci-sdk',function() {
             // Ensure that we extracted only one buffer
             funcSpyTimeSyncedRawAux.should.have.been.calledOnce;
         });
-        it('should not identify any packet',() => {
+        it('should not identify any packet',function() {
             var buffer = openBCISample.samplePacket(0);
 
             // Set the stop byte to some number not yet defined
@@ -1127,7 +1148,7 @@ describe('openbci-sdk',function() {
                     done();
                 });
                 // Make a new buffer
-                var buf1 = openBCISample.samplePacketTimeSyncSet(1);
+                var buf1 = openBCISample.samplePacketAccelTimeSyncSet(1);
                 // Send the buffer in
                 ourBoard._processBytes(buf1);
             });
@@ -1146,7 +1167,7 @@ describe('openbci-sdk',function() {
             it("should find time sync and emit two samples", function(done) {
 
                 var buf1 = openBCISample.samplePacket(250);
-                var buf2 = new Buffer(",");
+                var buf2 = new Buffer([0x2C]);
                 var buf3 = openBCISample.samplePacket(251);
 
                 var inputBuf = Buffer.concat([buf1,buf2,buf3],buf1.byteLength + 1 + buf3.byteLength);
@@ -1156,6 +1177,7 @@ describe('openbci-sdk',function() {
                 ourBoard.sync.timeSent = 0;
 
                 var newSample = sample => {
+                    // console.log(`sample ${JSON.stringify(sample)}`);
                     if (sampleCounter == 0) {
                         sample.sampleNumber.should.equal(250);
                     } else if (sampleCounter == 1) {
@@ -1176,7 +1198,18 @@ describe('openbci-sdk',function() {
                 ourBoard._processBytes(inputBuf);
 
             });
+            it("should not find the packet if in packet", () => {
 
+                var buf1 = openBCISample.samplePacket(250);
+                buf1[4] = 0x2C; // Inject a false packet
+                var buf2 = openBCISample.samplePacket(251);
+
+                // Call the processBytes function
+                ourBoard._processBytes(Buffer.concat([buf1,buf2],buf1.length + buf2.length));
+                // Verify the time sync set was NOT called
+                expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingTimeSyncSent);
+
+            });
         });
 
         describe("#OBCIParsingNormal",function() {
@@ -2544,7 +2577,7 @@ describe('#sync', function() {
     before(function (done) {
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose:true,
-            timeSync: true,
+            // timeSync: true,
             simulatorFirmwareVersion: 'v2'
         });
 
@@ -2594,51 +2627,51 @@ describe('#sync', function() {
         this.buffer = null;
     });
     describe('#syncClocks', function() {
-        it('can get time sync set packet', function(done) {
-            ourBoard.syncClocks()
-                .catch(err => {
-                    done(err);
-                });
-            ourBoard.once('synced',() => {
-                done();
-            });
-        });
-        it('can sync multiple times and compute average', function(done) {
-            var trials = 5;
-            var trialCount = 0;
-
-            // Clear the array for sure
-            ourBoard.sync.timeOffsetArray = [];
-
-            // The function executed on each synced event emitted
-            var synced = syncObj => {
-                trialCount++;
-                if (trialCount >= trials) {
-                    // Verify the length of the
-                    expect(syncObj.timeOffsetArray.length).to.equal(trials);
-                    // Verify the mean is correct
-                    expect(math.mean(syncObj.timeOffsetArray)).to.equal(syncObj.timeOffsetAvg);
-                    // Remove the event listener
-                    ourBoard.removeListener('synced',synced);
-                    done();
-                } else {
-                    ourBoard.syncClocks()
-                        .catch(err => {
-                            done(err);
-                        });
-                }
-            };
-
-            // Attached the emitted
-            ourBoard.on('synced',synced);
-
-            // Call the first one
-            ourBoard.syncClocks()
-                .catch(err => {
-                    done(err);
-                });
-        });
-        it('can sync while streaming', function(done) {
+        // it('can get time sync set packet', done => {
+        //     ourBoard.syncClocks()
+        //         .catch(err => {
+        //             done(err);
+        //         });
+        //     ourBoard.once('synced',() => {
+        //         done();
+        //     });
+        // });
+        // it('can sync multiple times and compute average', done => {
+        //     var trials = 5;
+        //     var trialCount = 0;
+        //
+        //     // Clear the array for sure
+        //     ourBoard.sync.timeOffsetArray = [];
+        //
+        //     // The function executed on each synced event emitted
+        //     var synced = syncObj => {
+        //         trialCount++;
+        //         if (trialCount >= trials) {
+        //             // Verify the length of the
+        //             expect(syncObj.timeOffsetArray.length).to.equal(trials);
+        //             // Verify the mean is correct
+        //             expect(math.mean(syncObj.timeOffsetArray)).to.equal(syncObj.timeOffsetAvg);
+        //             // Remove the event listener
+        //             ourBoard.removeListener('synced',synced);
+        //             done();
+        //         } else {
+        //             ourBoard.syncClocks()
+        //                 .catch(err => {
+        //                     done(err);
+        //                 });
+        //         }
+        //     };
+        //
+        //     // Attached the emitted
+        //     ourBoard.on('synced',synced);
+        //
+        //     // Call the first one
+        //     ourBoard.syncClocks()
+        //         .catch(err => {
+        //             done(err);
+        //         });
+        // });
+        it('can sync while streaming', done => {
             var syncAfterSamples = 50;
 
             var samp = sample => {

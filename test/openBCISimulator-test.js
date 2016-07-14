@@ -502,8 +502,9 @@ describe('openBCISimulator',function() {
     });
 
     describe("#sync",function () {
+        this.timeout(2000);
         var simulator;
-        beforeEach(done => {
+        beforeEach(function(done) {
             simulator = new openBCISimulator.OpenBCISimulator(portName, {
                 firmwareVersion: 'v2'
             });
@@ -511,10 +512,10 @@ describe('openBCISimulator',function() {
                 done();
             });
         });
-        afterEach(() => {
+        afterEach(function() {
             simulator = null;
         });
-        it("should emit the time sync sent command", done => {
+        it("should emit the time sync sent command", function(done) {
             simulator.once('data',data => {
                 expect(openBCISample.isTimeSyncSetConfirmationInBuffer(data)).to.be.true;
                 done();
@@ -525,19 +526,17 @@ describe('openBCISimulator',function() {
                 }
             });
         });
-        it("should set synced to true", done => {
+        it("should set synced to true", function(done) {
             simulator.synced = false;
-            var emitCounter = 0;
             var newData = data => {
-                if (emitCounter === 1) {
-                    expect(simulator.synced).to.be.true;
-                    simulator.removeListener('data', newData);
-                    done();
-                }
-                emitCounter++;
+                expect(simulator.synced).to.be.true;
+                simulator.removeListener('data', newData);
+                done();
             };
 
-            simulator.on('data', newData);
+            simulator.on('data', data => {
+                newData(data);
+            });
 
             simulator.write(k.OBCISyncTimeSet, (err, msg) => {
                 if (err) {
@@ -545,40 +544,19 @@ describe('openBCISimulator',function() {
                 }
             });
         });
-        it("should set emit a legit time sync set packet", done => {
+        it("should emit a time sync set packet followed by a time synced accel packet after sync up call", function(done) {
             simulator.synced = false;
             var emitCounter = 0;
             var newData = data => {
-                if (emitCounter === 1) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncSet);
-                    openBCISample.getFromTimePacketTime(data).then(time => {
-                        expect(time).to.be.greaterThan(0);
-                        done();
-                    }).catch(err => done(err));
-                    simulator.removeListener('data', newData);
-                }
-                emitCounter++;
-            };
-
-            simulator.on('data', newData);
-
-            simulator.write(k.OBCISyncTimeSet, (err, msg) => {
-                if (err) {
-                    done(err);
-                }
-            });
-        });
-        it("should emit a time synced standard packet after sync up call", done => {
-            simulator.synced = false;
-            var emitCounter = 0;
-            var newData = data => {
-                if (emitCounter === 1) { // the time sync packet is emitted here
+                if (emitCounter === 0) { // the time sync packet is emitted here
                     // Make a call to start streaming
                     simulator.write(k.OBCIStreamStart, err => {
                         if (err) done(err);
                     });
+                } else if (emitCounter === 1) {
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketAccelTimeSyncSet);
                 } else if (emitCounter === 2) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncedAccel);
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketAccelTimeSynced);
                     simulator.write(k.OBCIStreamStop, err => {
                         if (err) done(err);
                         simulator.removeListener('data', newData);
@@ -596,17 +574,20 @@ describe('openBCISimulator',function() {
                 }
             });
         });
-        it("should emit a time synced raw aux packet", done => {
+        it("should emit a time sync set raw aux, then time synced raw aux packet after sync up call", function(done) {
+            simulator.synced = false;
             simulator.options.accel = false;
             var emitCounter = 0;
             var newData = data => {
-                if (emitCounter === 1) { // the time sync packet is emitted here
+                if (emitCounter === 0) { // the time sync packet is emitted here
                     // Make a call to start streaming
                     simulator.write(k.OBCIStreamStart, err => {
                         if (err) done(err);
                     });
+                } else if (emitCounter === 1) {
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketRawAuxTimeSyncSet);
                 } else if (emitCounter === 2) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketTimeSyncedRawAux);
+                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketRawAuxTimeSynced);
                     simulator.write(k.OBCIStreamStop, err => {
                         if (err) done(err);
                         simulator.removeListener('data', newData);
@@ -618,7 +599,7 @@ describe('openBCISimulator',function() {
 
             simulator.on('data', newData);
 
-            simulator.write(k.OBCISyncTimeSet, err => {
+            simulator.write(k.OBCISyncTimeSet, (err, msg) => {
                 if (err) {
                     done(err);
                 }
@@ -626,5 +607,3 @@ describe('openBCISimulator',function() {
         });
     })
 });
-
-

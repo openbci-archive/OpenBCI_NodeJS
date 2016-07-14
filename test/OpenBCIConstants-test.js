@@ -445,14 +445,17 @@ describe('OpenBCIConstants', function() {
         it('User Defined Packet',function () {
             assert.equal(2, k.OBCIStreamPacketUserDefinedType);
         });
-        it('Time Sync Set',function () {
-            assert.equal(3, k.OBCIStreamPacketTimeSyncSet);
+        it('Time Sync Set with accel',function () {
+            assert.equal(3, k.OBCIStreamPacketAccelTimeSyncSet);
         });
         it('Time Synced with Accel',function () {
-            assert.equal(4, k.OBCIStreamPacketTimeSyncedAccel);
+            assert.equal(4, k.OBCIStreamPacketAccelTimeSynced);
+        });
+        it('Time Sync set with Raw Aux',function () {
+            assert.equal(5, k.OBCIStreamPacketRawAuxTimeSyncSet);
         });
         it('Time Synced with Raw Aux',function () {
-            assert.equal(5, k.OBCIStreamPacketTimeSyncedRawAux);
+            assert.equal(6, k.OBCIStreamPacketRawAuxTimeSynced);
         });
     });
     describe('Time synced with accel packet',function() {

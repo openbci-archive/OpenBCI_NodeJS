@@ -266,9 +266,10 @@ const OBCISimulatorPortName = 'OpenBCISimulator';
 const OBCIStreamPacketStandardAccel      = 0; // 0000
 const OBCIStreamPacketStandardRawAux     = 1; // 0001
 const OBCIStreamPacketUserDefinedType    = 2; // 0010
-const OBCIStreamPacketTimeSyncSet        = 3; // 0011
-const OBCIStreamPacketTimeSyncedAccel    = 4; // 0100
-const OBCIStreamPacketTimeSyncedRawAux   = 5; // 0101
+const OBCIStreamPacketAccelTimeSyncSet   = 3; // 0011
+const OBCIStreamPacketAccelTimeSynced    = 4; // 0100
+const OBCIStreamPacketRawAuxTimeSyncSet  = 5; // 0101
+const OBCIStreamPacketRawAuxTimeSynced   = 6; // 0110
 
 /** Time from board */
 const OBCIStreamPacketTimeByteSize = 4;
@@ -789,9 +790,10 @@ module.exports = {
     OBCIStreamPacketStandardAccel,
     OBCIStreamPacketStandardRawAux,
     OBCIStreamPacketUserDefinedType,
-    OBCIStreamPacketTimeSyncSet,
-    OBCIStreamPacketTimeSyncedAccel,
-    OBCIStreamPacketTimeSyncedRawAux,
+    OBCIStreamPacketAccelTimeSyncSet,
+    OBCIStreamPacketAccelTimeSynced,
+    OBCIStreamPacketRawAuxTimeSyncSet,
+    OBCIStreamPacketRawAuxTimeSynced,
     /** fun funcs */
     isNumber,
     isBoolean,

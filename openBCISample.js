@@ -125,74 +125,41 @@ var sampleModule = {
         rawAux.copy(packetBuffer,26);
 
         // stop byte
-        packetBuffer[k.OBCIPacketSize - 1] = 0xC1;
+        packetBuffer[k.OBCIPacketSize - 1] = makeTailByteFromPacketType(k.OBCIStreamPacketStandardRawAux);
 
         return packetBuffer;
     },
     /**
-     * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
+     * @description Mainly used by the simulator to convert a randomly generated sample into an accel time sync set buffer
      * @param sample {Buffer} - A sample object
      * @param time {Number} - The time to inject into the sample.
      * @returns {Buffer} - A time sync accel packet
      */
-    convertSampleToPacketTimeSyncAccel: (sample,time) => {
-        var packetBuffer = new Buffer(k.OBCIPacketSize);
-        packetBuffer.fill(0);
-
-        // start byte
-        packetBuffer[0] = k.OBCIByteStart;
-
-        // sample number
-        packetBuffer[1] = sample.sampleNumber;
-
-        // channel data
-        for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            var threeByteBuffer = floatTo3ByteBuffer(sample.channelData[i]);
-
-            threeByteBuffer.copy(packetBuffer, 2 + (i * 3));
-        }
-
-        packetBuffer.writeInt32BE(time,28);
-
-        // stop byte
-        packetBuffer[k.OBCIPacketSize - 1] = 0xC4;
-
-        return packetBuffer;
+    convertSampleToPacketAccelTimeSyncSet: (sample, time) => {
+        var buf = convertSampleToPacketAccelTimeSynced(sample, time);
+        buf[k.OBCIPacketPositionStopByte] = makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSyncSet);
+        return buf;
     },
     /**
-     * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
+     * @description Mainly used by the simulator to convert a randomly generated sample into an accel time synced buffer
      * @param sample {Buffer} - A sample object
      * @param time {Number} - The time to inject into the sample.
+     * @returns {Buffer} - A time sync accel packet
+     */
+    convertSampleToPacketAccelTimeSynced,
+    /**
+     * @description Mainly used by the simulator to convert a randomly generated sample into a raw aux time sync set packet
+     * @param sample {Buffer} - A sample object
+     * @param time {Number} - The time to inject into the sample.
+     * @param rawAux {Buffer} - 2 byte buffer to inject into sample
      * @returns {Buffer} - A time sync raw aux packet
      */
-    convertSampleToPacketTimeSyncRawAux: (sample, time, rawAux) => {
-        var packetBuffer = new Buffer(k.OBCIPacketSize);
-        packetBuffer.fill(0);
-
-        // start byte
-        packetBuffer[0] = k.OBCIByteStart;
-
-        // sample number
-        packetBuffer[1] = sample.sampleNumber;
-
-        // channel data
-        for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            var threeByteBuffer = floatTo3ByteBuffer(sample.channelData[i]);
-
-            threeByteBuffer.copy(packetBuffer, 2 + (i * 3));
-        }
-
-        // Write the raw aux bytes
-        rawAux.copy(packetBuffer,26);
-
-        // Write the time
-        packetBuffer.writeInt32BE(time,28);
-
-        // stop byte
-        packetBuffer[k.OBCIPacketSize - 1] = 0xC5;
-
-        return packetBuffer;
+    convertSampleToPacketRawAuxTimeSyncSet: (sample, time, rawAux) => {
+        var buf = convertSampleToPacketRawAuxTimeSynced(sample, time, rawAux);
+        buf[k.OBCIPacketPositionStopByte] = makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSyncSet);
+        return buf;
     },
+    convertSampleToPacketRawAuxTimeSynced,
     debugPrettyPrint: (sample) => {
         if(sample === null || sample === undefined) {
             console.log('== Sample is undefined ==');
@@ -520,25 +487,28 @@ var sampleModule = {
     },
     GOERTZEL_BLOCK_SIZE,
     samplePacket: sampleNumber => {
-        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 0, 0, 1, 0, 2, 0xC0]);
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 0, 0, 1, 0, 2, makeTailByteFromPacketType(k.OBCIStreamPacketStandardAccel)]);
     },
     samplePacketReal: sampleNumber => {
-        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0x8F, 0xF2, 0x40, 0x8F, 0xDF, 0xF4, 0x90, 0x2B, 0xB6, 0x8F, 0xBF, 0xBF, 0x7F, 0xFF, 0xFF, 0x7F, 0xFF, 0xFF, 0x94, 0x25, 0x34, 0x20, 0xB6, 0x7D, 0, 0xE0, 0, 0xE0, 0x0F, 0x70, 0xC0]);
-    },
-    samplePacketTimeSyncSet: () => {
-        return new Buffer([0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0, 0, 0, 1, 0xC3]);
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0x8F, 0xF2, 0x40, 0x8F, 0xDF, 0xF4, 0x90, 0x2B, 0xB6, 0x8F, 0xBF, 0xBF, 0x7F, 0xFF, 0xFF, 0x7F, 0xFF, 0xFF, 0x94, 0x25, 0x34, 0x20, 0xB6, 0x7D, 0, 0xE0, 0, 0xE0, 0x0F, 0x70, makeTailByteFromPacketType(k.OBCIStreamPacketStandardAccel)]);
     },
     samplePacketStandardRawAux: sampleNumber => {
-        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 1, 2, 3, 4, 5, 0xC1]);
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 1, 2, 3, 4, 5, makeTailByteFromPacketType(k.OBCIStreamPacketStandardRawAux)]);
     },
-    samplePacketTimeSyncedAccel: sampleNumber => {
-        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 1, 0, 0, 0, 1, 0xC4]);
+    samplePacketAccelTimeSyncSet: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 1, 0, 0, 0, 1, makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSyncSet)]);
     },
-    samplePacketTimeSyncedRawAux: sampleNumber => {
-        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0x00, 0x01, 0, 0, 0, 1, 0xC5]);
+    samplePacketAccelTimeSynced: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 1, 0, 0, 0, 1, makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSynced)]);
+    },
+    samplePacketRawAuxTimeSyncSet: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0x00, 0x01, 0, 0, 0, 1, makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSyncSet)]);
+    },
+    samplePacketRawAuxTimeSynced: sampleNumber => {
+        return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0x00, 0x01, 0, 0, 0, 1, makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSynced)]);
     },
     samplePacketUserDefined: () => {
-        return new Buffer([0xA0, 0x00, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0xC2]);
+        return new Buffer([0xA0, 0x00, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, makeTailByteFromPacketType(k.OBCIStreamPacketUserDefinedType)]);
     },
     makeDaisySampleObject,
     getChannelDataArray,
@@ -549,7 +519,8 @@ var sampleModule = {
     findV2Firmware,
     isFailureInBuffer,
     isSuccessInBuffer,
-    isTimeSyncSetConfirmationInBuffer
+    isTimeSyncSetConfirmationInBuffer,
+    makeTailByteFromPacketType
 };
 
 module.exports = sampleModule;
@@ -1142,6 +1113,111 @@ function isTimeSyncSetConfirmationInBuffer(dataBuffer) {
     // Push the new data buffer. This runs the search.
     s.push(dataBuffer);
 
-    // Check and see if there is a match
     return s.matches === 1;
+
+    // return new Promise((resolve, reject) => {
+    //     s.on('info', function(isMatch, data, start, end) {
+    //         if (data) {
+    //             console.log('data: ' + data.toString('ascii', start, end));
+    //         }
+    //         if (isMatch) {
+    //             console.log('match!');
+    //             console.log(`start: ${start}`);
+    //             console.log(`end: ${end}`);
+    //             // The only thing in the buffer is a comma
+    //             if (start === undefined && end === undefined) {
+    //                 s.removeAllListeners();
+    //                 resolve(true);
+    //             }
+    //             // if (end === dataBuffer.length) {
+    //             //     if ()
+    //             //     resolve(true);
+    //             // } else {
+    //             //     resolve(false);
+    //             // }
+    //         }
+    //
+    //     });
+    // });
+
+}
+
+/**
+ * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
+ * @param sample {Buffer} - A sample object
+ * @param time {Number} - The time to inject into the sample.
+ * @param rawAux {Buffer} - 2 byte buffer to inject into sample
+ * @returns {Buffer} - A time sync raw aux packet
+ */
+function convertSampleToPacketRawAuxTimeSynced(sample, time, rawAux) {
+    var packetBuffer = new Buffer(k.OBCIPacketSize);
+    packetBuffer.fill(0);
+
+    // start byte
+    packetBuffer[0] = k.OBCIByteStart;
+
+    // sample number
+    packetBuffer[1] = sample.sampleNumber;
+
+    // channel data
+    for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        var threeByteBuffer = floatTo3ByteBuffer(sample.channelData[i]);
+
+        threeByteBuffer.copy(packetBuffer, 2 + (i * 3));
+    }
+
+    // Write the raw aux bytes
+    rawAux.copy(packetBuffer,26);
+
+    // Write the time
+    packetBuffer.writeInt32BE(time,28);
+
+    // stop byte
+    packetBuffer[k.OBCIPacketSize - 1] = makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSynced);
+
+    return packetBuffer;
+}
+
+/**
+ * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
+ * @param sample {Buffer} - A sample object
+ * @param time {Number} - The time to inject into the sample.
+ * @returns {Buffer} - A time sync accel packet
+ */
+function convertSampleToPacketAccelTimeSynced(sample,time) {
+    var packetBuffer = new Buffer(k.OBCIPacketSize);
+    packetBuffer.fill(0);
+
+    // start byte
+    packetBuffer[0] = k.OBCIByteStart;
+
+    // sample number
+    packetBuffer[1] = sample.sampleNumber;
+
+    // channel data
+    for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        var threeByteBuffer = floatTo3ByteBuffer(sample.channelData[i]);
+
+        threeByteBuffer.copy(packetBuffer, 2 + (i * 3));
+    }
+
+    packetBuffer.writeInt32BE(time,28);
+
+    // stop byte
+    packetBuffer[k.OBCIPacketSize - 1] = makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSynced);
+
+    return packetBuffer;
+}
+
+/**
+ * @description Converts a packet type {Number} into a OpenBCI stop byte
+ * @param type {Number} - The number to smash on to the stop byte. Must be 0-15,
+ *          out of bounds input will result in a 0
+ * @return {Number} - A properly formatted OpenBCI stop byte
+ */
+function makeTailByteFromPacketType(type) {
+    if (type < 0 || type > 15) {
+        type = 0;
+    }
+    return k.OBCIByteStop | type;
 }

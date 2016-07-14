@@ -11,7 +11,7 @@ var now = require('performance-now');
 
 function OpenBCISimulatorFactory() {
     var factory = this;
-    
+
     var _options = {
         accel: true,
         alpha: true,
@@ -65,6 +65,7 @@ function OpenBCISimulatorFactory() {
         };
         this.streaming = false;
         this.synced = false;
+        this.sendSyncSetPacket = false;
         // Buffers
         this.buffer = new Buffer(500);
         // Numbers
@@ -73,6 +74,7 @@ function OpenBCISimulatorFactory() {
         this.pollTime = 80;
         this.sampleNumber = -1; // So the first sample is 0
         // Objects
+        this.sampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, this.options.ampleRate, this.options.alpha, this.options.lineNoise);
         this.time = {
             current: 0,
             start: now(),
@@ -149,6 +151,7 @@ function OpenBCISimulatorFactory() {
                 break;
             case k.OBCISyncTimeSet:
                 if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
+                    this.synced = true;
                     setTimeout(() => {
                         this.emit('data', new Buffer(k.OBCISyncTimeSent));
                         this._syncUp();
@@ -182,20 +185,29 @@ function OpenBCISimulatorFactory() {
 
         if (intervalInMS < 2) intervalInMS = 2;
 
-        var generateSample = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, this.options.alpha, this.options.lineNoise);
-
         var getNewPacket = sampNumber => {
             if (this.options.accel) {
                 if (this.synced) {
-                    return openBCISample.convertSampleToPacketTimeSyncAccel(generateSample(sampNumber),now().toFixed(0));
+                    if (this.sendSyncSetPacket) {
+                        this.sendSyncSetPacket = false;
+                        if (this.options.verbose) console.log('set');
+                        return openBCISample.convertSampleToPacketAccelTimeSyncSet(this.sampleGenerator(sampNumber),now().toFixed(0));
+                    } else {
+                        return openBCISample.convertSampleToPacketAccelTimeSynced(this.sampleGenerator(sampNumber),now().toFixed(0));
+                    }
                 } else {
-                    return openBCISample.convertSampleToPacketStandard(generateSample(sampNumber));
+                    return openBCISample.convertSampleToPacketStandard(this.sampleGenerator(sampNumber));
                 }
             } else {
                 if (this.synced) {
-                    return openBCISample.convertSampleToPacketTimeSyncRawAux(generateSample(sampNumber),now().toFixed(0),new Buffer([0,0,0,0,0,0]));
+                    if (this.sendSyncSetPacket) {
+                        this.sendSyncSetPacket = false;
+                        return openBCISample.convertSampleToPacketRawAuxTimeSyncSet(this.sampleGenerator(sampNumber),now().toFixed(0),new Buffer([0,0,0,0,0,0]));
+                    } else {
+                        return openBCISample.convertSampleToPacketRawAuxTimeSynced(this.sampleGenerator(sampNumber),now().toFixed(0),new Buffer([0,0,0,0,0,0]));
+                    }
                 } else {
-                    return openBCISample.convertSampleToPacketRawAux(generateSample(sampNumber),new Buffer([0,0,0,0,0,0]));
+                    return openBCISample.convertSampleToPacketRawAux(this.sampleGenerator(sampNumber),new Buffer([0,0,0,0,0,0]));
                 }
 
             }
@@ -208,13 +220,7 @@ function OpenBCISimulatorFactory() {
     };
 
     OpenBCISimulator.prototype._syncUp = function() {
-        this.synced = true;
-
-        var timeSyncSetPacket = openBCISample.samplePacketTimeSyncSet();
-
-        timeSyncSetPacket.writeInt32BE(now().toFixed(0),28);
-
-        this.emit('data',timeSyncSetPacket);
+        this.sendSyncSetPacket = true;
     };
 
     OpenBCISimulator.prototype._printEOT = function () {

@@ -828,14 +828,9 @@ function OpenBCIFactory() {
                 if (openBCISample.isSuccessInBuffer(data)) {
                     // Change the sample rate here
                     if (this.options.simulate === false) {
-                        this.serial.update({
-                            baudRate: newBaudRateNum
-                        }, err => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve(newBaudRateNum);
-                            }
+                        this.serial.update({baudRate:newBaudRateNum},err => {
+                            if (err) reject(err);
+                            else resolve(newBaudRateNum);
                         });
                     } else {
                         resolve(newBaudRateNum);
@@ -1521,8 +1516,7 @@ function OpenBCIFactory() {
             //if (this.streaming) reject('Cannot be streaming to sync clocks');
             if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on V1 firmware, please update');
             this.curParsingMode = k.OBCIParsingTimeSyncSent;
-            if (this.options.verbose) console.log('PC time sent to board: ' + this.sync.timeEnteredQueue);
-            this.write(k.OBCISyncTimeSet);
+            this._writeAndDrain(k.OBCISyncTimeSet);
             resolve();
         });
     };
@@ -1566,11 +1560,18 @@ function OpenBCIFactory() {
                 }
                 break;
             case k.OBCIParsingTimeSyncSent:
+                // If there is only one match
                 if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
+                    if (this.options.verbose) console.log(`Found Time Sync Sent`);
                     this.sync.timeGotPacketSent = this.sntpNow();
-                    this.curParsingMode = k.OBCIParsingNormal;
                 }
                 this.buffer = this._processDataBuffer(data);
+                // If this.buffer is not null, then there was some data left over, must be the case
+                if (this.buffer) {
+                    if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
+                        this.curParsingMode = k.OBCIParsingNormal;
+                    }
+                }
                 break;
             case k.OBCIParsingNormal:
             default:
@@ -1697,14 +1698,18 @@ function OpenBCIFactory() {
             case k.OBCIStreamPacketUserDefinedType:
                 // Do nothing for User Defined Packets
                 break;
-            case k.OBCIStreamPacketTimeSyncSet:
-                this.sync.timeGotSetPacket = this.sntpNow();
+            case k.OBCIStreamPacketAccelTimeSyncSet:
                 this._processPacketTimeSyncSet(rawDataPacketBuffer);
-                break;
-            case k.OBCIStreamPacketTimeSyncedAccel:
                 this._processPacketTimeSyncedAccel(rawDataPacketBuffer);
                 break;
-            case k.OBCIStreamPacketTimeSyncedRawAux:
+            case k.OBCIStreamPacketAccelTimeSynced:
+                this._processPacketTimeSyncedAccel(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketRawAuxTimeSyncSet:
+                this._processPacketTimeSyncSet(rawDataPacketBuffer);
+                this._processPacketTimeSyncedRawAux(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketRawAuxTimeSynced:
                 this._processPacketTimeSyncedRawAux(rawDataPacketBuffer);
                 break;
             default:
@@ -1775,38 +1780,43 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
-        if (this.options.verbose) console.log('Got time set packet from the board');
-        openBCISample.getFromTimePacketTime(rawPacket)
-            .then(boardTime => {
-                this.sync.timeRoundTrip = this.sync.timeGotSetPacket - this.sync.timeGotPacketSent;
-                console.log();
-                this.sync.timeTransmission = this.sync.timeRoundTrip / 2;
-                this.sync.timeOffset = this.sync.timeGotSetPacket - this.sync.timeTransmission - boardTime;
-                this.sync.active = true;
-                // Add to array
-                if (this.sync.timeOffsetArray.length >= k.OBCITimeSyncArraySize) {
-                    // Shift the oldest one out of the array
-                    this.sync.timeOffsetArray.shift();
-                    // Push the new value into the array
-                    this.sync.timeOffsetArray.push(this.sync.timeOffset);
-                } else {
-                    // Push the new value into the array
-                    this.sync.timeOffsetArray.push(this.sync.timeOffset);
-                }
-                this.sync.timeOffsetAvg = math.mean(this.sync.timeOffsetArray);
-                if (this.options.verbose) {
-                    console.log(`Board time: ${boardTime}`);
-                    console.log(`Board offset time: ${this.sync.timeOffset}`);
-                    console.log(`Queue time to actual send time: ${(this.sync.timeGotPacketSent - this.sync.timeEnteredQueue)} ms`);
-                    console.log(`Round trip time: ${this.sync.timeRoundTrip} ms`);
-                    console.log(`Transmission time: ${this.sync.timeTransmission} ms`);
-                    console.log(`Corrected board time: ${(this.sync.timeOffset + boardTime)} ms`);
-                    console.log(`Diff between corrected board time and actual time we got that packet: ${((this.sync.timeGotPacketSent + this.sync.timeTransmission) - (boardTime + this.sync.timeOffset))} ms`);
-                    console.log(`Avg time offset is ${this.sync.timeOffsetAvg}`);
-                }
-                this.emit('synced',this.sync);
-            })
-            .catch(err => console.log('Error in _processPacketTimeSyncSet', err));
+        return new Promise((resolve, reject) => {
+            if (this.options.verbose) console.log('Got time set packet from the board');
+            var currentTime = this.sntpNow();
+            openBCISample.getFromTimePacketTime(rawPacket)
+                .then(boardTime => {
+                    this.sync.timeRoundTrip = this.sync.timeGotSetPacket - this.sync.timeGotPacketSent;
+                    this.sync.timeTransmission = this.sync.timeRoundTrip / 2;
+                    this.sync.timeOffset = this.sync.timeGotSetPacket - this.sync.timeTransmission - boardTime;
+                    this.sync.active = true;
+                    // Add to array
+                    if (this.sync.timeOffsetArray.length >= k.OBCITimeSyncArraySize) {
+                        // Shift the oldest one out of the array
+                        this.sync.timeOffsetArray.shift();
+                        // Push the new value into the array
+                        this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                    } else {
+                        // Push the new value into the array
+                        this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                    }
+                    this.sync.timeOffsetAvg = math.floor(math.mean(this.sync.timeOffsetArray));
+                    if (this.options.verbose) {
+                        console.log(`Board time: ${boardTime}`);
+                        console.log(`Board offset time: ${this.sync.timeOffset}`);
+                        console.log(`Round trip time: ${this.sync.timeRoundTrip} ms`);
+                        console.log(`Transmission time: ${this.sync.timeTransmission} ms`);
+                        console.log(`Corrected board time: ${(this.sync.timeOffset + boardTime)} ms`);
+                        console.log(`Diff between corrected board time and actual time we got that packet: ${((this.sync.timeGotPacketSent + this.sync.timeTransmission) - (boardTime + this.sync.timeOffset))} ms`);
+                        console.log(`Avg time offset is ${this.sync.timeOffsetAvg}`);
+                    }
+                    this.emit('synced',this.sync);
+                    resolve(rawPacket);
+                })
+                .catch(err => {
+                    console.log('Error in _processPacketTimeSyncSet', err)
+                    reject(err);
+                });
+        });
     };
 
     /**
@@ -1835,11 +1845,11 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._processPacketTimeSyncedRawAux = function(rawPacket) {
         if (this.sync.active === false) console.log('Need to sync with board...');
-        openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
+        openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffset)
             .then(sampleObject => {
                 this._finalizeNewSample.call(this,sampleObject);
             })
-            .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
+            .catch(err => console.log('Error in _processPacketTimeSyncedRawAux',err));
     };
 
     /**
