@@ -1585,14 +1585,9 @@ function OpenBCIFactory() {
                 if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
                     if (this.options.verbose) console.log(`Found Time Sync Sent`);
                     this.sync.timeGotPacketSent = this.sntpNow();
+                    this.curParsingMode = k.OBCIParsingNormal;
                 }
                 this.buffer = this._processDataBuffer(data);
-                // If this.buffer is not null, then there was some data left over, must be the case
-                if (this.buffer) {
-                    if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
-                        this.curParsingMode = k.OBCIParsingNormal;
-                    }
-                }
                 break;
             case k.OBCIParsingNormal:
             default:
@@ -1628,7 +1623,7 @@ function OpenBCIFactory() {
             if (dataBuffer[parsePosition] === k.OBCIByteStart) {
                 // Now that we know the first is a head byte, let's see if the last one is a
                 //  tail byte 0xCx where x is the set of numbers from 0-F (hex)
-                if (this._isStopByte(dataBuffer[parsePosition + k.OBCIPacketSize - 1])) {
+                if (openBCISample.isStopByte(dataBuffer[parsePosition + k.OBCIPacketSize - 1])) {
                     /** We just qualified a raw packet */
                     // Grab the raw packet, make a copy of it.
                     var rawPacket;
@@ -1668,18 +1663,6 @@ function OpenBCIFactory() {
         }
 
         return dataBuffer;
-    };
-
-    /**
-     * @description Used to check and see if a byte adheres to the stop byte structure of 0xCx where x is the set of
-     *      numbers from 0-F in hex of 0-15 in decimal.
-     * @param byte {Number} - The number to test
-     * @returns {boolean} - True if `byte` follows the correct form
-     * @private
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype._isStopByte = function(byte) {
-        return (byte & 0xF0) === k.OBCIByteStop;
     };
 
     /**

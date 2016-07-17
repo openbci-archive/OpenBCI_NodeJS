@@ -1381,30 +1381,6 @@ describe('openbci-sdk',function() {
         });
     });
 
-    describe('#_isStopByte',function() {
-        var ourBoard;
-        before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
-                verbose: true
-            });
-        });
-        after(() => {
-            ourBoard = null;
-        });
-        it('should return true for a normal stop byte', () => {
-            expect(ourBoard._isStopByte(0xC0)).to.be.true;
-        });
-        it('should return true for a good stop byte with a different end nibble', () => {
-            expect(ourBoard._isStopByte(0xCF)).to.be.true;
-        });
-        it('should return false for a bad stop byte', () => {
-            expect(ourBoard._isStopByte(0xF0)).to.be.false;
-        });
-        it('should return false for a bad stop byte', () => {
-            expect(ourBoard._isStopByte(0x00)).to.be.false;
-        });
-    });
-
     describe("#_finalizeNewSampleForDaisy", function() {
         var ourBoard, randomSampleGenerator, sampleEvent, failTimeout;
         before(() => {

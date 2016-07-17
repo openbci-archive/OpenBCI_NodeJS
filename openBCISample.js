@@ -520,7 +520,8 @@ var sampleModule = {
     isFailureInBuffer,
     isSuccessInBuffer,
     isTimeSyncSetConfirmationInBuffer,
-    makeTailByteFromPacketType
+    makeTailByteFromPacketType,
+    isStopByte
 };
 
 module.exports = sampleModule;
@@ -1105,41 +1106,47 @@ function isSuccessInBuffer(dataBuffer) {
  * @returns {boolean} - True if the `,` was found.
  */
 function isTimeSyncSetConfirmationInBuffer(dataBuffer) {
-    const s = new StreamSearch(new Buffer(k.OBCISyncTimeSent));
+    const comma = new Buffer(k.OBCISyncTimeSent);
+    if (dataBuffer) {
+        var bufferLength = dataBuffer.length;
+        switch (bufferLength) {
+            case 0:
+                return false;
+                break;
+            case 1:
+                return dataBuffer[0] === k.OBCISyncTimeSent.charCodeAt(0);
+            case 2:
+                // HEAD Byte at End
+                if (dataBuffer[1] === k.OBCIByteStart) {
+                    return dataBuffer[0] === k.OBCISyncTimeSent.charCodeAt(0);
+                // TAIL byte in front
 
-    // Clear the buffer
-    s.reset();
+                } else if (isStopByte((dataBuffer[0]))) {
+                    return dataBuffer[1] === k.OBCISyncTimeSent.charCodeAt(0);
 
-    // Push the new data buffer. This runs the search.
-    s.push(dataBuffer);
+                } else {
+                    return false;
+                }
+            default:
+                for (var i = 1; i < bufferLength; i++) {
+                    // The base case (last one)
+                    // console.log(i);
+                    if (i === (bufferLength - 1)) {
+                        if (isStopByte((dataBuffer[i-1]))) {
+                            return dataBuffer[i] === k.OBCISyncTimeSent.charCodeAt(0);
+                        }
+                    } else {
+                        // Wedged
+                        if (isStopByte(dataBuffer[i-1]) && dataBuffer[i+1] === k.OBCIByteStart) {
+                            return dataBuffer[i] === k.OBCISyncTimeSent.charCodeAt(0);
+                        // TAIL byte in front
+                        }
+                    }
+                }
+                return false;
 
-    return s.matches === 1;
-
-    // return new Promise((resolve, reject) => {
-    //     s.on('info', function(isMatch, data, start, end) {
-    //         if (data) {
-    //             console.log('data: ' + data.toString('ascii', start, end));
-    //         }
-    //         if (isMatch) {
-    //             console.log('match!');
-    //             console.log(`start: ${start}`);
-    //             console.log(`end: ${end}`);
-    //             // The only thing in the buffer is a comma
-    //             if (start === undefined && end === undefined) {
-    //                 s.removeAllListeners();
-    //                 resolve(true);
-    //             }
-    //             // if (end === dataBuffer.length) {
-    //             //     if ()
-    //             //     resolve(true);
-    //             // } else {
-    //             //     resolve(false);
-    //             // }
-    //         }
-    //
-    //     });
-    // });
-
+        }
+    }
 }
 
 /**
@@ -1221,3 +1228,14 @@ function makeTailByteFromPacketType(type) {
     }
     return k.OBCIByteStop | type;
 }
+
+/**
+ * @description Used to check and see if a byte adheres to the stop byte structure of 0xCx where x is the set of
+ *      numbers from 0-F in hex of 0-15 in decimal.
+ * @param byte {Number} - The number to test
+ * @returns {boolean} - True if `byte` follows the correct form
+ * @author AJ Keller (@pushtheworldllc)
+ */
+function isStopByte(byte) {
+    return (byte & 0xF0) === k.OBCIByteStop;
+};

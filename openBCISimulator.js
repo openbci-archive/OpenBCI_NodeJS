@@ -74,7 +74,7 @@ function OpenBCISimulatorFactory() {
         this.pollTime = 80;
         this.sampleNumber = -1; // So the first sample is 0
         // Objects
-        this.sampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, this.options.ampleRate, this.options.alpha, this.options.lineNoise);
+        this.sampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, this.options.sampleRate, this.options.alpha, this.options.lineNoise);
         this.time = {
             current: 0,
             start: now(),
@@ -190,7 +190,6 @@ function OpenBCISimulatorFactory() {
                 if (this.synced) {
                     if (this.sendSyncSetPacket) {
                         this.sendSyncSetPacket = false;
-                        if (this.options.verbose) console.log('set');
                         return openBCISample.convertSampleToPacketAccelTimeSyncSet(this.sampleGenerator(sampNumber),now().toFixed(0));
                     } else {
                         return openBCISample.convertSampleToPacketAccelTimeSynced(this.sampleGenerator(sampNumber),now().toFixed(0));

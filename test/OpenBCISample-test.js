@@ -1233,13 +1233,96 @@ describe('openBCISample',function() {
         });
     });
 
-    describe("#isTimeSyncSetConfirmationInBuffer", function() {
-        it("should find the character in a buffer with only the character", function() {
-            openBCISample.isTimeSyncSetConfirmationInBuffer(new Buffer(",")).should.equal(true);
+    describe('#isStopByte',function() {
+        it('should return true for a normal stop byte', () => {
+            expect(openBCISample.isStopByte(0xC0)).to.be.true;
         });
+        it('should return true for a good stop byte with a different end nibble', () => {
+            expect(openBCISample.isStopByte(0xCF)).to.be.true;
+        });
+        it('should return false for a bad stop byte', () => {
+            expect(openBCISample.isStopByte(0xF0)).to.be.false;
+        });
+        it('should return false for a bad stop byte', () => {
+            expect(openBCISample.isStopByte(0x00)).to.be.false;
+        });
+    });
+
+    describe("#isTimeSyncSetConfirmationInBuffer", function() {
+        // Attn: 0x2C is ASCII for ','
+        var comma = 0x2C;
         it("should not find the character in a buffer without the character", function() {
             openBCISample.isTimeSyncSetConfirmationInBuffer(openBCISample.samplePacket()).should.equal(false);
         });
+        it("should find with just 0x2C", function() {
+            var buffer = new Buffer([comma]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"just comma").to.be.true;
+        });
+        it("should find even at start of buffer", function() {
+            // Start of buffer
+            var buffer = new Buffer([comma, k.OBCIByteStart]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"before packet").to.be.true;
+        });
+        it("should find even at back of buffer", function() {
+            // Back of buffer
+            var buffer = new Buffer([0xC0,comma]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"after packet").to.be.true;
+        });
+        it("should find wedged beween two packets", function() {
+            /// wedged
+            var buffer = new Buffer([0xC0,comma,0xA0]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"wedged between packets").to.be.true;
+        });
+        it("should not find if no comma present", function() {
+            /// wedged
+            var buffer = new Buffer([0x2D]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"not comma").to.be.false;
+        });
+        it("should not find if comma at the front of bad block", function() {
+            // Start of buffer
+            var buffer = new Buffer([comma, 0xCC]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"front of buffer").to.be.false;
+        });
+        it("should not find if comma at the back of bad block", function() {
+            // Back of buffer
+            buffer = new Buffer([0xD3,comma]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"end of buffer").to.be.false;
+        });
+        it("should not find is not the comma", function() {
+            // Wedged
+            buffer = new Buffer([comma,comma,comma]);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer),"strictly commas").to.be.false;
+        });
+        it("should find the character in a buffer packed with samples", function() {
+            var buf1 = openBCISample.samplePacket(1);
+            var buf2 = openBCISample.samplePacket(2);
+            var buf3 = new Buffer([0x2C]);
+            var buf4 = openBCISample.samplePacket(3);
+
+            var bufferLength = buf1.length + buf2.length + buf3.length + buf4.length;
+            var buffer = new Buffer.concat([buf1,buf2,buf3,buf4],bufferLength);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer)).to.be.true;
+        });
+        it("should find the character in a buffer packed with samples with comma at end", function() {
+            var buf1 = openBCISample.samplePacket(1);
+            var buf2 = openBCISample.samplePacket(2);
+            var buf3 = openBCISample.samplePacket(3);
+            var buf4 = new Buffer([0x2C]);
+
+            var bufferLength = buf1.length + buf2.length + buf3.length + buf4.length;
+            var buffer = new Buffer.concat([buf1,buf2,buf3,buf4],bufferLength);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer)).to.be.true;
+        });
+        it("should not find the character in a buffer packed with samples", function() {
+            var buf1 = openBCISample.samplePacket(1);
+            var buf2 = openBCISample.samplePacket(2);
+            var buf3 = openBCISample.samplePacket(3);
+
+            var bufferLength = buf1.length + buf2.length + buf3.length;
+            var buffer = new Buffer.concat([buf1,buf2,buf3],bufferLength);
+            expect(openBCISample.isTimeSyncSetConfirmationInBuffer(buffer)).to.be.false;
+        });
+
     });
     describe('#makeTailByteFromPacketType', function() {
         it("should convert 0 to 0xC0",function() {

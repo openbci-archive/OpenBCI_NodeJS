@@ -115,6 +115,97 @@ describe('openBCISimulator',function() {
             expect(simulator.options.drift).to.be.lessThan(0);
         });
     });
+    describe("_startStream", function() {
+        it('should return a packet with sample data in it', function(done) {
+            var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+            var sampleCounter = 0;
+            var sampleTestSize = 5;
+
+            var newDataFunc = data => {
+                if (sampleCounter > sampleTestSize) {
+                    simulator.write(new Buffer([k.OBCIStreamStop]));
+                    simulator.removeListener('data',newDataFunc);
+                    openBCISample.parseRawPacketStandard(data,k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault),true)
+                        .then(sampleObject => {
+                            sampleObject.channelData.forEach((channelValue, index) => {
+                                expect(channelValue).to.not.equal(0);
+                            });
+                            simulator = null;
+                            done();
+                        });
+                } else {
+                    sampleCounter++;
+                }
+            }
+            simulator.on('data',newDataFunc);
+            simulator._startStream();
+        });
+        it('should return a sync set packet with accel',function(done) {
+            var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+            var sampleCounter = 0;
+            var sampleTestSize = 5;
+
+            var newDataFunc = data => {
+                if (sampleCounter === 0) {
+                    // Ensure everything is switched on for this test
+                    simulator.options.accel = true;
+                    simulator.synced = true;
+                    simulator.sendSyncSetPacket = true;
+                    expect(data[k.OBCIPacketPositionStopByte]).to.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketStandardAccel));
+                } else if (sampleCounter === 1) {
+                    // Now this data should be the time sync up packet
+                    expect(data[k.OBCIPacketPositionStopByte]).to.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSyncSet));
+                    // Expect flag to be down
+                    expect(simulator.sendSyncSetPacket).to.be.false;
+                } else if (sampleCounter >= sampleTestSize) {
+                    simulator.write(new Buffer([k.OBCIStreamStop]));
+                    simulator.removeListener('data',newDataFunc);
+                    simulator = null;
+                    done();
+                } else {
+                    // Now this data should be the time sync up packet
+                    expect(data[k.OBCIPacketPositionStopByte]).to.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSynced));
+                }
+                sampleCounter++;
+            }
+
+            simulator.on('data',newDataFunc);
+            simulator._startStream();
+        });
+        it('should return a sync set packet with raw aux',function(done) {
+            var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName,{
+                accel: false
+            });
+            var sampleCounter = 0;
+            var sampleTestSize = 5;
+
+            var newDataFunc = data => {
+                if (sampleCounter === 0) {
+                    // Ensure everything is switched on for this test
+                    simulator.synced = true;
+                    simulator.sendSyncSetPacket = true;
+                    expect(data[k.OBCIPacketPositionStopByte]).to.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketStandardRawAux));
+                } else if (sampleCounter === 1) {
+                    // Now this data should be the time sync up packet
+                    expect(data[k.OBCIPacketPositionStopByte]).to.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSyncSet));
+                    // Expect flag to be down
+                    expect(simulator.sendSyncSetPacket).to.be.false;
+                } else if (sampleCounter >= sampleTestSize) {
+                    simulator.write(new Buffer([k.OBCIStreamStop]));
+                    simulator.removeListener('data',newDataFunc);
+                    simulator = null;
+                    done();
+                } else {
+                    // Now this data should be the time sync up packet
+                    expect(data[k.OBCIPacketPositionStopByte]).to.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSynced));
+                }
+                sampleCounter++;
+            }
+
+            simulator.on('data',newDataFunc);
+            simulator._startStream();
+        });
+    });
     describe("firmwareVersion1",function () {
 
     });

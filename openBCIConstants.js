@@ -166,7 +166,7 @@ const OBCITrigger = '`';
 
 /** Sync Clocks */
 const OBCISyncTimeSet = '<';
-const OBCISyncTimeSent = ",";
+const OBCISyncTimeSent = ',';
 
 /** Radio Key */
 const OBCIRadioKey = 0xF0;
