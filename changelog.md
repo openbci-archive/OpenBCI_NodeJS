@@ -1,5 +1,9 @@
 # 1.0.1
 
+### New Features
+
+* Add time sync tutorial in `README.md`
+
 ### Bug Fixes
 
 * Fixed bug in simulator that lead to samples being all zeros.

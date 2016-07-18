@@ -158,6 +158,48 @@ var ourBoard = new require('openbci').OpenBCIBoard();
 ourBoard.streamStop().then(ourBoard.disconnect());
 ```
 
+Time Syncing
+------------
+You must be using OpenBCI firmware version 2 in order to do time syncing. After you `.connect()` and send a `.softReset()`, you can call `.usingVersionTwoFirmware()` to get a boolean response as to if you are using `v1` or `v2`.
+
+Now using firmware `v2`, the fun begins! What we set out to do was synchronize not only the board to this modules clock, but also with a global NTP server, so that you could use several different devices and all sync to the same global server. That way you can really do some serious cloud computing!
+
+```js
+var OpenBCIBoard = require('openbci').OpenBCIBoard,
+    ourBoard = new OpenBCIBoard({
+        verbose:true,
+        timeSync: true // Sync up with NTP servers in constructor
+    });
+
+// Call to connect
+ourBoard.connect(portName).then(() => {
+    ourBoard.on('ready',() => {
+        ourBoard.streamStart()
+            .catch(err => {
+                console.log(`stream start: ${err}`);
+            })
+    });
+    // 'synced' event contains the guts of the whole sync operation.
+    ourBoard.on('synced',obj => {
+        console.log('sync obj',obj);
+    });
+    ourBoard.on('sample',sample => {
+        // Resynchronize every 100 samples
+        if (sample.sampleNumber % 100 === 0) {
+            ourBoard.syncClocks();
+        }
+
+        if (sample.timeStamp) { // true after the first sync
+            console.log(`NTP Time Stamp ${sample.timeStamp}`);
+        }
+
+    });
+})
+.catch(err => {
+    console.log(`connect: ${err}`);
+});
+```
+
 Auto-finding boards
 -------------------
 You must have the OpenBCI board connected to the PC before trying to automatically find it.
