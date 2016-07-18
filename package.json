@@ -1,6 +1,6 @@
 {
-  "name": "openbci-sdk",
-  "version": "0.3.9",
+  "name": "openbci",
+  "version": "1.0.1",
   "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
   "main": "openBCIBoard",
   "scripts": {
@@ -15,17 +15,20 @@
   "author": "AJ Keller <aj@pushtheworld.us> (www.openbci.com)",
   "license": "MIT",
   "dependencies": {
+    "buffer-equal": "^1.0.0",
     "gaussian": "^1.0.0",
     "istanbul": "^0.4.2",
+    "mathjs": "^3.3.0",
     "performance-now": "^0.2.0",
-    "scientific-statistics": "^0.2.7",
     "serialport": "3.1.2",
-    "sntp": "^2.0.0"
+    "sntp": "^2.0.0",
+    "streamsearch": "^0.1.2"
   },
   "directories": {
     "test": "test"
   },
   "devDependencies": {
+    "buffer-equal": "^1.0.0",
     "chai": "^3.4.1",
     "chai-as-promised": "^5.2.0",
     "codecov": "^1.0.1",

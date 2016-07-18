@@ -7,6 +7,7 @@ node_js:
   - "6.0"
   - "6.1"
   - "6.2"
+  - "6.3"
 install:
   - npm install --all
 script:

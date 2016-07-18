@@ -1,14 +1,18 @@
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
-var util = require('util');
-var stream = require('stream');
-var serialPort = require('serialport');
-var openBCISample = require('./openBCISample');
-var k = openBCISample.k;
-var openBCISimulator = require('./openBCISimulator');
-var now = require('performance-now');
-var Sntp = require('sntp');
+var EventEmitter = require('events').EventEmitter,
+    util = require('util'),
+    stream = require('stream'),
+    serialPort = require('serialport'),
+    openBCISample = require('./openBCISample'),
+    k = openBCISample.k,
+    openBCISimulator = require('./openBCISimulator'),
+    now = require('performance-now'),
+    Sntp = require('sntp'),
+    StreamSearch = require('streamsearch'),
+    bufferEqual = require('buffer-equal'),
+    math = require('mathjs');
+
 
 /**
  * @description SDK for OpenBCI Board {@link www.openbci.com}
@@ -20,52 +24,75 @@ function OpenBCIFactory() {
     var _options = {
         boardType: k.OBCIBoardDefault,
         baudrate: 115200,
-        verbose: false,
-        sntp: false,
         simulate: false,
+        simulatorBoardFailure: false,
+        simulatorDaisyModuleAttached: false,
+        simulatorFirmwareVersion: k.OBCIFirmwareV1,
+        simulatorHasAccelerometer: true,
+        simulatorInternalClockDrift: 0,
+        simulatorInjectAlpha: true,
+        simulatorInjectLineNoise: '60Hz',
         simulatorSampleRate: 250,
-        simulatorAlpha: true,
-        simulatorLineNoise: '60Hz'
+        simulatorSerialPortFailure:false,
+        timeSync: false,
+        verbose: false
     };
 
     /**
      * @description The initialization method to call first, before any other method.
      * @param options (optional) - Board optional configurations.
-     *     - `boardType` - Specifies type of OpenBCI board
+     *     - `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if
+     *                      firmware on board has been previously configured.
+     *
+     *     - `boardType` {String} - Specifies type of OpenBCI board.
      *          3 Possible Boards:
      *              `default` - 8 Channel OpenBCI board (Default)
-     *              `daisy` - 8 Channel board with Daisy Module
-     *                  (NOTE: THIS IS IN-OP AT THIS TIME DUE TO NO ACCESS TO ACCESSORY BOARD)
+     *              `daisy` - 8 Channel OpenBCI board with Daisy Module. Total of 16 channels.
      *              `ganglion` - 4 Channel board
      *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
      *
-     *     - `baudRate` - Baud Rate, defaults to 115200. Manipulating this is allowed if
-     *                      firmware on board has been previously configured.
+     *     - `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting
+     *                  `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
      *
-     *     - `verbose` - Print out useful debugging events
+     *     - `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on
+     *                  the board is not polling the RFduino on the dongle. (Default `false`)
      *
-     *     - `simulate` - Full functionality, just mock data.
+     *     - `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board.
+     *                  This is useful if you want to test how your application reacts to a user requesting 16 channels
+     *                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
+     *                  attached and the user only wants to use 8 channels. (Default `false`)
      *
-     *     - `simulatorSampleRate` - The sample rate to use for the simulator
-     *                      (Default is `250`)
+     *     - `simulatorFirmwareVersion` {String} - Allows simulator to be started with firmware version 2 features
+     *          2 Possible Options:
+     *              `v1` - Firmware Version 1 (Default)
+     *              `v2` - Firmware Version 2
      *
-     *     - `simulatorAlpha` - {Boolean} - Inject and 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+     *     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
      *
-     *     - `simulatorLineNoise` - Injects line noise on channels.
-     *          3 Possible Boards:
+     *     - `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+     *
+     *     - `simulatorInjectLineNoise` {String} - Injects line noise on channels.
+     *          3 Possible Options:
      *              `60Hz` - 60Hz line noise (Default) [America]
      *              `50Hz` - 50Hz line noise [Europe]
      *              `None` - Do not inject line noise.
      *
-     *     - `sntp` - Syncs the module up with an SNTP time server. Syncs the board on startup
-     *                  with the SNTP time. Adds a time stamp to the AUX channels. (NOT FULLY
-     *                  IMPLEMENTED) [DO NOT USE]
+     *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if
+     *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that
+     *                  setting and this sample rate will be used. (Default is `250`)
+     *
+     *     - `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely
+     *                  due to a OpenBCI dongle not being plugged in.
+     *
+     *     - `timeSync` - {Boolean} Syncs the module up with an SNTP time server. Syncs the board on startup
+     *                  with the SNTP time. Adds a time stamp to the AUX channels.
+     *
+     *     - `verbose` {Boolean} - Print out useful debugging events
+     *
      * @constructor
      * @author AJ Keller (@pushtheworldllc)
      */
     function OpenBCIBoard(options) {
-        //var args = Array.prototype.slice.call(arguments);
-
         options = (typeof options !== 'function') && options || {};
         var opts = {};
 
@@ -74,39 +101,46 @@ function OpenBCIFactory() {
         /** Configuring Options */
         opts.boardType = options.boardType || options.boardtype || _options.boardType;
         opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
-        opts.verbose = options.verbose || _options.verbose;
-        opts.sntp = options.SNTP || options.sntp || _options.NTP;
         opts.simulate = options.simulate || _options.simulate;
-        opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
-        opts.simulatorLineNoise = options.simulatorLineNoise || options.simulatorlinenoise || _options.simulatorLineNoise;
-        // Safety check!
-        if (opts.simulatorLineNoise !== '60Hz' && opts.simulatorLineNoise !== '50Hz' && opts.simulatorLineNoise !== 'None') {
-            opts.simulatorLineNoise = '60Hz';
+        opts.simulatorBoardFailure = options.simulatorBoardFailure || options.simulatorboardfailure || _options.simulatorBoardFailure;
+        opts.simulatorDaisyModuleAttached = options.simulatorDaisyModuleAttached || options.simulatordaisymoduleattached || _options.simulatorDaisyModuleAttached;
+        opts.simulatorFirmwareVersion = options.simulatorFirmwareVersion || options.simulatorfirmwareversion || _options.simulatorFirmwareVersion;
+        if (opts.simulatorFirmwareVersion !== k.OBCIFirmwareV1 && opts.simulatorFirmwareVersion !== k.OBCIFirmwareV2) {
+            opts.simulatorFirmwareVersion = k.OBCIFirmwareV1;
         }
-        if (options.simulatorAlpha === false || options.simulatoralpha === false) {
-            opts.simulatorAlpha = false;
+        if (options.simulatorHasAccelerometer === false || options.simulatorhasaccelerometer === false) {
+            opts.simulatorHasAccelerometer = false;
         } else {
-            opts.simulatorAlpha = _options.simulatorAlpha;
+            opts.simulatorHasAccelerometer = _options.simulatorHasAccelerometer;
         }
+        opts.simulatorInternalClockDrift = options.simulatorInternalClockDrift || options.simulatorinternalclockdrift || _options.simulatorInternalClockDrift;
+        if (options.simulatorInjectAlpha === false || options.simulatorinjectalpha === false) {
+            opts.simulatorInjectAlpha = false;
+        } else {
+            opts.simulatorInjectAlpha = _options.simulatorInjectAlpha;
+        }
+        opts.simulatorInjectLineNoise = options.simulatorInjectLineNoise || options.simulatorinjectlinenoise || _options.simulatorInjectLineNoise;
+        if (opts.simulatorInjectLineNoise !== '60Hz' && opts.simulatorInjectLineNoise !== '50Hz' && opts.simulatorInjectLineNoise !== 'None') {
+            opts.simulatorInjectLineNoise = '60Hz';
+        }
+        opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
+        opts.simulatorSerialPortFailure = options.simulatorSerialPortFailure || options.simulatorserialportfailure || _options.simulatorSerialPortFailure;
+        opts.timeSync = options.timeSync || options.timesync || _options.timeSync;
+        opts.verbose = options.verbose || _options.verbose;
+
         // Set to global options object
         this.options = opts;
 
         /** Properties (keep alphabetical) */
         // Arrays
-        this.writeOutArray = new Array(100);
+        this.accelArray = [0,0,0]; // X, Y, Z
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
-        // Bools
-        this.isLookingForKeyInBuffer = true;
+        this.writeOutArray = new Array(100);
         // Buffers
+        this.buffer = null;
         this.masterBuffer = masterBufferMaker();
-        this.searchBuffers = {
-            timeSyncStart: new Buffer('$a$'),
-            miscStop: new Buffer('$$$')
-        };
-        this.searchingBuf = this.searchBuffers.miscStop;
         // Objects
         this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
-        this.writer = null;
         this.impedanceTest = {
             active: false,
             isTestingPInput: false,
@@ -116,9 +150,28 @@ function OpenBCIFactory() {
             continuousMode: false,
             impedanceForChannel: 0
         };
+        this.info = {
+            boardType : this.options.boardType,
+            sampleRate : k.OBCISampleRate125,
+            firmware : k.OBCIFirmwareV1,
+            numberOfChannels : k.OBCINumberOfChannelsDefault,
+            missedPackets : 0
+        };
+        if (this.options.boardType === k.OBCIBoardDefault) {
+            this.info.sampleRate = k.OBCISampleRate250
+        }
+
+        this._lowerChannelsSampleObject = null;
         this.sync = {
-            npt1: 0,
-            ntp2: 0
+            active: false,
+            timeGotPacketSent: 0,
+            timeLastBoardTime: 0,
+            timeGotSetPacket: 0,
+            timeRoundTrip: 0,
+            timeTransmission: 0,
+            timeOffset: 0,
+            timeOffsetAvg: 0,
+            timeOffsetArray: []
         };
         this.sntpOptions = {
             host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
@@ -126,23 +179,26 @@ function OpenBCIFactory() {
             resolveReference: true,         // Default to false (not resolving)
             timeout: 1000                   // Defaults to zero (no timeout)
         };
+        this.writer = null;
         // Numbers
         this.badPackets = 0;
         this.commandsToWrite = 0;
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
         this.sampleCount = 0;
+        this.curParsingMode = k.OBCIParsingReset;
         // Strings
 
         // NTP
-        if (this.options.sntp) {
-            this.sntpGetServerTime()
-                .then((timeObj) => {
-                    if (this.options.verbose) {
-                        console.log('NTP synced successfully, time object:');
-                        console.log(timeObj);
-                    }
-                });
+        if (this.options.timeSync) {
+            // establishing ntp connection
+            this.sntpStart()
+                .then(() => {
+                    if(this.options.verbose) console.log('SNTP: connected');
+                })
+                .catch(err => {
+                    if(this.options.verbose) console.log(`Error [sntpStart] ${err}`);
+                })
         }
 
         //TODO: Add connect immediately functionality, suggest this to be the default...
@@ -169,10 +225,16 @@ function OpenBCIFactory() {
                 this.options.simulate = true;
                 if (this.options.verbose) console.log('using faux board ' + portName);
                 boardSerial = new openBCISimulator.OpenBCISimulator(portName, {
-                    verbose: this.options.verbose,
+                    accel: this.options.simulatorHasAccelerometer,
+                    alpha: this.options.simulatorInjectAlpha,
+                    boardFailure:this.options.simulatorBoardFailure,
+                    daisy: this.options.simulatorDaisyModuleAttached,
+                    drift: this.options.simulatorInternalClockDrift,
+                    firmwareVersion: this.options.simulatorFirmwareVersion,
+                    lineNoise: this.options.simulatorInjectLineNoise,
                     sampleRate: this.options.simulatorSampleRate,
-                    alpha: this.options.simulatorAlpha,
-                    lineNoise: this.options.simulatorLineNoise
+                    serialPortFailure: this.options.simulatorSerialPortFailure,
+                    verbose: this.options.verbose
                 });
             } else {
                 /* istanbul ignore if */
@@ -185,16 +247,15 @@ function OpenBCIFactory() {
             }
 
             this.serial = boardSerial;
+            this.portName = portName;
 
             if(this.options.verbose) console.log('Serial port connected');
 
-            boardSerial.on('data',(data) => {
+            boardSerial.on('data',data => {
                 this._processBytes(data);
             });
             this.connected = true;
-
-
-            boardSerial.on('open',() => {
+            boardSerial.once('open',() => {
                 var timeoutLength = this.options.simulate ? 50 : 300;
                 if(this.options.verbose) console.log('Serial port open');
                 setTimeout(() => {
@@ -210,12 +271,12 @@ function OpenBCIFactory() {
 
                 },timeoutLength + 250);
             });
-            boardSerial.on('close',() => {
+            boardSerial.once('close',() => {
                 if (this.options.verbose) console.log('Serial Port Closed');
                 this.emit('close')
             });
             /* istanbul ignore next */
-            boardSerial.on('error',(err) => {
+            boardSerial.once('error',(err) => {
                 if (this.options.verbose) console.log('Serial Port Error');
                 this.emit('error',err);
             });
@@ -223,7 +284,8 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Closes the serial port
+     * @description Closes the serial port. Waits for stop streaming command to
+     *  be sent if currently streaming.
      * @returns {Promise} - fulfilled by a successful close of the serial port object, rejected otherwise.
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -234,7 +296,7 @@ function OpenBCIFactory() {
         if (this.streaming) {
             this.streamStop();
             if(this.options.verbose) console.log('stop streaming');
-            timeout = 20;
+            timeout = 15; // Avg time is takes for message to propagate
         }
 
         return new Promise((resolve, reject) => {
@@ -243,11 +305,9 @@ function OpenBCIFactory() {
                 this.connected = false;
                 if (this.serial) {
                     this.serial.close(() => {
-                        this.isLookingForKeyInBuffer = true;
                         resolve();
                     });
                 } else {
-                    this.isLookingForKeyInBuffer = true;
                     resolve();
                 }
 
@@ -273,7 +333,7 @@ function OpenBCIFactory() {
                 .then(() => {
                     setTimeout(() => {
                         resolve();
-                    }, 50); // allow time for command to get sent
+                    }, 10); // allow time for command to get sent
                 })
                 .catch(err => reject(err));
         });
@@ -405,13 +465,12 @@ function OpenBCIFactory() {
 
     /**
      * @description Should be used to send data to the board
-     * @param data
+     * @param data {Buffer} - The data to write out
      * @returns {Promise} if signal was able to be sent
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._writeAndDrain = function(data) {
         return new Promise((resolve,reject) => {
-            //console.log('writing command ' + data);
             if(!this.serial) reject('Serial port not open');
             this.serial.write(data,(error,results) => {
                 if(results) {
@@ -432,8 +491,8 @@ function OpenBCIFactory() {
      *           connect to a board. If you find a case (i.e. a platform (linux,
      *           windows...) that this does not work, please open an issue and
      *           we will add support!
-     * @author AJ Keller (@pushtheworldllc)
      * @returns {Promise} - Fulfilled with portName, rejected when can't find the board.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.autoFindOpenBCIBoard = function() {
         var macSerialPrefix = 'usbserial-D';
@@ -468,12 +527,396 @@ function OpenBCIFactory() {
     };
 
     /**
+     * @description Convenience method to determine if you can use firmware v2.x.x
+     *  capabilities.
+     * @returns {boolean} - True if using firmware version 2 or greater. Should
+     *  be called after a `.softReset()` because we can parse the output of that
+     *  to determine if we are using firmware version 2.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.usingVersionTwoFirmware = function() {
+        if (this.options.simulate) {
+            return this.options.simulatorFirmwareVersion === k.OBCIFirmwareV2;
+        } else {
+            return this.info.firmware === k.OBCIFirmwareV2;
+        }
+    };
+
+    /**
+     * @description Used to set the system radio channel number. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
+     * @since 1.0.0
+     * @returns {Promise} - Resolves with the new channel number, rejects with err.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioChannelSet = function(channelNumber) {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the radio while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+            if (channelNumber === undefined || channelNumber === null) return reject("Must input a new channel number to switch too!");
+            if (!k.isNumber(channelNumber)) return reject("Must input type Number");
+            if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
+            if (channelNumber < k.OBCIRadioChannelMin) return reject(`New channel number must be greater than ${k.OBCIRadioChannelMin}`);
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    resolve(data[data.length - 4]);
+                } else {
+                    reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSet,channelNumber]));
+        });
+    };
+
+    /**
+     * @description Used to set the ONLY the radio dongle Host channel number. This will fix your radio system if
+     *      your dongle and board are not on the right channel and bring down your radio system if you take your
+     *      dongle and board are not on the same channel. Use with caution! The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
+     * @since 1.0.0
+     * @returns {Promise} - Resolves with the new channel number, rejects with err.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioChannelSetHostOverride = function(channelNumber) {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the radio while streaming");
+            if (channelNumber === undefined || channelNumber === null) return reject("Must input a new channel number to switch too!");
+            if (!k.isNumber(channelNumber)) return reject("Must input type Number");
+            if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
+            if (channelNumber < k.OBCIRadioChannelMin) return reject(`New channel number must be greater than ${k.OBCIRadioChannelMin}`);
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                if (this.options.verbose) console.log(`${data.toString()}`);
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    resolve(data[data.length - 4]);
+                } else {
+                    reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelSetOverride,channelNumber]));
+        });
+    };
+
+    /**
+     * @description Used to query the OpenBCI system for it's radio channel number. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+     *      an Object. See `returns` below.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolve an object with keys `channelNumber` which is a Number and `err` which contains an error in
+     *      the condition that there system is experiencing board communications failure.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioChannelGet = function() {
+        // The function to run on timeout
+        var badCommsTimeout;
+
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the radio while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 500);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    resolve({
+                        channelNumber : data[data.length - 4],
+                        data:data
+                    });
+                } else {
+                    reject(`Error [radioChannelGet]: ${data.toString()}`);
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdChannelGet]));
+
+        });
+    };
+
+    /**
+     * @description Used to query the OpenBCI system for it's device's poll time. The function will reject if not
+     *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+     *      the poll time when fulfilled. It's important to note that if the board is not on, this function will always
+     *      be rejected with a failure message.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves with the poll time, rejects with an error message.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioPollTimeGet = function() {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't query for the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    var pollTime = data[data.length - 4];
+                    resolve(pollTime);
+                } else {
+                    reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeGet]));
+        });
+    };
+
+    /**
+     * @description Used to set the OpenBCI poll time. With the RFduino configuration, the Dongle is the Host and the
+     *      Board is the Device. Only the Device can initiate a communication between the two entities. Therefore this
+     *      sets the interval at which the Device polls the Host for new information. Further the function should reject
+     *      if currently streaming. Lastly and more important, if the board is not running the new firmware then this
+     *      functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this
+     *      function should resolve.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @param `pollTime` {Number} - The poll time you want to set for the system. 0-255
+     * @since 1.0.0
+     * @returns {Promise} - Resolves with new poll time, rejects with error message.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioPollTimeSet = function (pollTime) {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't change the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
+            if (pollTime === undefined || pollTime === null) return reject("Must input a new poll time to switch too!");
+            if (!k.isNumber(pollTime)) return reject("Must input type Number");
+            if (pollTime > k.OBCIRadioPollTimeMax) return reject(`New polltime must be less than ${k.OBCIRadioPollTimeMax}`);
+            if (pollTime < k.OBCIRadioPollTimeMin) return reject(`New polltime must be greater than ${k.OBCIRadioPollTimeMin}`);
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    resolve(data[data.length - 4]); // Ditch the eot $$$
+                } else {
+                    reject(`Error [radioPollTimeSet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdPollTimeSet,pollTime]));
+        });
+    };
+
+    /**
+     * @description Used to set the OpenBCI Host (Dongle) baud rate. With the RFduino configuration, the Dongle is the
+     *      Host and the Board is the Device. Only the Device can initiate a communication between the two entities.
+     *      There exists a detrimental error where if the Host is interrupted by the radio during a Serial write, then
+     *      all hell breaks loose. So this is an effort to eliminate that problem by increasing the rate at which serial
+     *      data is sent from the Host to the Serial driver. The rate can either be set to default or fast.
+     *      Further the function should reject if currently streaming. Lastly and more important, if the board is not
+     *      running the new firmware then this functionality does not exist and thus this method will reject.
+     *      If the board is using firmware 2+ then this function should resolve the new baud rate after closing the
+     *      current serial port and reopening one.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @param speed {String} - The baud rate that to switch to. Can be either `default` (115200) or `fast` (230400)
+     * @returns {Promise} - Resolves a {Number} that is the new baud rate, rejects on error.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioBaudRateSet = function(speed) {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't change the baud rate while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware v2");
+            if (!k.isString(speed)) return reject("Must input type String");
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                if (this.options.verbose) console.log(data.toString());
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+                var eotBuf = new Buffer('$$$');
+                var newBaudRateBuf;
+                for (var i = data.length; i > 3; i--) {
+                    if (bufferEqual(data.slice(i - 3, i),eotBuf)) {
+                        newBaudRateBuf = data.slice(i - 9, i - 3);
+                        break;
+                    }
+                }
+                var newBaudRateNum = Number(newBaudRateBuf.toString());
+                if (newBaudRateNum !== k.OBCIRadioBaudRateDefault && newBaudRateNum !== k.OBCIRadioBaudRateFast) {
+                    return reject("Error parse mismatch, restart your system!");
+                }
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    // Change the sample rate here
+                    if (this.options.simulate === false) {
+                        this.serial.update({baudRate:newBaudRateNum},err => {
+                            if (err) reject(err);
+                            else resolve(newBaudRateNum);
+                        });
+                    } else {
+                        resolve(newBaudRateNum);
+                    }
+                } else {
+                    reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            if (speed === k.OBCIRadioBaudRateFastStr) {
+                this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetFast]));
+            } else {
+                this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdBaudRateSetDefault]));
+            }
+        });
+    };
+
+    /**
+     * @description Used to ask the Host if it's radio system is up. This is useful to quickly determine if you are
+     *      in fact ready to start trying to connect and such. The function will reject if not connected to the serial
+     *      port of the dongle. Further the function should reject if currently streaming.
+     *      Lastly and more important, if the board is not running the new firmware then this functionality does not
+     *      exist and thus this method will reject. If the board is using firmware +v2.0.0 and the radios are both on the
+     *      same channel and powered, then this will resolve true.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves true if both radios are powered and on the same channel; false otherwise.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.radioSystemStatusGet = function() {
+        var badCommsTimeout;
+        return new Promise((resolve,reject) => {
+            if (!this.connected) return reject("Must be connected to Dongle. Pro tip: Call .connect()");
+            if (this.streaming) return reject("Don't change the poll time while streaming");
+            if (!this.usingVersionTwoFirmware()) return reject("Must be using firmware version 2");
+
+            // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+            //  important if the module was connected, not streaming and using the old firmware
+            badCommsTimeout = setTimeout(() => {
+                reject("Please make sure your dongle is plugged in and using firmware v2");
+            }, 1000);
+
+            // Subscribe to the EOT event
+            this.once('eot',data => {
+                // Remove the timeout!
+                clearTimeout(badCommsTimeout);
+                badCommsTimeout = null;
+
+                if (this.options.verbose) console.log(data.toString());
+
+                if (openBCISample.isSuccessInBuffer(data)) {
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            });
+
+            this.curParsingMode = k.OBCIParsingEOT;
+
+            // Send the radio channel query command
+            this._writeAndDrain(new Buffer([k.OBCIRadioKey,k.OBCIRadioCmdSystemStatus]));
+        });
+
+    };
+
+    /**
      * @description List available ports so the user can choose a device when not
      *              automatically found.
      * Note: This method is used for convenience essentially just wrapping up
      *           serial port.
      * @author Andy Heusser (@andyh616)
-     * @returns {Promise}
+     * @returns {Promise} - On fulfill will contain an array of Serial ports to use.
      */
     OpenBCIBoard.prototype.listPorts = function() {
         return new Promise((resolve, reject) => {
@@ -503,8 +946,7 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.softReset = function() {
-        this.isLookingForKeyInBuffer = true;
-        this.searchingBuf = this.searchBuffers.miscStop;
+        this.curParsingMode = k.OBCIParsingReset;
         return this.write(k.OBCIMiscSoftReset);
     };
 
@@ -514,10 +956,10 @@ function OpenBCIFactory() {
      * @returns {Promise.<T>|*}
      * @author AJ Keller (@pushtheworldllc)
      */
+    // TODO: REDO THIS FUNCTION
     OpenBCIBoard.prototype.getSettingsForChannel = function(channelNumber) {
-
         return k.channelSettingsKeyForChannel(channelNumber).then((newSearchingBuffer) => {
-            this.searchingBuf = newSearchingBuffer;
+            // this.searchingBuf = newSearchingBuffer;
             return this.printRegisterSettings();
         });
     };
@@ -529,7 +971,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.printRegisterSettings = function() {
         return this.write(k.OBCIMiscQueryRegisterSettings).then(() => {
-            this.isLookingForKeyInBuffer = true; //need to wait for key in
+            this.curParsingMode = k.OBCIParsingChannelSettings;
         });
     };
 
@@ -674,6 +1116,7 @@ function OpenBCIFactory() {
     /**
      * @description To apply test signals to the channels on the OpenBCI board used to test for impedance. This can take a
      *  little while to actually run (<8 seconds)!
+     * @returns {Promise} - Resovles when complete testing all the channels.
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.impedanceTestAllChannels = function() {
@@ -718,6 +1161,7 @@ function OpenBCIFactory() {
      *          For 8 channel board: ['-','N','n','p','P','-','b','b']
      *              (Note: it doesn't matter if capitalized or not)
      * @returns {Promise} - Fulfilled with a loaded impedance object.
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.impedanceTestChannels = function(arrayOfChannels) {
         if (!Array.isArray(arrayOfChannels)) return Promise.reject('Input must be array of channels... See Docs!');
@@ -847,6 +1291,7 @@ function OpenBCIFactory() {
      * @param pInput - A bool true if you want to apply the test signal to the P input, false to not apply the test signal.
      * @param nInput - A bool true if you want to apply the test signal to the N input, false to not apply the test signal.
      * @returns {Promise} - With Number value of channel number
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._impedanceTestSetChannel = function(channelNumber, pInput, nInput) {
@@ -904,6 +1349,7 @@ function OpenBCIFactory() {
      * @param pInput - A bool true if you want to calculate impedance on the P input, false to not calculate.
      * @param nInput - A bool true if you want to calculate impedance on the N input, false to not calculate.
      * @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._impedanceTestCalculateChannel = function(channelNumber,pInput,nInput) {
@@ -956,6 +1402,7 @@ function OpenBCIFactory() {
      * @param pInput - A bool true if you want to finalize impedance on the P input, false to not finalize.
      * @param nInput - A bool true if you want to finalize impedance on the N input, false to not finalize.
      * @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._impedanceTestFinalizeChannel = function(channelNumber,pInput,nInput) {
@@ -987,10 +1434,12 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Start logging to the SD card.
+     * @description Start logging to the SD card. If not streaming then `eot` event will be emitted with request
+     *      response from the board.
      * @param recordingDuration {String} - The duration you want to log SD information for. Limited to:
      *      '14sec', '5min', '15min', '30min', '1hour', '2hour', '4hour', '12hour', '24hour'
      * @returns {Promise} - Resolves if the command was added to write queue.
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sdStart = function(recordingDuration) {
@@ -1000,8 +1449,7 @@ function OpenBCIFactory() {
                 .then(command => {
                     // If we are not streaming, then expect a confirmation message back from the board
                     if (!this.streaming) {
-                        this.isLookingForKeyInBuffer = true;
-                        this.searchingBuf = this.searchBuffers.miscStop;
+                        this.curParsingMode = k.OBCIParsingEOT;
                     }
                     this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
                     return this.write(command);
@@ -1012,16 +1460,17 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Sends the stop SD logging command to the board.
-     * @returns {Promise}
+     * @description Sends the stop SD logging command to the board. If not streaming then `eot` event will be emitted
+     *      with request response from the board.
+     * @returns {Promise} - Resovles if added to the write queue
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sdStop = function() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
             // If we are not streaming, then expect a confirmation message back from the board
             if (!this.streaming) {
-                this.isLookingForKeyInBuffer = true;
-                this.searchingBuf = this.searchBuffers.miscStop;
+                this.curParsingMode = k.OBCIParsingEOT;
             }
             this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
             return this.write(k.OBCISDLogStop);
@@ -1038,10 +1487,16 @@ function OpenBCIFactory() {
         if (this.options.simulate) {
             return this.options.simulatorSampleRate;
         } else {
-            if(this.options.boardType === k.OBCIBoardDaisy) {
-                return k.OBCISampleRate125;
+            if (this.info) {
+                return this.info.sampleRate;
             } else {
-                return k.OBCISampleRate250;
+                switch (this.boardType) {
+                    case k.OBCIBoardDaisy:
+                        return k.OBCISampleRate125;
+                    case k.OBCIBoardDefault:
+                    default:
+                        return k.OBCISampleRate250;
+                }
             }
         }
     };
@@ -1054,23 +1509,34 @@ function OpenBCIFactory() {
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.numberOfChannels = function() {
-        if(this.options.boardType === k.OBCIBoardDaisy) {
-            return k.OBCINumberOfChannelsDaisy;
+        if (this.info) {
+            return this.info.numberOfChannels;
         } else {
-            return k.OBCINumberOfChannelsDefault;
+            switch (this.boardType) {
+                case k.OBCIBoardDaisy:
+                    return k.OBCINumberOfChannelsDaisy;
+                case k.OBCIBoardDefault:
+                default:
+                    return k.OBCINumberOfChannelsDefault;
+            }
         }
     };
 
     /**
-     * @description Send the command to tell the board to start the syncing protocol.
+     * @description Send the command to tell the board to start the syncing protocol. Must be connected,
+     *      streaming and using version +2 firmware.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.0.0
+     * @returns {Promise} - Resolves if sent, rejects if not connected or using firmware verison +2.
+     * @author AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.syncClocksStart = function() {
+    OpenBCIBoard.prototype.syncClocks = function() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
-            if (this.streaming) reject('Cannot be streaming to sync clocks');
-            this.searchingBuf = this.searchBuffers.timeSyncStart;
-            this.isLookingForKeyInBuffer = true;
-            this.write(k.OBCISyncClockStart);
+            if (!this.streaming) reject('Must be streaming to sync clocks');
+            if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on V1 firmware, please update');
+            this.curParsingMode = k.OBCIParsingTimeSyncSent;
+            this._writeAndDrain(k.OBCISyncTimeSet);
             resolve();
         });
     };
@@ -1084,122 +1550,386 @@ function OpenBCIFactory() {
      *              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
      *              we will need to store what we don't read for next time.
      * @param data - a buffer of unknown size
+     * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processBytes = function(data) {
-        //console.log(data);
-        var sizeOfData = data.byteLength;
-        this.bytesIn += sizeOfData; // increment to keep track of how many bytes we are receiving
-        if(this.isLookingForKeyInBuffer) { //in a reset state
-            var sizeOfSearchBuf = this.searchingBuf.byteLength; // then size in bytes of the buffer we are searching for
-            for (var i = 0; i < sizeOfData - (sizeOfSearchBuf - 1); i++) {
-                if (this.searchingBuf.equals(data.slice(i, i + sizeOfSearchBuf))) { // slice a chunk of the buffer to analyze
-                    if (this.searchingBuf.equals(this.searchBuffers.miscStop)) {
-                        if (this.options.verbose) console.log('Money!');
-                        if (this.options.verbose) console.log(data.toString());
-                        this.isLookingForKeyInBuffer = false; // critical!!!
-                        this.emit('ready'); // tell user they are ready to stream, etc...
-                    } else if (this.searchingBuf.equals(this.searchBuffers.timeSyncStart)) {
-                        this.sync.ntp1 = now();
-                        if(this.options.verbose) console.log('Got time sync request: ' + this.sync.npt1.toFixed(4));
-                        this.sync.ntp2 = now();
-                        this._writeAndDrain('<' + (this.sync.ntp1 * 1000) + (this.sync.ntp2 * 1000));
-                        this.searchingBuf = this.searchBuffers.miscStop;
+        // Concat old buffer
+        var oldDataBuffer = null;
+        if (this.buffer) {
+            oldDataBuffer = this.buffer;
+            data = Buffer.concat([this.buffer,data],data.length + this.buffer.length);
+        }
 
-                    } else {
-                        getChannelSettingsObj(data.slice(i)).then((channelSettingsObject) => {
-                            this.emit('query',channelSettingsObject);
-                        }, (err) => {
-                            console.log('Error: ' + err);
-                        });
-                        this.searchingBuf = this.searchBuffers.miscStop;
-                        break;
-                    }
+        switch (this.curParsingMode) {
+            case k.OBCIParsingEOT:
+                if (openBCISample.doesBufferHaveEOT(data)) {
+                    this.curParsingMode = k.OBCIParsingNormal;
+                    this.emit('eot',data);
+                    this.buffer = null;
+                } else {
+                    this.buffer = data;
                 }
-            }
-        } else { // steaming operation should lead here...
-
-            var bytesToRead = sizeOfData;
-
-            // is there old data?
-            if (this.buffer) {
-                // Get size of old buffer
-                var oldBufferSize = this.buffer.byteLength;
-
-                // Make a new buffer
-                var newDataBuffer = new Buffer(bytesToRead + oldBufferSize);
-
-                // Put old buffer in the front of the new buffer
-                var oldBytesWritten = this.buffer.copy(newDataBuffer);
-
-                // Move the incoming data into the end of the new buffer
-                data.copy(newDataBuffer,oldBytesWritten);
-
-                // Over write data
-                data = newDataBuffer;
-
-                // Update the number of bytes to read
-                bytesToRead += oldBytesWritten;
-            }
-
-            var readingPosition = 0;
-
-            // 45 < (200 - 33) --> 45 < 167 (good) | 189 < 167 (bad) | 0 < (28 - 33) --> 0 < -5 (bad)
-            while (readingPosition <= bytesToRead - k.OBCIPacketSize) {
-                if (data[readingPosition] === k.OBCIByteStart) {
-                    var rawPacket = data.slice(readingPosition, readingPosition + k.OBCIPacketSize);
-                    if (data[readingPosition + k.OBCIPacketSize - 1] === k.OBCIByteStop) {
-                        this.emit('rawDataPacket',rawPacket);
-                        // standard packet!
-                        openBCISample.parseRawPacket(rawPacket,this.channelSettingsArray)
-                            .then(sampleObject => {
-
-                                sampleObject._count = this.sampleCount++;
-                                if(this.impedanceTest.active) {
-                                    var impedanceArray;
-                                    if (this.impedanceTest.continuousMode) {
-                                        //console.log('running in contiuous mode...');
-                                        //openBCISample.debugPrettyPrint(sampleObject);
-                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
-                                        if (impedanceArray) {
-                                            this.emit('impedanceArray',impedanceArray);
-                                        }
-                                    } else if (this.impedanceTest.onChannel != 0) {
-                                        // Only calculate impedance for one channel
-                                        impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject)
-                                        if (impedanceArray) {
-                                            this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
-                                        }
-                                    }
-                                } else {
-                                    this.emit('sample', sampleObject);
-                                }
-                            });
-                    }
+                break;
+            case k.OBCIParsingReset:
+                // Does the buffer have an EOT in it?
+                if (openBCISample.doesBufferHaveEOT(data)) {
+                    this._processParseBufferForReset(data);
+                    this.curParsingMode = k.OBCIParsingNormal;
+                    this.buffer = null;
+                    this.emit('ready');
                 }
+                break;
+            case k.OBCIParsingTimeSyncSent:
+                // If there is only one match
+                if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
+                    if (this.options.verbose) console.log(`Found Time Sync Sent`);
+                    this.sync.timeGotPacketSent = this.sntpNow();
+                    this.curParsingMode = k.OBCIParsingNormal;
+                }
+                this.buffer = this._processDataBuffer(data);
+                break;
+            case k.OBCIParsingNormal:
+            default:
+                this.buffer = this._processDataBuffer(data);
+                break;
+        }
 
-                // increment reading position
-                readingPosition++;
-            }
-
-            // Are there any bytes to move into the buffer?
-            if (readingPosition < bytesToRead) {
-                //we are creating a new Buffer the size of how many bytes are left in the data buffer
-                // so we can move and store that into this.buffer for the next time this function is ran.
-                this.buffer = new Buffer(bytesToRead - readingPosition);
-
-                // copy data from data into this.buffer.
-                data.copy(this.buffer);
-
-            } else {
+        if (this.buffer && oldDataBuffer) {
+            if (bufferEqual(this.buffer,oldDataBuffer)) {
                 this.buffer = null;
+            }
+        }
+
+    };
+
+    /**
+     * @description Used to extract samples out of a buffer of unknown length
+     * @param dataBuffer {Buffer} - A buffer to parse for samples
+     * @returns {Buffer} - Any data that was not pulled out of the buffer
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processDataBuffer = function(dataBuffer) {
+        if (!dataBuffer) return null;
+        var bytesToParse = dataBuffer.length;
+        // Exit if we have a buffer with less data than a packet
+        if (bytesToParse < k.OBCIPacketSize) return dataBuffer;
+
+        var parsePosition = 0;
+        // Begin parseing
+        while (parsePosition <= bytesToParse - k.OBCIPacketSize) {
+            // Is the current byte a head byte that looks like 0xA0
+            if (dataBuffer[parsePosition] === k.OBCIByteStart) {
+                // Now that we know the first is a head byte, let's see if the last one is a
+                //  tail byte 0xCx where x is the set of numbers from 0-F (hex)
+                if (openBCISample.isStopByte(dataBuffer[parsePosition + k.OBCIPacketSize - 1])) {
+                    /** We just qualified a raw packet */
+                    // Grab the raw packet, make a copy of it.
+                    var rawPacket;
+                    if (k.getVersionNumber(process.version) >= 6) {
+                        // From introduced in node version 6.x.x
+                        rawPacket = Buffer.from(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
+                    } else {
+                        rawPacket = new Buffer(dataBuffer.slice(parsePosition, parsePosition + k.OBCIPacketSize));
+                    }
+
+                    // Emit that buffer
+                    this.emit('rawDataPacket',rawPacket);
+                    // Submit the packet for processing
+                    this._processQualifiedPacket(rawPacket);
+                    // Overwrite the dataBuffer with a new buffer
+                    var tempBuf;
+                    if (parsePosition > 0) {
+                        tempBuf = Buffer.concat([dataBuffer.slice(0,parsePosition),dataBuffer.slice(parsePosition + k.OBCIPacketSize)],dataBuffer.byteLength - k.OBCIPacketSize);
+                    } else {
+                        tempBuf = dataBuffer.slice(k.OBCIPacketSize);
+                    }
+                    if (tempBuf.length === 0) {
+                        dataBuffer = null;
+                    } else {
+                        if (k.getVersionNumber(process.version) >= 6) {
+                            dataBuffer = Buffer.from(tempBuf);
+                        } else {
+                            dataBuffer = new Buffer(tempBuf);
+                        }
+                    }
+                    // Move the parse position up one packet
+                    parsePosition = -1;
+                    bytesToParse -= k.OBCIPacketSize;
+                }
+            }
+            parsePosition++;
+        }
+
+        return dataBuffer;
+    };
+
+    /**
+     * @description Alters the global info object by parseing an incoming soft reset key
+     * @param dataBuffer {Buffer} - The soft reset data buffer
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processParseBufferForReset = function(dataBuffer) {
+        if (openBCISample.countADSPresent(dataBuffer) === 2) {
+            this.info.boardType = k.OBCIBoardDaisy;
+            this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
+            this.info.sampleRate = k.OBCISampleRate125;
+        } else {
+            this.info.boardType = k.OBCIBoardDefault;
+            this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
+            this.info.sampleRate = k.OBCISampleRate250;
+        }
+
+        if (openBCISample.findV2Firmware(dataBuffer)) {
+            this.info.firmware = k.OBCIFirmwareV2;
+            this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
+        } else {
+            this.info.firmware = k.OBCIFirmwareV1;
+            this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
+        }
+    };
+
+    /**
+     * @description Used to route qualified packets to their proper parsers
+     * @param rawDataPacketBuffer
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processQualifiedPacket = function(rawDataPacketBuffer) {
+        if (!rawDataPacketBuffer) return;
+        if (rawDataPacketBuffer.byteLength !== k.OBCIPacketSize) return;
+        var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
+        switch (packetType) {
+            case k.OBCIStreamPacketStandardAccel:
+                this._processPacketStandardAccel(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketStandardRawAux:
+                this._processPacketStandardRawAux(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketUserDefinedType:
+                // Do nothing for User Defined Packets
+                break;
+            case k.OBCIStreamPacketAccelTimeSyncSet:
+                this._processPacketTimeSyncSet(rawDataPacketBuffer);
+                this._processPacketTimeSyncedAccel(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketAccelTimeSynced:
+                this._processPacketTimeSyncedAccel(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketRawAuxTimeSyncSet:
+                this._processPacketTimeSyncSet(rawDataPacketBuffer);
+                this._processPacketTimeSyncedRawAux(rawDataPacketBuffer);
+                break;
+            case k.OBCIStreamPacketRawAuxTimeSynced:
+                this._processPacketTimeSyncedRawAux(rawDataPacketBuffer);
+                break;
+            default:
+                // Don't do anything if the packet is not defined
+                break;
+        }
+    };
+
+    /**
+     * @description A method used to compute impedances.
+     * @param sampleObject - A sample object that follows the normal standards.
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processImpedanceTest = function(sampleObject) {
+        var impedanceArray;
+        if (this.impedanceTest.continuousMode) {
+            //console.log('running in continuous mode...');
+            //openBCISample.debugPrettyPrint(sampleObject);
+            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+            if (impedanceArray) {
+                this.emit('impedanceArray',impedanceArray);
+            }
+        } else if (this.impedanceTest.onChannel != 0) {
+            // Only calculate impedance for one channel
+            impedanceArray = openBCISample.goertzelProcessSample(sampleObject,this.goertzelObject);
+            if (impedanceArray) {
+                this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
             }
         }
     };
 
+    /**
+     * @description A method to parse a stream packet that has channel data and data in the aux channels that contains accel data.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processPacketStandardAccel = function(rawPacket) {
+        openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray)
+            .then(sampleObject => {
+                //openBCISample.debugPrettyPrint(sampleObject);
+                sampleObject.rawPacket = rawPacket;
+                this._finalizeNewSample.call(this,sampleObject);
+            })
+            .catch(err => console.log('Error in _processPacketStandardAccel',err));
+    };
+
+    /**
+     * @description A method to parse a stream packet that has channel data and data in the aux channels that should not be scaled.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processPacketStandardRawAux = function(rawPacket) {
+        openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray,false)
+            .then(sampleObject => {
+                this._finalizeNewSample.call(this,sampleObject);
+            })
+            .catch(err => console.log('Error in _processPacketStandardRawAux',err));
+    };
+
+
+    /**
+     * @description A method to parse a stream packet that does not have channel data or aux/accel data, just a timestamp
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
+        return new Promise((resolve, reject) => {
+            var currentTime = this.sntpNow();
+            if (this.options.verbose) console.log('Got time set packet from the board');
+            openBCISample.getFromTimePacketTime(rawPacket)
+                .then(boardTime => {
+                    this.sync.timeRoundTrip = currentTime - this.sync.timeGotPacketSent;
+                    this.sync.timeTransmission = math.floor(this.sync.timeRoundTrip / 2); // Must be whole number
+                    this.sync.timeOffset = currentTime - this.sync.timeTransmission - boardTime;
+                    this.sync.active = true;
+                    // Add to array
+                    if (this.sync.timeOffsetArray.length >= k.OBCITimeSyncArraySize) {
+                        // Shift the oldest one out of the array
+                        this.sync.timeOffsetArray.shift();
+                        // Push the new value into the array
+                        this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                    } else {
+                        // Push the new value into the array
+                        this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                    }
+                    this.sync.timeOffsetAvg = math.floor(math.mean(this.sync.timeOffsetArray));
+                    if (this.options.verbose) {
+                        console.log(`Time Sent Confirmation Found was ${this.sync.timeGotPacketSent}`)
+                        console.log(`Current time is ${currentTime}`);
+                        console.log(`Their difference is ${currentTime - this.sync.timeGotPacketSent}`);
+                        console.log(`Board time: ${boardTime}`);
+                        console.log(`Round trip time: ${this.sync.timeRoundTrip} ms`);
+                        console.log(`Transmission time: ${this.sync.timeTransmission} ms`);
+                        console.log(`Board offset time: ${this.sync.timeOffset}`);
+                        console.log(`Corrected board time: ${(this.sync.timeOffset + boardTime)} ms`);
+                        console.log(`Average across sync offset: ${this.sync.timeOffsetAvg}`);
+                        console.log(`Corrected board time with average: ${(this.sync.timeOffset + boardTime)} ms`);
+                    }
+                    this.emit('synced',this.sync);
+                    resolve(rawPacket);
+                })
+                .catch(err => {
+                    console.log('Error in _processPacketTimeSyncSet', err)
+                    reject(err);
+                });
+        });
+    };
+
+    /**
+     * @description A method to parse a stream packet that contains channel data, a time stamp and event couple packets
+     *      an accelerometer value.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processPacketTimeSyncedAccel = function(rawPacket) {
+        // if (this.sync.active === false) console.log('Need to sync with board...');
+        openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
+            .then((sampleObject) => {
+                sampleObject.rawPacket = rawPacket;
+                this._finalizeNewSample.call(this,sampleObject);
+            })
+            .catch(err => console.log('Error in _processPacketTimeSyncedAccel',err));
+    };
+
+    /**
+     * @description A method to parse a stream packet that contains channel data, a time stamp and two extra bytes that
+     *      shall be emitted as a raw buffer and not scaled.
+     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._processPacketTimeSyncedRawAux = function(rawPacket) {
+        // if (this.sync.active === false) console.log('Need to sync with board...');
+        openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffset)
+            .then(sampleObject => {
+                this._finalizeNewSample.call(this,sampleObject);
+            })
+            .catch(err => console.log('Error in _processPacketTimeSyncedRawAux',err));
+    };
+
+    /**
+     * @description A method to emit samples through the EventEmitter channel `sample` or compute impedances if are
+     *      being tested.
+     * @param sampleObject - A sample object that follows the normal standards.
+     * @private
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype._finalizeNewSample = function(sampleObject) {
+        sampleObject._count = this.sampleCount++;
+        if(this.impedanceTest.active) {
+            this._processImpedanceTest(sampleObject);
+        } else {
+            // With the daisy board attached, lower channels (1-8) come in packets with odd sample numbers and upper
+            //  channels (9-16) come in packets with even sample numbers
+            if (this.info.boardType === k.OBCIBoardDaisy) {
+                // Send the sample for downstream sample compaction
+                this._finalizeNewSampleForDaisy(sampleObject);
+            } else {
+                this.emit('sample', sampleObject);
+            }
+        }
+    };
+
+    /**
+     * @description This function is called every sample if the boardType is Daisy. The function stores odd sampleNumber
+     *      sample objects to a private global variable called `._lowerChannelsSampleObject`. The method will emit a
+     *      sample object only when the upper channels arrive in an even sampleNumber sample object. No sample will be
+     *      emitted on an even sampleNumber if _lowerChannelsSampleObject is null and one will be added to the
+     *      missedPacket counter. Further missedPacket will increase if two odd sampleNumber packets arrive in a row.
+     * @param sampleObject
+     * @private
+     */
+    OpenBCIBoard.prototype._finalizeNewSampleForDaisy = function(sampleObject) {
+        if(openBCISample.isOdd(sampleObject.sampleNumber)) {
+            // Check for the skipped packet condition
+            if (this._lowerChannelsSampleObject) {
+                // The last packet was odd... missed the even packet
+                this.info.missedPackets++;
+            }
+            this._lowerChannelsSampleObject = sampleObject;
+        } else {
+            // Make sure there is an odd packet waiting to get merged with this packet
+            if (this._lowerChannelsSampleObject) {
+                // Merge these two samples
+                var mergedSample = openBCISample.makeDaisySampleObject(this._lowerChannelsSampleObject,sampleObject);
+                // Set the _lowerChannelsSampleObject object to null
+                this._lowerChannelsSampleObject = null;
+                // Emite the new merged sample
+                this.emit('sample', mergedSample);
+            } else {
+                // Missed the odd packet, i.e. two evens in a row
+                this.info.missedPackets++;
+            }
+        }
+    };
+
+    /**
+     * @description Reset the master buffer and reset the number of bad packets.
+     * @author AJ Keller (@pushtheworldllc)
+     */
     OpenBCIBoard.prototype._reset = function() {
         this.masterBuffer = masterBufferMaker();
-        this.searchingBuf = this.searchBuffers.miscStop;
         this.badPackets = 0;
     };
 
@@ -1207,6 +1937,7 @@ function OpenBCIFactory() {
      * @description Stateful method for querying the current offset only when the last
      *                  one is too old. (defaults to daily)
      * @returns {Promise} A promise with the time offset
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype.sntpGetOffset = function() {
         return new Promise((resolve, reject) => {
@@ -1258,8 +1989,10 @@ function OpenBCIFactory() {
         return new Promise((resolve, reject) => {
             Sntp.start((err) => {
                 if (err) {
+                    this.sync.active = true;
                     reject(err);
                 } else {
+                    this.sync.active = false;
                     resolve();
                 }
             });
@@ -1271,6 +2004,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.sntpStop = function() {
         Sntp.stop();
+        this.sync.active = false;
     };
 
     /**

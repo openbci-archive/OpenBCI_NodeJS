@@ -1,3 +1,42 @@
+# 1.0.1
+
+### New Features
+
+* Add time sync tutorial in `README.md`
+
+### Bug Fixes
+
+* Fixed bug in simulator that lead to samples being all zeros.
+* Fixed time sync sent confirmation bug that led to bad time values.
+
+# 1.0.0
+
+The second major release for the OpenBCI Node.js SDK brings major changes, improvements and stability, on top of a push to increase automated test coverage.
+
+### New Features
+
+* NPM Module now called `openbci` instead of `openbci-sdk`
+* Firmware version 2.0 support.
+* Clock synchronization between OpenBCI board and this driver
+* `.info` property which contains verified board information parsed from the OpenBCI's `softReset()` response.
+* `eot` event that is emitted when a user sends a command that results in an EOT ("$$$") being sent from the board
+* Daisy (16 channel) support
+* Simulator overhaul, it completely mocks the board. Can now simulate board failure, where the board stops talking to the dongle. Can also mock a serial port failure.
+* `error` and `close` events from serialport now emtted events users can subscribe to.
+
+### Breaking Changes
+
+* NPM package is not called `openbci-sdk` anymore, now called `openbci`
+* Accelerometer data now goes into `.accelData` array instead of `.auxData` array.
+* In openBCISample.js
+  * `parseRawPacket()` is now called `parseRawPacketStandard()`
+* `ready` event only triggered after soft reset. `eot` event emitted in all other conditions resulting in the board sending EOT ("$$$")
+* Must use camel case on the OpenBCISimulator object.
+* Renamed constructor options for readability:
+  * `simulatorAlpha` to `simulatorInjectAlpha`
+  * `simulatorLineNoise` to `simulatorInjectLineNoise`
+* `connect()` no longer rejects on `close` or `error` event from the serialport.
+
 # 0.3.9
 
 ### Enhancements
@@ -17,8 +56,14 @@
 # 0.3.7
 
 ### New Features
+
 * Upgrade dependencies
 * Update Travis
+
+### Bug Fixes
+
+* `.numberOfChannels()` now uses the info object, which is set in the constructor and on the return message from `.softReset()`
+* `.sampleRate()` now uses the info object, which is set in the constructor and on the return message from `.softReset()`
 
 # 0.3.6
 
@@ -30,8 +75,8 @@
 
 ### New Features
 
-* SD card support! Now logging to an SD card is easier than ever. 
- 
+* SD card support! Now logging to an SD card is easier than ever.
+
 ### Bug Fixes
 
 * Sample rate does not return correct sample rate for custom rate on simulator. #58
@@ -45,7 +90,6 @@
 ### Github Issues Addressed
 
 * [https://github.com/OpenBCI/openbci-js-sdk/issues/44](#44)
-
 
 # 0.3.3
 
@@ -81,7 +125,7 @@
 * OpenBCI Radio Test File
 * Added Sntp npm module with helper functions
 * Removed stopByte and startByte from sampleObjects
-    
+
 ### Breaking Changes
 
 * Changed simulator name to `OpenBCISimulator`
@@ -92,15 +136,15 @@
 
 * NTP Time Synchronization
 * Goertzel algorithm to get voltage for impedance calculation
-    
+
 ### Bug fixes
 
 * Impedance calculations
 * Readme updates
 * Serial buffer had the chance to become permanently unaligned, optimized and completely transformed and refactored the way bytes are processed.
 * Changes to gain of channels not working correctly.
-* Node 5 compatibility 
-    
+* Node 5 compatibility
+
 ### Github Issues Addressed
 
 * #25, #26, #27, #29, #30, #31, #33, #34

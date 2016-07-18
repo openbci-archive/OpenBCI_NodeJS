@@ -435,6 +435,45 @@ describe('OpenBCIConstants', function() {
             assert.equal('f', k.OBCIFilterEnable);
         });
     });
+    describe('Stream packet types/codes',function() {
+        it('Standard with Accel',function () {
+            assert.equal(0, k.OBCIStreamPacketStandardAccel);
+        });
+        it('Standard with Raw Aux',function () {
+            assert.equal(1, k.OBCIStreamPacketStandardRawAux);
+        });
+        it('User Defined Packet',function () {
+            assert.equal(2, k.OBCIStreamPacketUserDefinedType);
+        });
+        it('Time Sync Set with accel',function () {
+            assert.equal(3, k.OBCIStreamPacketAccelTimeSyncSet);
+        });
+        it('Time Synced with Accel',function () {
+            assert.equal(4, k.OBCIStreamPacketAccelTimeSynced);
+        });
+        it('Time Sync set with Raw Aux',function () {
+            assert.equal(5, k.OBCIStreamPacketRawAuxTimeSyncSet);
+        });
+        it('Time Synced with Raw Aux',function () {
+            assert.equal(6, k.OBCIStreamPacketRawAuxTimeSynced);
+        });
+    });
+    describe('Time synced with accel packet',function() {
+        it('X axis',function () {
+            assert.equal(0, k.OBCIAccelAxisX);
+        });
+        it('Y axis',function () {
+            assert.equal(1, k.OBCIAccelAxisY);
+        });
+        it('Z axis',function () {
+            assert.equal(2, k.OBCIAccelAxisZ);
+        });
+    });
+    describe('Time sync useful numbers',function() {
+        it('Time from the board is 4 bytes',function () {
+            assert.equal(4, k.OBCIStreamPacketTimeByteSize);
+        });
+    });
     describe('should return the right command for each channel', function(){
         it('Channel 1', function() {
             var expectation = '1';
@@ -710,6 +749,20 @@ describe('OpenBCIConstants', function() {
         });
         it('should be 250',function () {
             assert.equal(250, k.OBCISampleRate250);
+        });
+    });
+    describe("Radio Channel Limits", function() {
+        it("should get the right channel number max",function () {
+            expect(k.OBCIRadioChannelMax).to.be.equal(25);
+        });
+        it("should get the right channel number min",function () {
+            expect(k.OBCIRadioChannelMin).to.be.equal(0);
+        });
+        it("should get the right poll time max",function () {
+            expect(k.OBCIRadioPollTimeMax).to.be.equal(255);
+        });
+        it("should get the right poll time min",function () {
+            expect(k.OBCIRadioPollTimeMin).to.be.equal(0);
         });
     });
     describe('#getChannelSetter', function() {
@@ -1011,6 +1064,14 @@ describe('OpenBCIConstants', function() {
             var expectation = 'd';
             var result = k.getTestSignalCommand('none');
             return expect(result).to.eventually.equal(expectation);
+        });
+    });
+    describe('#getVersionNumber', function() {
+        it('should get the major version number from a github standard version string',() => {
+            var expectedVersion = 6;
+            var inputStringVersion = 'v6.0.0';
+
+            expect(k.getVersionNumber(inputStringVersion)).to.equal(expectedVersion);
         });
     });
     describe('#getImpedanceSetter', function() {
