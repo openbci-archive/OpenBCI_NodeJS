@@ -354,7 +354,7 @@ Board optional configurations.
 * `timeSync` - {Boolean} Syncs the module up with an SNTP time server. Syncs the board on startup with the SNTP time. Adds a time stamp to the AUX channels.
 * `verbose` {Boolean} - Print out useful debugging events
 
-**Note, we have added support for either all lowercase OR camelcase of the options, use whichever style you prefer.**
+**Note, we have added support for either all lowercase OR camel case for the options, use whichever style you prefer.**
 
 ### .autoFindOpenBCIBoard()
 
@@ -795,7 +795,7 @@ Get time from the SNTP server. Must have internet connection!
 
 ### .sntpNow()
 
-This function gets SNTP time since Jan 1, 1970, if we call this after a successful `.sntpStart()` this time will be sycned, or else we will just get the current computer time, the case if there is no internet.
+This function gets SNTP time since Jan 1, 1970, if we call this after a successful `.sntpStart()` this time will be synced, or else we will just get the current computer time, the case if there is no internet.
 
 **_Returns_** time since UNIX epoch in ms.
 
@@ -803,7 +803,7 @@ This function gets SNTP time since Jan 1, 1970, if we call this after a successf
 
 This starts the SNTP server and gets it to remain in sync with the SNTP server;
 
-**_Returns_** a promise if the module was able to sync with ntp server.
+**_Returns_** a promise if the module was able to sync with NTP server.
 
 ### .sntpStop()
 
