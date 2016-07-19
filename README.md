@@ -1,7 +1,7 @@
-[![Stories in Ready](https://badge.waffle.io/OpenBCI/openbci-js-sdk.png?label=ready&title=Ready)](https://waffle.io/OpenBCI/openbci-js-sdk)
-[![Join the chat at https://gitter.im/OpenBCI/openbci-js-sdk](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/OpenBCI/openbci-js-sdk?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/OpenBCI/openbci-js-sdk.svg?branch=master)](https://travis-ci.org/OpenBCI/openbci-js-sdk)
-[![codecov.io](https://codecov.io/github/OpenBCI/openbci-js-sdk/coverage.svg?branch=master)](https://codecov.io/github/OpenBCI/openbci-js-sdk?branch=master)
+[![Stories in Ready](https://badge.waffle.io/OpenBCI/OpenBCI_NodeJS.png?label=ready&title=Ready)](https://waffle.io/OpenBCI/OpenBCI_NodeJS)
+[![Join the chat at https://gitter.im/OpenBCI/OpenBCI_NodeJS](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/OpenBCI/OpenBCI_NodeJS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/OpenBCI/OpenBCI_NodeJS.svg?branch=master)](https://travis-ci.org/OpenBCI/OpenBCI_NodeJS)
+[![codecov](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS/branch/master/graph/badge.svg)](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS)
 
 # OpenBCI Node.js SDK
 
