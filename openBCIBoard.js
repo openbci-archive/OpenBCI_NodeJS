@@ -7,7 +7,7 @@ var EventEmitter = require('events').EventEmitter,
     openBCISample = require('./openBCISample'),
     k = openBCISample.k,
     openBCISimulator = require('./openBCISimulator'),
-    now = require('performance-now'),
+    now = require("performance-now"),
     Sntp = require('sntp'),
     StreamSearch = require('streamsearch'),
     bufferEqual = require('buffer-equal'),
@@ -34,7 +34,9 @@ function OpenBCIFactory() {
         simulatorInjectLineNoise: '60Hz',
         simulatorSampleRate: 250,
         simulatorSerialPortFailure:false,
-        timeSync: false,
+        sntpTimeSync: false,
+        sntpTimeSyncHost: 'pool.ntp.org',
+        sntpTimeSyncPort: 123,
         verbose: false
     };
 
@@ -84,8 +86,13 @@ function OpenBCIFactory() {
      *     - `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely
      *                  due to a OpenBCI dongle not being plugged in.
      *
-     *     - `timeSync` - {Boolean} Syncs the module up with an SNTP time server. Syncs the board on startup
-     *                  with the SNTP time. Adds a time stamp to the AUX channels.
+     *     - `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source
+     *                  of truth instead of local computer time. If you are running experiements on your local
+     *                  computer, keep this `false`. (Default `false`)
+     *
+     *     - `sntpTimeSyncHost` - {String} The ntp server to use, can be either sntp or ntp. (Defaults `pool.ntp.org`).
+     *
+     *     - `sntpTimeSyncPort` - {Number} The port to access the ntp server. (Defaults `123`)
      *
      *     - `verbose` {Boolean} - Print out useful debugging events
      *
@@ -125,7 +132,9 @@ function OpenBCIFactory() {
         }
         opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
         opts.simulatorSerialPortFailure = options.simulatorSerialPortFailure || options.simulatorserialportfailure || _options.simulatorSerialPortFailure;
-        opts.timeSync = options.timeSync || options.timesync || _options.timeSync;
+        opts.sntpTimeSync = options.sntpTimeSync || options.sntptimesync || _options.sntpTimeSync;
+        opts.sntpTimeSyncHost = options.sntpTimeSyncHost || options.sntptimesynchost || _options.sntpTimeSyncHost;
+        opts.sntpTimeSyncPort = options.sntpTimeSyncPort || options.sntptimesyncport || _options.sntpTimeSyncPort;
         opts.verbose = options.verbose || _options.verbose;
 
         // Set to global options object
@@ -163,34 +172,26 @@ function OpenBCIFactory() {
 
         this._lowerChannelsSampleObject = null;
         this.sync = {
-            active: false,
-            timeGotPacketSent: 0,
-            timeLastBoardTime: 0,
-            timeGotSetPacket: 0,
-            timeRoundTrip: 0,
-            timeTransmission: 0,
-            timeOffset: 0,
+            curSyncObj: null,
+            objArray: [],
+            sntpActive: false,
+            timeOffsetMaster: 0,
             timeOffsetAvg: 0,
-            timeOffsetArray: []
-        };
-        this.sntpOptions = {
-            host: 'nist1-sj.ustiming.org',  // Defaults to pool.ntp.org
-            port: 123,                      // Defaults to 123 (NTP)
-            resolveReference: true,         // Default to false (not resolving)
-            timeout: 1000                   // Defaults to zero (no timeout)
+            timeOffsetArray: [],
         };
         this.writer = null;
         // Numbers
         this.badPackets = 0;
+        this.curParsingMode = k.OBCIParsingReset;
         this.commandsToWrite = 0;
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
         this.sampleCount = 0;
-        this.curParsingMode = k.OBCIParsingReset;
+        this.timeOfPacketArrival = 0;
         // Strings
 
         // NTP
-        if (this.options.timeSync) {
+        if (this.options.sntpTimeSync) {
             // establishing ntp connection
             this.sntpStart()
                 .then(() => {
@@ -1534,10 +1535,42 @@ function OpenBCIFactory() {
         return new Promise((resolve,reject) => {
             if (!this.connected) reject('Must be connected to the device');
             if (!this.streaming) reject('Must be streaming to sync clocks');
-            if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on V1 firmware, please update');
+            if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on v1 firmware, please update to v2');
+            this.sync.curSyncObj = openBCISample.newSyncObject();
+            this.sync.curSyncObj.timeSyncSent = this.time();
             this.curParsingMode = k.OBCIParsingTimeSyncSent;
             this._writeAndDrain(k.OBCISyncTimeSet);
             resolve();
+        });
+    };
+
+    /**
+     * @description Send the command to tell the board to start the syncing protocol. Must be connected,
+     *      streaming and using version +2 firmware. Uses the `synced` event to ensure multiple syncs
+     *      don't overlap.
+     *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+     * @since 1.1.0
+     * @returns {Promise} - Resolves if `synced` event is emitted, rejects if not connected or using firmware v2.
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.syncClocksFull = function() {
+        return new Promise((resolve,reject) => {
+            if (!this.connected) reject('Must be connected to the device');
+            if (!this.streaming) reject('Must be streaming to sync clocks');
+            if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on v1 firmware, please update to v2');
+            setTimeout(() => {
+                return reject('syncClocksFull timeout after 500ms with no sync');
+            }, 1000); // Should not take more than 1s to sync up
+            this.once('synced',syncObj => {
+                return resolve(syncObj);
+            });
+            this.sync.curSyncObj = openBCISample.newSyncObject();
+            this.sync.curSyncObj.timeSyncSent = this.time();
+            this.curParsingMode = k.OBCIParsingTimeSyncSent;
+            this._writeAndDrain(k.OBCISyncTimeSet)
+                .catch(err => {
+                    return reject(err);
+                })
         });
     };
 
@@ -1584,7 +1617,7 @@ function OpenBCIFactory() {
                 // If there is only one match
                 if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
                     if (this.options.verbose) console.log(`Found Time Sync Sent`);
-                    this.sync.timeGotPacketSent = this.sntpNow();
+                    this.sync.curSyncObj.timeSyncSentConfirmation = this.time();
                     this.curParsingMode = k.OBCIParsingNormal;
                 }
                 this.buffer = this._processDataBuffer(data);
@@ -1625,6 +1658,8 @@ function OpenBCIFactory() {
                 //  tail byte 0xCx where x is the set of numbers from 0-F (hex)
                 if (openBCISample.isStopByte(dataBuffer[parsePosition + k.OBCIPacketSize - 1])) {
                     /** We just qualified a raw packet */
+                    // This could be a time set packet!
+                    this.timeOfPacketArrival = this.time();
                     // Grab the raw packet, make a copy of it.
                     var rawPacket;
                     if (k.getVersionNumber(process.version) >= 6) {
@@ -1712,14 +1747,15 @@ function OpenBCIFactory() {
                 // Do nothing for User Defined Packets
                 break;
             case k.OBCIStreamPacketAccelTimeSyncSet:
-                this._processPacketTimeSyncSet(rawDataPacketBuffer);
+                // Don't waste any time!
+                this._processPacketTimeSyncSet(rawDataPacketBuffer, this.timeOfPacketArrival);
                 this._processPacketTimeSyncedAccel(rawDataPacketBuffer);
                 break;
             case k.OBCIStreamPacketAccelTimeSynced:
                 this._processPacketTimeSyncedAccel(rawDataPacketBuffer);
                 break;
             case k.OBCIStreamPacketRawAuxTimeSyncSet:
-                this._processPacketTimeSyncSet(rawDataPacketBuffer);
+                this._processPacketTimeSyncSet(rawDataPacketBuffer, this.timeOfPacketArrival);
                 this._processPacketTimeSyncedRawAux(rawDataPacketBuffer);
                 break;
             case k.OBCIStreamPacketRawAuxTimeSynced:
@@ -1764,7 +1800,7 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype._processPacketStandardAccel = function(rawPacket) {
         openBCISample.parseRawPacketStandard(rawPacket,this.channelSettingsArray)
             .then(sampleObject => {
-                //openBCISample.debugPrettyPrint(sampleObject);
+                // openBCISample.debugPrettyPrint(sampleObject);
                 sampleObject.rawPacket = rawPacket;
                 this._finalizeNewSample.call(this,sampleObject);
             })
@@ -1788,49 +1824,124 @@ function OpenBCIFactory() {
 
     /**
      * @description A method to parse a stream packet that does not have channel data or aux/accel data, just a timestamp
-     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @param rawPacket {Buffer} - A 33byte data buffer from _processQualifiedPacket
+     * @param timeOfPacketArrival {Number} - The time the packet arrived.
      * @private
+     * @returns {Promise}
      * @author AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket) {
+    OpenBCIBoard.prototype._processPacketTimeSyncSet = function(rawPacket, timeOfPacketArrival) {
         return new Promise((resolve, reject) => {
-            var currentTime = this.sntpNow();
+            if (this.sync.curSyncObj === null) reject('no sync in progress');
+            // console.log('hey');
+            this.sync.curSyncObj.timeSyncSetPacket = timeOfPacketArrival;
+
             if (this.options.verbose) console.log('Got time set packet from the board');
+
+            // this.curParsingMode will equal k.OBCIParsingNormal if comma found
+            if (this.curParsingMode === k.OBCIParsingTimeSyncSent) {
+                if (this.options.verbose) console.log(`Missed the time sync sent confirmation, sycned object will not be valid, please resync again`);
+                // Fix the curParsingMode back to normal
+                this.curParsingMode = k.OBCIParsingNormal;
+                // Emit the bad sync object for fun
+                this.emit('synced',openBCISample.newSyncObject());
+                // Set back to null
+                this.sync.curSyncObj = null;
+                // Return will exit this method with the err
+                return reject(`Missed the time sync sent confirmation`);
+            }
+
+            // We got the timeSyncSentConfirmation... continue on
             openBCISample.getFromTimePacketTime(rawPacket)
                 .then(boardTime => {
-                    this.sync.timeRoundTrip = currentTime - this.sync.timeGotPacketSent;
-                    this.sync.timeTransmission = math.floor(this.sync.timeRoundTrip / 2); // Must be whole number
-                    this.sync.timeOffset = currentTime - this.sync.timeTransmission - boardTime;
-                    this.sync.active = true;
+                    this.sync.curSyncObj.boardTime = boardTime;
+                    // if (this.options.verbose) {
+                    //     console.log(`Sent sync command at ${this.sync.curSyncObj.timeSyncSent} ms`);
+                    //     console.log(`Sent confirmation at ${this.sync.curSyncObj.timeSyncSentConfirmation} ms`)
+                    //     console.log(`Set packet arrived at ${this.sync.curSyncObj.timeSyncSetPacket} ms`);
+                    // }
+
+                    // Calculate the time between sending the `<` to getting the set packet, call this the round trip length
+                    this.sync.curSyncObj.timeRoundTrip = this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSent;
+                    if (this.options.verbose) console.log(`Round trip time: ${this.sync.curSyncObj.timeRoundTrip} ms`);
+
+
+                    // If the sync sent conf and set packet arrive in different serial flushes
+                    //  ------------------------------------------
+                    // |       |        timeTransmission          |  < GOOD :)
+                    //  ------------------------------------------
+                    // ^       ^                                  ^
+                    //  s      s                                   s
+                    //   e      e                                   e
+                    //    n      n                                   t packet
+                    //     t      t confirmation
+                    //
+                    // Assume it's good...
+                    this.sync.curSyncObj.timeTransmission = this.sync.curSyncObj.timeRoundTrip - (this.sync.curSyncObj.timeSyncSentConfirmation - this.sync.curSyncObj.timeSyncSent);
+
+                    // If the conf and the set packet arrive in the same serial flush we have big problem!
+                    //  ------------------------------------------
+                    // |                                   |      |  < BAD :(
+                    //  ------------------------------------------
+                    // ^                                   ^      ^
+                    //  s                                   s      s
+                    //   e                                   e      e
+                    //    n                                   n      t packet
+                    //     t                                   t confirmation
+                    if ((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSentConfirmation) < k.OBCITimeSyncThresholdTransFailureMS) {
+                        // Estimate that 75% of the time between sent and set packet was spent on the packet making it's way from board to this point
+                        this.sync.curSyncObj.timeTransmission = math.floor((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSent) * k.OBCITimeSyncMultiplierWithSyncConf);
+                        if (this.options.verbose) console.log(`Had to correct transmission time`);
+                        this.sync.curSyncObj.correctedTransmissionTime = true;
+                    }
+
+                    // Calculate the offset #finally
+                    this.sync.curSyncObj.timeOffset = this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeTransmission - boardTime;
+                    if (this.options.verbose) {
+                        console.log(`Board offset time: ${this.sync.curSyncObj.timeOffset} ms`);
+                        console.log(`Board time: ${boardTime}`);
+                    }
+
+
                     // Add to array
                     if (this.sync.timeOffsetArray.length >= k.OBCITimeSyncArraySize) {
                         // Shift the oldest one out of the array
                         this.sync.timeOffsetArray.shift();
                         // Push the new value into the array
-                        this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                        this.sync.timeOffsetArray.push(this.sync.curSyncObj.timeOffset);
                     } else {
                         // Push the new value into the array
-                        this.sync.timeOffsetArray.push(this.sync.timeOffset);
+                        this.sync.timeOffsetArray.push(this.sync.curSyncObj.timeOffset);
                     }
-                    this.sync.timeOffsetAvg = math.floor(math.mean(this.sync.timeOffsetArray));
+
+
+                    // Calculate the master time offset that we use averaging to compute
+                    if (this.sync.timeOffsetArray.length > 1) {
+                        var sum = this.sync.timeOffsetArray.reduce(function(a, b) { return a + b; });
+                        this.sync.timeOffsetMaster = math.floor(sum / this.sync.timeOffsetArray.length);
+
+                    } else {
+                        this.sync.timeOffsetMaster = this.sync.curSyncObj.timeOffset;
+                    }
+
                     if (this.options.verbose) {
-                        console.log(`Time Sent Confirmation Found was ${this.sync.timeGotPacketSent}`)
-                        console.log(`Current time is ${currentTime}`);
-                        console.log(`Their difference is ${currentTime - this.sync.timeGotPacketSent}`);
-                        console.log(`Board time: ${boardTime}`);
-                        console.log(`Round trip time: ${this.sync.timeRoundTrip} ms`);
-                        console.log(`Transmission time: ${this.sync.timeTransmission} ms`);
-                        console.log(`Board offset time: ${this.sync.timeOffset}`);
-                        console.log(`Corrected board time: ${(this.sync.timeOffset + boardTime)} ms`);
-                        console.log(`Average across sync offset: ${this.sync.timeOffsetAvg}`);
-                        console.log(`Corrected board time with average: ${(this.sync.timeOffset + boardTime)} ms`);
+                        console.log(`Master offset ${this.sync.timeOffsetMaster} ms`);
                     }
-                    this.emit('synced',this.sync);
-                    resolve(rawPacket);
+
+                    // Set the valid object to true
+                    this.sync.curSyncObj.valid = true;
+
+                    // Emit it!
+                    this.emit('synced',this.sync.curSyncObj);
+                    // Save obj to the global array
+                    this.sync.objArray.push(this.sync.curSyncObj);
+                    // Set to null
+                    this.sync.curSyncObj = null;
+                    return resolve(rawPacket);
                 })
                 .catch(err => {
                     console.log('Error in _processPacketTimeSyncSet', err)
-                    reject(err);
+                    return reject(err);
                 });
         });
     };
@@ -1844,7 +1955,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype._processPacketTimeSyncedAccel = function(rawPacket) {
         // if (this.sync.active === false) console.log('Need to sync with board...');
-        openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffset, this.accelArray)
+        openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster, this.accelArray)
             .then((sampleObject) => {
                 sampleObject.rawPacket = rawPacket;
                 this._finalizeNewSample.call(this,sampleObject);
@@ -1855,13 +1966,13 @@ function OpenBCIFactory() {
     /**
      * @description A method to parse a stream packet that contains channel data, a time stamp and two extra bytes that
      *      shall be emitted as a raw buffer and not scaled.
-     * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+     * @param rawPacket {Buffer} - A 33byte data buffer from _processQualifiedPacket
      * @private
      * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._processPacketTimeSyncedRawAux = function(rawPacket) {
         // if (this.sync.active === false) console.log('Need to sync with board...');
-        openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffset)
+        openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster)
             .then(sampleObject => {
                 this._finalizeNewSample.call(this,sampleObject);
             })
@@ -1871,7 +1982,7 @@ function OpenBCIFactory() {
     /**
      * @description A method to emit samples through the EventEmitter channel `sample` or compute impedances if are
      *      being tested.
-     * @param sampleObject - A sample object that follows the normal standards.
+     * @param sampleObject {Object} - A sample object that follows the normal standards.
      * @private
      * @author AJ Keller (@pushtheworldllc)
      */
@@ -1897,8 +2008,9 @@ function OpenBCIFactory() {
      *      sample object only when the upper channels arrive in an even sampleNumber sample object. No sample will be
      *      emitted on an even sampleNumber if _lowerChannelsSampleObject is null and one will be added to the
      *      missedPacket counter. Further missedPacket will increase if two odd sampleNumber packets arrive in a row.
-     * @param sampleObject
+     * @param sampleObject {Object} - The sample object to finalize
      * @private
+     * @author AJ Keller (@pushtheworldllc)
      */
     OpenBCIBoard.prototype._finalizeNewSampleForDaisy = function(sampleObject) {
         if(openBCISample.isOdd(sampleObject.sampleNumber)) {
@@ -1949,62 +2061,62 @@ function OpenBCIFactory() {
     };
 
     /**
-     * @description Get time from the SNTP server. Must have internet connection!
-     * @returns {Promise} - Fulfilled with time object
-     * @author AJ Keller (@pushtheworldllc)
-     */
-    OpenBCIBoard.prototype.sntpGetServerTime = function() {
-        return new Promise((resolve,reject) => {
-            Sntp.time(this.sntpOptions, (err, time) => {
-
-                if (err) {
-                    console.log('Failed: ' + err.message);
-                    reject(err);
-                    //process.exit(1);
-                }
-
-                console.log('Local clock is off by: ' + time.t + ' milliseconds');
-                //process.exit(0);
-                resolve(time);
-            });
-        });
-    };
-
-    /**
      * @description Allows users to utilize all features of sntp if they want to...
      */
     OpenBCIBoard.prototype.sntp = Sntp;
 
     /**
      * @description This gets the time plus offset
+     * @private
      */
-    OpenBCIBoard.prototype.sntpNow = Sntp.now;
+    OpenBCIBoard.prototype._sntpNow = Sntp.now;
 
     /**
      * @description This starts the SNTP server and gets it to remain in sync with the SNTP server
      * @returns {Promise} - A promise if the module was able to sync with ntp server.
      * @author AJ Keller (@pushtheworldllc)
      */
-    OpenBCIBoard.prototype.sntpStart = function() {
+    OpenBCIBoard.prototype.sntpStart = function(options) {
         return new Promise((resolve, reject) => {
-            Sntp.start((err) => {
+            this.options.sntpTimeSync = true;
+            Sntp.start({
+                host: this.options.sntpTimeSyncHost,    // Defaults to pool.ntp.org
+                port: this.options.sntpTimeSyncPort,    // Defaults to 123 (NTP)
+                clockSyncRefresh: 30 * 60 * 1000        // Resync every 30 minutes
+            }, err => {
                 if (err) {
-                    this.sync.active = true;
+                    this.sync.sntpActive = false;
                     reject(err);
                 } else {
-                    this.sync.active = false;
+                    this.sync.sntpActive = true;
                     resolve();
+                    this.emit('sntpTimeLock');
                 }
             });
         });
     };
 
     /**
-     * @description Stops the sntp from updating
+     * @description Stops the sntp from updating.
      */
     OpenBCIBoard.prototype.sntpStop = function() {
         Sntp.stop();
-        this.sync.active = false;
+        this.options.sntpTimeSync = false;
+        this.sync.sntpActive = false;
+    };
+
+
+    /**
+     * @description Should use sntp time when sntpTimeSync specified in options, or else use Date.now() for time
+     * @returns {Number} - The time
+     * @author AJ Keller (@pushtheworldllc)
+     */
+    OpenBCIBoard.prototype.time = function() {
+        if (this.options.sntpTimeSync) {
+            return this._sntpNow();
+        } else {
+            return Date.now();
+        }
     };
 
     /**

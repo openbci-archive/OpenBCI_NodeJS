@@ -1,3 +1,22 @@
+# 1.1.0
+
+### New Features
+
+* Add function `.time()` which should be used in time syncing
+* Add function `.syncClocksFull()` which should be used for immediate consecutive time syncs
+* Synced object can be emitted on `synced` event. Check `valid` property for if the sync was done
+* Add detailed description of object returned on `synced` event to README.md
+
+### Breaking Changes
+
+* Changed option named `timeSync` to `sntpTimeSync`
+* Removed function called `.sntpNow()` because it was replaced by `.time()`
+
+### Bug Fixes
+
+* Time sync working
+* Module could not work with local time
+
 # 1.0.1
 
 ### New Features

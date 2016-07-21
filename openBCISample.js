@@ -521,7 +521,8 @@ var sampleModule = {
     isSuccessInBuffer,
     isTimeSyncSetConfirmationInBuffer,
     makeTailByteFromPacketType,
-    isStopByte
+    isStopByte,
+    newSyncObject
 };
 
 module.exports = sampleModule;
@@ -537,6 +538,20 @@ function newImpedanceObject(channelNumber) {
             raw: -1,
             text: k.OBCIImpedanceTextInit
         }
+    }
+}
+
+function newSyncObject() {
+    return {
+        boardTime: 0,
+        correctedTransmissionTime: false,
+        timeSyncSent: 0,
+        timeSyncSentConfirmation: 0,
+        timeSyncSetPacket: 0,
+        timeRoundTrip: 0,
+        timeTransmission: 0,
+        timeOffset: 0,
+        valid: false
     }
 }
 

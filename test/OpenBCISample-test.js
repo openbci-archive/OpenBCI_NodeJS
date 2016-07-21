@@ -1344,7 +1344,38 @@ describe('openBCISample',function() {
             expect(openBCISample.makeTailByteFromPacketType(-2)).to.equal(0xC0);
         });
     });
+    describe('#newSyncObject',function() {
+        var syncObj = openBCISample.newSyncObject();
+        it("should have property timeSyncSent",function() {
+            expect(syncObj).to.have.property("timeSyncSent",0);
+        });
+        it("should have property timeOffset",function() {
+            expect(syncObj).to.have.property("timeOffset",0);
+        });
+        it("should have property timeRoundTrip",function() {
+            expect(syncObj).to.have.property("timeRoundTrip",0);
+        });
+        it("should have property timeTransmission",function() {
+            expect(syncObj).to.have.property("timeTransmission",0);
+        });
+        it("should have property timeSyncSentConfirmation",function() {
+            expect(syncObj).to.have.property("timeSyncSentConfirmation",0);
+        });
+        it("should have property timeSyncSetPacket",function() {
+            expect(syncObj).to.have.property("timeSyncSetPacket",0);
+        });
+        it("should have property valid",function() {
+            expect(syncObj).to.have.property("valid",false);
+        });
+        it("should have property correctedTransmissionTime",function() {
+            expect(syncObj).to.have.property("correctedTransmissionTime",false);
+        });
+        it("should have property boardTime",function() {
+            expect(syncObj).to.have.property("boardTime",0);
+        });
+    })
 });
+
 
 describe('#goertzelProcessSample', function() {
     var numberOfChannels = k.OBCINumberOfChannelsDefault;

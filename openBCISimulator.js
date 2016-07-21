@@ -190,6 +190,7 @@ function OpenBCISimulatorFactory() {
                 if (this.synced) {
                     if (this.sendSyncSetPacket) {
                         this.sendSyncSetPacket = false;
+                        console.log('sendSyncSetPacket now false');
                         return openBCISample.convertSampleToPacketAccelTimeSyncSet(this.sampleGenerator(sampNumber),now().toFixed(0));
                     } else {
                         return openBCISample.convertSampleToPacketAccelTimeSynced(this.sampleGenerator(sampNumber),now().toFixed(0));
@@ -219,7 +220,9 @@ function OpenBCISimulatorFactory() {
     };
 
     OpenBCISimulator.prototype._syncUp = function() {
-        this.sendSyncSetPacket = true;
+        setTimeout(() => {
+            this.sendSyncSetPacket = true;
+        }, 12); // 3 packets later
     };
 
     OpenBCISimulator.prototype._printEOT = function () {

@@ -162,31 +162,56 @@ Time Syncing
 ------------
 You must be using OpenBCI firmware version 2 in order to do time syncing. After you `.connect()` and send a `.softReset()`, you can call `.usingVersionTwoFirmware()` to get a boolean response as to if you are using `v1` or `v2`.
 
-Now using firmware `v2`, the fun begins! What we set out to do was synchronize not only the board to this modules clock, but also with a global NTP server, so that you could use several different devices and all sync to the same global server. That way you can really do some serious cloud computing!
+Now using firmware `v2`, the fun begins! We synchronize the Board's clock with the module's time. In firmware `v2` we leverage samples with time stamps and different time stamps and unique new features to calculate a time sync strategy. Time syncing has been verified to +/- 4ms and a test report is on the way. We are still working on the synchronize of this module and an NTP server, this is an open call for any NTP experts out there! With a global NTP server you could use several different devices and all sync to the same time server. That way you can really do some serious cloud computing!
 
+Keep your resync interval above 50ms. While it's important to resync every couple minutes due to drifting of clocks, please do not try to sync without getting the last sync event! We can only support one sync operation at a time!
+
+Using local computer time:
 ```js
 var OpenBCIBoard = require('openbci').OpenBCIBoard,
     ourBoard = new OpenBCIBoard({
-        verbose:true,
-        timeSync: true // Sync up with NTP servers in constructor
+        verbose:true
     });
+
+const resyncPeriodMin = 5; // re sync every five minutes
+const secondsInMinute = 60;
+var sampleRate = k.OBCISampleRate250; // Default to 250, ALWAYS verify with a call to `sampleRate` after `ready` event!
+var timeSyncPossible = false;
 
 // Call to connect
 ourBoard.connect(portName).then(() => {
     ourBoard.on('ready',() => {
+        // Get the sample rate after 'ready' event!
+        sampleRate = ourBoard.sampleRate();
+        // Find out if you can even time sync, you must be using v2 and this is only accurate after a `.softReset()` call which is called internally on `.connect()`. We parse the `.softReset()` response for the presence of firmware version 2 properties.
+        timeSyncPossible = ourBoard.usingVersionTwoFirmware();
+
         ourBoard.streamStart()
+            .then(() => {
+                /** Start streaming command sent to board. */
+            })
             .catch(err => {
                 console.log(`stream start: ${err}`);
             })
     });
-    // 'synced' event contains the guts of the whole sync operation.
-    ourBoard.on('synced',obj => {
-        console.log('sync obj',obj);
-    });
+
+    // PTW recommends sample driven  
     ourBoard.on('sample',sample => {
-        // Resynchronize every 100 samples
-        if (sample.sampleNumber % 100 === 0) {
-            ourBoard.syncClocks();
+        // Resynchronize every every 5 minutes
+        if (sample._count % (sampleRate * resyncPeriodMin * secondsInMinute) === 0) {
+            ourBoard.syncClocksFull()
+                .then(syncObj => {
+                    // Sync was successful
+                    if (syncObj.valid) {
+                        // Log the object to check it out!
+                        console.log(`syncObj`,syncObj);
+
+                    // Sync was not successful
+                    } else {
+                        // Retry it
+                        console.log(`Was not able to sync, please retry?`);
+                    }
+                });
         }
 
         if (sample.timeStamp) { // true after the first sync
@@ -351,7 +376,9 @@ Board optional configurations.
   * `None` - Do not inject line noise.
 * `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that setting and this sample rate will be used. (Default is `250`)
 * `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely due to a OpenBCI dongle not being plugged in.
-* `timeSync` - {Boolean} Syncs the module up with an SNTP time server. Syncs the board on startup with the SNTP time. Adds a time stamp to the AUX channels.
+* `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source of truth instead of local computer time. (Default `true`)
+* `sntpTimeSyncHost` - {String} The sntp server to use, can be either sntp or ntp (Defaults `pool.ntp.org`).
+* `sntpTimeSyncPort` - {Number} The port to access the sntp server (Defaults `123`)
 * `verbose` {Boolean} - Print out useful debugging events
 
 **Note, we have added support for either all lowercase OR camel case for the options, use whichever style you prefer.**
@@ -493,7 +520,7 @@ A Number, specifies which channel you want to test.
 
 **_Returns_** a promise that resolves a single channel impedance object.
 
-Example:
+**Example**
 ```js
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
@@ -535,7 +562,7 @@ A Number, specifies which channel you want to test.
 
 **_Returns_** a promise that resolves a single channel impedance object.
 
-Example:
+**Example**
 ```js
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
@@ -577,7 +604,7 @@ A Number, specifies which channel you want to test.
 
 **_Returns_** a promise that resolves a single channel impedance object.
 
-Example:
+**Example**
 ```js
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard();
@@ -787,21 +814,9 @@ Stateful method for querying the current offset only when the last one is too ol
 
 **_Returns_** a promise with the time offset
 
-### .sntpGetServerTime()
-
-Get time from the SNTP server. Must have internet connection!
-
-**_Returns_** a promise fulfilled with time object
-
-### .sntpNow()
-
-This function gets SNTP time since Jan 1, 1970, if we call this after a successful `.sntpStart()` this time will be synced, or else we will just get the current computer time, the case if there is no internet.
-
-**_Returns_** time since UNIX epoch in ms.
-
 ### .sntpStart()
 
-This starts the SNTP server and gets it to remain in sync with the SNTP server;
+This starts the SNTP server and gets it to remain in sync with the SNTP server.
 
 **_Returns_** a promise if the module was able to sync with NTP server.
 
@@ -841,6 +856,96 @@ Send the command to tell the board to start the syncing protocol. Must be connec
 
 **_Returns_** {Promise} resolves if the command was sent to the write queue, rejects if unable.
 
+### .syncClocksFull()
+
+Send the command to tell the board to start the syncing protocol. Must be connected, streaming and using v2 firmware. Uses the `synced` event to ensure multiple syncs don't overlap.
+
+**Note, this functionality requires OpenBCI Firmware Version 2.0**
+
+**_Returns_** {Promise} resolves if `synced` event is emitted, rejects if not connected or using firmware v2. Resolves with a synced object:
+```javascript
+{
+    boardTime: 0, // The time contained in the time sync set packet.
+    correctedTransmissionTime: false, // If the confirmation and the set packet arrive in the same serial flush we have big problem! This will be true in this case. See source code for full explanation.
+    timeSyncSent: 0, // The time the `<` was sent to the Dongle.
+    timeSyncSentConfirmation: 0, // The time the `<` was sent to the Board; It's really the time `,` was received from the Dongle.
+    timeSyncSetPacket: 0, // The time the set packet was received from the Board.
+    timeRoundTrip: 0, // Simply timeSyncSetPacket - timeSyncSent.
+    timeTransmission: 0, // Estimated time it took for time sync set packet to be sent from Board to Driver.
+    timeOffset: 0, // The map (or translation) from boardTime to module time.
+    valid: false // If there was an error in the process, valid will be false and no time sync was done. It's important to resolve this so we can perform multiple promise syncs as show in the example below.
+}
+```
+
+**Example**
+
+```javascript
+var OpenBCIBoard = require('openbci').OpenBCIBoard,
+    ourBoard = new OpenBCIBoard({
+        verbose:true
+    });
+
+var portName = /* INSERT PORT NAME HERE */;
+var samples = []; // Array to store time synced samples into
+var timeSyncActivated = false;
+
+ourBoard.connect(portName)
+    .then(() => {
+        ourBoard.on('ready',() => {
+            ourBoard.streamStart()
+                .then(() => {
+                    /** Could also call `.syncClocksFull()` here */
+                })
+                .catch(err => {
+                    console.log(`Error starting stream ${err}`);
+                })
+            });
+        ourBoard.on('sample',sample => {
+            /** If we are not synced, then do that! */
+            if (timeSyncActivated === false) {
+                timeSyncActivated = true;
+                ourBoard.syncClocksFull()
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('1st sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('2nd sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('3rd sync done');
+                        }
+                        return ourBoard.syncClocksFull();
+                    })
+                    .then(syncObj => {
+                        if (syncObj.valid) {
+                            console.log('4th sync done');
+
+                        }
+                        /* Do awesome time syncing stuff */
+                    })
+                    .catch(err => {
+                        console.log(`sync err ${err}`);
+                    });
+            }
+            if (startLoggingSamples && sample.hasOwnProperty("timeStamp") && sample.hasOwnProperty("boardTime")) {
+                /** If you only want to log samples with time stamps */
+                samples.push(sample);
+            }
+        });
+    })
+.catch(err => {
+    console.log(`connect ${err}`);
+});
+
+```
+
 ### .testSignal(signal)
 
 Apply the internal test signal to all channels.
@@ -858,6 +963,12 @@ A String indicating which test signal to apply
  * `none` - Reset to default
 
 **_Returns_** a promise, if the commands were sent to write buffer.
+
+### .time()
+
+Uses `._sntpNow()` time when sntpTimeSync specified in options, or else use Date.now() for time.
+
+**_Returns_** time since UNIX epoch in ms.
 
 ### .usingVersionTwoFirmware()
 

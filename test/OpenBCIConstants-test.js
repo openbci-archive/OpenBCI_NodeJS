@@ -291,6 +291,20 @@ describe('OpenBCIConstants', function() {
             assert.equal('1', k.OBCIChannelImpedanceTestSignalApplied);
         });
     });
+    describe('Time Sync Stuff',function() {
+        it('Can get proper array size',function() {
+            assert.equal(10, k.OBCITimeSyncArraySize);
+        });
+        it('Get correct time sync with conf',function() {
+            assert.equal(0.9, k.OBCITimeSyncMultiplierWithSyncConf);
+        });
+        it('Get correct time sync without conf',function() {
+            assert.equal(0.75, k.OBCITimeSyncMultiplierWithoutSyncConf);
+        });
+        it('Get correct time sync transmission threshold',function() {
+            assert.equal(10, k.OBCITimeSyncThresholdTransFailureMS);
+        });
+    });
     describe('SD card Commands',function() {
         it('logs for 1 hour', function() {
             assert.equal('G', k.OBCISDLogForHour1);
