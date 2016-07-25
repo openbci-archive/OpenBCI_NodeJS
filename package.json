@@ -39,12 +39,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openbci/openbci-js-sdk.git"
+    "url": "git+https://github.com/openbci/openbci_nodejs.git"
   },
   "bugs": {
-    "url": "https://github.com/openbci/openbci-js-sdk/issues"
+    "url": "https://github.com/openbci/openbci_nodejs/issues"
   },
-  "homepage": "https://github.com/openbci/openbci-js-sdk#readme",
+  "homepage": "https://github.com/openbci/openbci_nodejs#readme",
   "engines": {
     "node": ">=4.0.0"
   }
