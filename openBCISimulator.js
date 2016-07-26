@@ -190,7 +190,6 @@ function OpenBCISimulatorFactory() {
                 if (this.synced) {
                     if (this.sendSyncSetPacket) {
                         this.sendSyncSetPacket = false;
-                        console.log('sendSyncSetPacket now false');
                         return openBCISample.convertSampleToPacketAccelTimeSyncSet(this.sampleGenerator(sampNumber),now().toFixed(0));
                     } else {
                         return openBCISample.convertSampleToPacketAccelTimeSynced(this.sampleGenerator(sampNumber),now().toFixed(0));

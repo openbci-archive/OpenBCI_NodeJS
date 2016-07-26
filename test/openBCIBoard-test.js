@@ -1182,13 +1182,13 @@ describe('openbci-sdk',function() {
 
     describe("#time", function() {
         it("should use sntp time when sntpTimeSync specified in options", function() {
-            var ourBoard = new openBCIBoard.OpenBCIBoard({
+            var board = new openBCIBoard.OpenBCIBoard({
                 verbose: true,
                 sntpTimeSync: true
             });
-            var funcSpySntpNow = sinon.spy(ourBoard,"_sntpNow");
+            var funcSpySntpNow = sinon.spy(board,"_sntpNow");
 
-            ourBoard.time();
+            board.time();
 
             funcSpySntpNow.should.have.been.calledOnce;
 
@@ -1197,12 +1197,12 @@ describe('openbci-sdk',function() {
             funcSpySntpNow = null;
         });
         it("should use Date.now() for time when sntpTimeSync is not specified in options", function() {
-            var ourBoard = new openBCIBoard.OpenBCIBoard({
+            var board = new openBCIBoard.OpenBCIBoard({
                 verbose: true
             });
-            var funcSpySntpNow = sinon.spy(ourBoard,"_sntpNow");
+            var funcSpySntpNow = sinon.spy(board,"_sntpNow");
 
-            ourBoard.time();
+            board.time();
 
             funcSpySntpNow.should.not.have.been.called;
 
@@ -1211,62 +1211,62 @@ describe('openbci-sdk',function() {
             funcSpySntpNow = null;
         });
         it("should emit sntpTimeLock event after sycned with ntp server", function(done) {
-            var ourBoard = new openBCIBoard.OpenBCIBoard({
+            var board = new openBCIBoard.OpenBCIBoard({
                 verbose: true,
                 sntpTimeSync: true
             });
 
-            ourBoard.once('sntpTimeLock', () => {
+            board.once('sntpTimeLock', () => {
                 done();
             })
         });
     });
     describe("#sntpStart",function() {
-        var ourBoard;
+        var board;
         before(() => {
-            ourBoard = new openBCIBoard.OpenBCIBoard();
-            ourBoard.sntpStop();
+            board = new openBCIBoard.OpenBCIBoard();
+            board.sntpStop();
         });
         after(() => {
-            ourBoard.sntpStop();
+            board.sntpStop();
         })
         it("should be able to start ntp server", done => {
-            expect(ourBoard.sntp.isLive()).to.be.false;
-            ourBoard.sntpStart()
+            expect(board.sntp.isLive()).to.be.false;
+            board.sntpStart()
                 .then(() => {
-                    expect(ourBoard.sntp.isLive()).to.be.true;
+                    expect(board.sntp.isLive()).to.be.true;
                 })
-            ourBoard.once("sntpTimeLock", () => {
+            board.once("sntpTimeLock", () => {
                 done();
             });
         });
     });
     describe("#sntpStop",function() {
-        var ourBoard;
+        var board;
         before(done => {
-            ourBoard = new openBCIBoard.OpenBCIBoard({
+            board = new openBCIBoard.OpenBCIBoard({
                 sntpTimeSync: true
             });
-            ourBoard.once("sntpTimeLock", () => {
+            board.once("sntpTimeLock", () => {
                 done();
             });
         });
         after(() => {
-            ourBoard.sntpStop();
+            board.sntpStop();
         })
         it("should be able to stop the ntp server and set the globals correctly",function() {
             // Verify the before condition is correct
-            expect(ourBoard.options.sntpTimeSync).to.be.true;
-            expect(ourBoard.sync.sntpActive).to.be.true;
-            expect(ourBoard.sntp.isLive()).to.be.true;
+            expect(board.options.sntpTimeSync).to.be.true;
+            expect(board.sync.sntpActive).to.be.true;
+            expect(board.sntp.isLive()).to.be.true;
 
             // Call the function under test
-            ourBoard.sntpStop();
+            board.sntpStop();
 
             // Ensure the globals were set off
-            expect(ourBoard.options.sntpTimeSync).to.be.false;
-            expect(ourBoard.sync.sntpActive).to.be.false;
-            expect(ourBoard.sntp.isLive()).to.be.false;
+            expect(board.options.sntpTimeSync).to.be.false;
+            expect(board.sync.sntpActive).to.be.false;
+            expect(board.sntp.isLive()).to.be.false;
 
         });
     });
@@ -2838,7 +2838,6 @@ describe('#sync', function() {
     before(function (done) {
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose:true,
-            // timeSync: true,
             simulatorFirmwareVersion: 'v2'
         });
 
@@ -2872,7 +2871,11 @@ describe('#sync', function() {
 
 
         ourBoard.once('ready', () => {
-            done();
+            ourBoard.streamStart()
+                .then(() => {
+                    done();
+                })
+                .catch(err => done);
         });
     });
     after(function(done) {
@@ -2888,50 +2891,6 @@ describe('#sync', function() {
         this.buffer = null;
     });
     describe('#syncClocks', function() {
-        // it('can get time sync set packet', done => {
-        //     ourBoard.syncClocks()
-        //         .catch(err => {
-        //             done(err);
-        //         });
-        //     ourBoard.once('synced',() => {
-        //         done();
-        //     });
-        // });
-        // it('can sync multiple times and compute average', done => {
-        //     var trials = 5;
-        //     var trialCount = 0;
-        //
-        //     // Clear the array for sure
-        //     ourBoard.sync.timeOffsetArray = [];
-        //
-        //     // The function executed on each synced event emitted
-        //     var synced = syncObj => {
-        //         trialCount++;
-        //         if (trialCount >= trials) {
-        //             // Verify the length of the
-        //             expect(syncObj.timeOffsetArray.length).to.equal(trials);
-        //             // Verify the mean is correct
-        //             expect(math.mean(syncObj.timeOffsetArray)).to.equal(syncObj.timeOffsetAvg);
-        //             // Remove the event listener
-        //             ourBoard.removeListener('synced',synced);
-        //             done();
-        //         } else {
-        //             ourBoard.syncClocks()
-        //                 .catch(err => {
-        //                     done(err);
-        //                 });
-        //         }
-        //     };
-        //
-        //     // Attached the emitted
-        //     ourBoard.on('synced',synced);
-        //
-        //     // Call the first one
-        //     ourBoard.syncClocks()
-        //         .catch(err => {
-        //             done(err);
-        //         });
-        // });
         it('can sync while streaming', done => {
             var syncAfterSamples = 50;
             var notSynced = true;
@@ -2943,19 +2902,35 @@ describe('#sync', function() {
                 }
             };
             ourBoard.on('sample',samp);
-            ourBoard.streamStart().catch(err => done);
             // Attached the emitted
             ourBoard.once('synced',obj => {
                 console.log('syhnc obj', obj);
-                ourBoard.disconnect()
-                    .then(() => {
-                        done();
-                    });
                 ourBoard.removeListener('sample',samp);
                 done();
             });
+        });
+    });
+    describe('#syncClocksFull', function() {
+        it('can run a full clock sync', done => {
+            var notSynced = true;
+            var sampleFun = sample => {
+                console.log('sample',sample);
 
-
+                if (notSynced) {
+                    notSynced = false;
+                    // Call the first one
+                    ourBoard.syncClocksFull()
+                        .then(syncObj => {
+                            console.log(syncObj);
+                            if (syncObj.valid) {
+                                done();
+                            } else {
+                                done("Not able to sync");
+                            }
+                        }).catch(err => done);
+                }
+            };
+            ourBoard.on('sample',sampleFun);
         });
     });
 });
