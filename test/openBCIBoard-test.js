@@ -77,7 +77,8 @@ describe('openbci-sdk',function() {
             expect(board.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz60);
             expect(board.options.simulatorSampleRate).to.equal(k.OBCISampleRate250);
             expect(board.options.simulatorSerialPortFailure).to.be.false;
-            expect(board.options.timeSync).to.be.false;
+            expect(board.options.sntpTimeSync).to.be.false;
+            expect(board.options.sntpTimeSyncHost).to.equal('pool.ntp.org');
             expect(board.options.verbose).to.be.false;
             expect(board.sampleRate()).to.equal(250);
             expect(board.numberOfChannels()).to.equal(8);
@@ -241,14 +242,38 @@ describe('openbci-sdk',function() {
         });
         it('should be able to enter sync mode', function() {
             var ourBoard1 = new openBCIBoard.OpenBCIBoard({
-                timeSync: true
+                sntpTimeSync: true
             });
-            expect(ourBoard1.options.timeSync).to.be.true;
+            expect(ourBoard1.options.sntpTimeSync).to.be.true;
             // Verify multi case support
             var ourBoard2 = new openBCIBoard.OpenBCIBoard({
-                timesync: true
+                sntptimesync: true
             });
-            expect(ourBoard2.options.timeSync).to.be.true;
+            expect(ourBoard2.options.sntpTimeSync).to.be.true;
+        });
+        it('should be able to change the ntp pool host', function() {
+            var expectedPoolName = 'time.apple.com';
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                sntpTimeSyncHost: expectedPoolName
+            });
+            expect(ourBoard1.options.sntpTimeSyncHost).to.equal(expectedPoolName);
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                sntptimesynchost: expectedPoolName
+            });
+            expect(ourBoard2.options.sntpTimeSyncHost).to.equal(expectedPoolName);
+        });
+        it('should be able to change the ntp pool port', function() {
+            var expectedPortNumber = 73;
+            var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+                sntpTimeSyncPort: expectedPortNumber
+            });
+            expect(ourBoard1.options.sntpTimeSyncPort).to.equal(expectedPortNumber);
+            // Verify multi case support
+            var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+                sntptimesyncport: expectedPortNumber
+            });
+            expect(ourBoard2.options.sntpTimeSyncPort).to.equal(expectedPortNumber);
         });
         it('can enter verbose mode', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -889,6 +914,8 @@ describe('openbci-sdk',function() {
             funcSpyTimeSyncSet.reset();
             funcSpyTimeSyncedAccel.reset();
             funcSpyTimeSyncedRawAux.reset();
+
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
         });
         after(function() {
             // ourBoard = null;
@@ -988,6 +1015,261 @@ describe('openbci-sdk',function() {
         });
     });
 
+    describe("#_processPacketTimeSyncSet", function() {
+        var timeSyncSetPacket;
+        var ourBoard;
+        before(() => {
+            ourBoard = new openBCIBoard.OpenBCIBoard({
+                verbose: false
+            });
+
+        });
+        beforeEach(() => {
+            timeSyncSetPacket = openBCISample.samplePacketRawAuxTimeSyncSet();
+            ourBoard.sync.timeOffsetArray = [];
+        });
+        afterEach(() => {
+            ourBoard.sync.curSyncObj = null;
+        });
+        it("should reject if no sync in progress", function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived).should.be.rejected.and.notify(done);
+        });
+        it("should reject if no sent confimation found", function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived).should.be.rejected.and.notify(done);
+        });
+        it("should reset global sync variables if no sent confimation found", function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived)
+                .then(() => {
+                    done("failed to get rejected");
+                })
+                .catch(function(err) {
+                    expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
+                    expect(ourBoard.sync.curSyncObj).to.be.null;
+                    done();
+                });
+        });
+        it("should emit sycned event with valid false", function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            ourBoard.once('synced',obj => {
+                expect(obj.valid).to.be.false;
+                done();
+            })
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived);
+        });
+        it("should calculate round trip time as the difference between time sent and time set packet arrived",function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            var expectedRoundTripTime = 20; //ms
+            ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
+            // Make a new object!
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            // Set the sent time
+            ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
+
+            ourBoard.once('synced',obj => {
+                expect(obj.timeRoundTrip).to.equal(expectedRoundTripTime);
+                done();
+            })
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived);
+        });
+        it("should calculate transmission time as the difference between round trip time and (sentConf - sent) when set arrived - sent conf is larger than threshold",function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            var expectedRoundTripTime = 20; //ms
+            var expectedTimeTillSentConf = expectedRoundTripTime - k.OBCITimeSyncThresholdTransFailureMS - 1; // 9 ms
+            // Setup
+            ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
+            // Make a new object!
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            // Set the sent time
+            ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
+            ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
+
+            ourBoard.once('synced',obj => {
+                expect(obj.timeTransmission).to.equal(obj.timeRoundTrip - (obj.timeSyncSentConfirmation - obj.timeSyncSent));
+                done();
+            })
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived);
+        });
+        it("should calculate transmission time as a percentage of round trip time when set arrived - sent conf is smaller than threshold",function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            var expectedRoundTripTime = 20; //ms
+            var expectedTimeTillSentConf = expectedRoundTripTime - k.OBCITimeSyncThresholdTransFailureMS + 1; // 11 ms
+            // Setup
+            ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
+            // Make a new object!
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            // Set the sent time
+            ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
+            ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
+
+            ourBoard.once('synced',obj => {
+                expect(obj.timeTransmission).to.equal(obj.timeRoundTrip * k.OBCITimeSyncMultiplierWithSyncConf);
+                done();
+            })
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived);
+        });
+        it("should calculate offset time as a time packet arrived - transmission time - board time",function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            var expectedRoundTripTime = 20; //ms
+            var expectedTimeTillSentConf = expectedRoundTripTime - k.OBCITimeSyncThresholdTransFailureMS - 2; // 8 ms
+            // Set the board time
+            var boardTime = 5000;
+            timeSyncSetPacket.writeInt32BE(boardTime,k.OBCIPacketPositionTimeSyncTimeStart);
+
+            // Setup
+            ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
+            // Make a new object!
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            // Set the sent time
+            ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
+            ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
+
+            var expectedTransmissionTime = expectedRoundTripTime - (ourBoard.sync.curSyncObj.timeSyncSentConfirmation - ourBoard.sync.curSyncObj.timeSyncSent);
+
+            var expectedTimeOffset = timeSetPacketArrived - expectedTransmissionTime - boardTime;
+
+            ourBoard.once('synced',obj => {
+                expect(obj.timeOffset,"object timeOffset").to.equal(expectedTimeOffset);
+                expect(ourBoard.sync.timeOffsetMaster,"master time offset").to.equal(expectedTimeOffset);
+                done();
+            })
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived);
+        });
+        it("should calculate offset time as an average of previous offset times",function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            var expectedRoundTripTime = 20; //ms
+            var expectedTimeTillSentConf = expectedRoundTripTime - k.OBCITimeSyncThresholdTransFailureMS - 2; // 8 ms
+            // Set the board time
+            var boardTime = 5000;
+            timeSyncSetPacket.writeInt32BE(boardTime,k.OBCIPacketPositionTimeSyncTimeStart);
+
+            // Setup
+            ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
+            // Make a new object!
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            // Set the sent time
+            ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
+            ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
+
+            var expectedTransmissionTime = expectedRoundTripTime - (ourBoard.sync.curSyncObj.timeSyncSentConfirmation - ourBoard.sync.curSyncObj.timeSyncSent);
+
+            var expectedTimeOffset = timeSetPacketArrived - expectedTransmissionTime - boardTime;
+
+            var dif1 = 3;
+            ourBoard.sync.timeOffsetArray.push(expectedTimeOffset + dif1);
+            var dif2 = 1;
+            ourBoard.sync.timeOffsetArray.push(expectedTimeOffset + dif2);
+
+            ourBoard.once('synced',obj => {
+                expect(obj.timeOffset,"object timeOffset").to.equal(expectedTimeOffset);
+
+                var expectedMasterTimeoffset = math.floor((obj.timeOffset + (obj.timeOffset + dif1) + (obj.timeOffset + dif2)) / 3);
+                expect(ourBoard.sync.timeOffsetMaster,"master time offset").to.equal(expectedMasterTimeoffset);
+                done();
+            })
+            ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived);
+        });
+    });
+
+    describe("#time", function() {
+        it("should use sntp time when sntpTimeSync specified in options", function() {
+            var board = new openBCIBoard.OpenBCIBoard({
+                verbose: true,
+                sntpTimeSync: true
+            });
+            var funcSpySntpNow = sinon.spy(board,"_sntpNow");
+
+            board.time();
+
+            funcSpySntpNow.should.have.been.calledOnce;
+
+            funcSpySntpNow.reset();
+
+            funcSpySntpNow = null;
+        });
+        it("should use Date.now() for time when sntpTimeSync is not specified in options", function() {
+            var board = new openBCIBoard.OpenBCIBoard({
+                verbose: true
+            });
+            var funcSpySntpNow = sinon.spy(board,"_sntpNow");
+
+            board.time();
+
+            funcSpySntpNow.should.not.have.been.called;
+
+            funcSpySntpNow.reset();
+
+            funcSpySntpNow = null;
+        });
+        it("should emit sntpTimeLock event after sycned with ntp server", function(done) {
+            var board = new openBCIBoard.OpenBCIBoard({
+                verbose: true,
+                sntpTimeSync: true
+            });
+
+            board.once('sntpTimeLock', () => {
+                done();
+            })
+        });
+    });
+    describe("#sntpStart",function() {
+        var board;
+        before(() => {
+            board = new openBCIBoard.OpenBCIBoard();
+            board.sntpStop();
+        });
+        after(() => {
+            board.sntpStop();
+        })
+        it("should be able to start ntp server", done => {
+            expect(board.sntp.isLive()).to.be.false;
+            board.sntpStart()
+                .then(() => {
+                    expect(board.sntp.isLive()).to.be.true;
+                })
+            board.once("sntpTimeLock", () => {
+                done();
+            });
+        });
+    });
+    describe("#sntpStop",function() {
+        var board;
+        before(done => {
+            board = new openBCIBoard.OpenBCIBoard({
+                sntpTimeSync: true
+            });
+            board.once("sntpTimeLock", () => {
+                done();
+            });
+        });
+        after(() => {
+            board.sntpStop();
+        })
+        it("should be able to stop the ntp server and set the globals correctly",function() {
+            // Verify the before condition is correct
+            expect(board.options.sntpTimeSync).to.be.true;
+            expect(board.sync.sntpActive).to.be.true;
+            expect(board.sntp.isLive()).to.be.true;
+
+            // Call the function under test
+            board.sntpStop();
+
+            // Ensure the globals were set off
+            expect(board.options.sntpTimeSync).to.be.false;
+            expect(board.sync.sntpActive).to.be.false;
+            expect(board.sntp.isLive()).to.be.false;
+
+        });
+    });
     describe("#_processParseBufferForReset",function() {
         var ourBoard;
 
@@ -1062,6 +1344,9 @@ describe('openbci-sdk',function() {
                 verbose: true
             });
         });
+        beforeEach(() => {
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+        })
         afterEach(() => {
             ourBoard.buffer = null;
         });
@@ -1112,6 +1397,7 @@ describe('openbci-sdk',function() {
             });
             beforeEach(() => {
                 ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+                ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
                 // spy.reset();
             });
             it("should call to find the time sync set character in the buffer", function(done) {
@@ -1174,8 +1460,6 @@ describe('openbci-sdk',function() {
 
                 var sampleCounter = 0;
 
-                ourBoard.sync.timeSent = 0;
-
                 var newSample = sample => {
                     // console.log(`sample ${JSON.stringify(sample)}`);
                     if (sampleCounter == 0) {
@@ -1185,8 +1469,7 @@ describe('openbci-sdk',function() {
                         // bufferEqual(buf1, buffer).should.be.true;
                         // ourBoard.buffer.length.should.equal(buf1.length);
                         ourBoard.removeListener("sample", newSample);
-                        ourBoard.curParsingMode.should.equal(k.OBCIParsingNormal);
-                        ourBoard.sync.timeGotPacketSent.should.be.greaterThan(0);
+                        expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
                         done();
                     }
                     sampleCounter++;
@@ -2382,10 +2665,13 @@ describe('openbci-sdk',function() {
 
     describe('#hardwareValidation', function() {
         this.timeout(20000); // long timeout for pleanty of stream time :)
-        var runHardwareValidation = masterPortName !== k.OBCISimulatorPortName;
+        var runHardwareValidation = true;
         var wstream;
         var board;
         before(function(done) {
+            if (masterPortName === k.OBCISimulatorPortName) {
+                runHardwareValidation = false;
+            }
             if (runHardwareValidation) {
                 board = new openBCIBoard.OpenBCIBoard({
                     verbose:true
@@ -2546,14 +2832,12 @@ describe('#daisy', function () {
     });
 });
 
-// Need a better test
 describe('#sync', function() {
     var ourBoard;
     this.timeout(4000);
     before(function (done) {
         ourBoard = new openBCIBoard.OpenBCIBoard({
             verbose:true,
-            // timeSync: true,
             simulatorFirmwareVersion: 'v2'
         });
 
@@ -2587,7 +2871,11 @@ describe('#sync', function() {
 
 
         ourBoard.once('ready', () => {
-            done();
+            ourBoard.streamStart()
+                .then(() => {
+                    done();
+                })
+                .catch(err => done);
         });
     });
     after(function(done) {
@@ -2603,72 +2891,46 @@ describe('#sync', function() {
         this.buffer = null;
     });
     describe('#syncClocks', function() {
-        // it('can get time sync set packet', done => {
-        //     ourBoard.syncClocks()
-        //         .catch(err => {
-        //             done(err);
-        //         });
-        //     ourBoard.once('synced',() => {
-        //         done();
-        //     });
-        // });
-        // it('can sync multiple times and compute average', done => {
-        //     var trials = 5;
-        //     var trialCount = 0;
-        //
-        //     // Clear the array for sure
-        //     ourBoard.sync.timeOffsetArray = [];
-        //
-        //     // The function executed on each synced event emitted
-        //     var synced = syncObj => {
-        //         trialCount++;
-        //         if (trialCount >= trials) {
-        //             // Verify the length of the
-        //             expect(syncObj.timeOffsetArray.length).to.equal(trials);
-        //             // Verify the mean is correct
-        //             expect(math.mean(syncObj.timeOffsetArray)).to.equal(syncObj.timeOffsetAvg);
-        //             // Remove the event listener
-        //             ourBoard.removeListener('synced',synced);
-        //             done();
-        //         } else {
-        //             ourBoard.syncClocks()
-        //                 .catch(err => {
-        //                     done(err);
-        //                 });
-        //         }
-        //     };
-        //
-        //     // Attached the emitted
-        //     ourBoard.on('synced',synced);
-        //
-        //     // Call the first one
-        //     ourBoard.syncClocks()
-        //         .catch(err => {
-        //             done(err);
-        //         });
-        // });
         it('can sync while streaming', done => {
             var syncAfterSamples = 50;
-
+            var notSynced = true;
             var samp = sample => {
-                if (sample.sampleNumber >= syncAfterSamples) {
+                if (sample.sampleNumber >= syncAfterSamples && notSynced) {
+                    notSynced = false;
                     // Call the first one
                     ourBoard.syncClocks().catch(err => done);
                 }
             };
             ourBoard.on('sample',samp);
-            ourBoard.streamStart().catch(err => done);
             // Attached the emitted
-            ourBoard.once('synced',() => {
-                ourBoard.disconnect()
-                    .then(() => {
-                        done();
-                    });
+            ourBoard.once('synced',obj => {
+                console.log('syhnc obj', obj);
                 ourBoard.removeListener('sample',samp);
                 done();
             });
+        });
+    });
+    describe('#syncClocksFull', function() {
+        it('can run a full clock sync', done => {
+            var notSynced = true;
+            var sampleFun = sample => {
+                console.log('sample',sample);
 
-
+                if (notSynced) {
+                    notSynced = false;
+                    // Call the first one
+                    ourBoard.syncClocksFull()
+                        .then(syncObj => {
+                            console.log(syncObj);
+                            if (syncObj.valid) {
+                                done();
+                            } else {
+                                done("Not able to sync");
+                            }
+                        }).catch(err => done);
+                }
+            };
+            ourBoard.on('sample',sampleFun);
         });
     });
 });

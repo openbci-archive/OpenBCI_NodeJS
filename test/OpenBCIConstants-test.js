@@ -291,6 +291,20 @@ describe('OpenBCIConstants', function() {
             assert.equal('1', k.OBCIChannelImpedanceTestSignalApplied);
         });
     });
+    describe('Time Sync Stuff',function() {
+        it('Can get proper array size',function() {
+            assert.equal(10, k.OBCITimeSyncArraySize);
+        });
+        it('Get correct time sync with conf',function() {
+            assert.equal(0.9, k.OBCITimeSyncMultiplierWithSyncConf);
+        });
+        it('Get correct time sync without conf',function() {
+            assert.equal(0.75, k.OBCITimeSyncMultiplierWithoutSyncConf);
+        });
+        it('Get correct time sync transmission threshold',function() {
+            assert.equal(10, k.OBCITimeSyncThresholdTransFailureMS);
+        });
+    });
     describe('SD card Commands',function() {
         it('logs for 1 hour', function() {
             assert.equal('G', k.OBCISDLogForHour1);
@@ -653,78 +667,78 @@ describe('OpenBCIConstants', function() {
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 2', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = '@';
+            var result = k.commandChannelOn(2);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 3', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = '#';
+            var result = k.commandChannelOn(3);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 4', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = '$';
+            var result = k.commandChannelOn(4);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 5', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = '%';
+            var result = k.commandChannelOn(5);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 6', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = '^';
+            var result = k.commandChannelOn(6);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 7', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = '&';
+            var result = k.commandChannelOn(7);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 8', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = '*';
+            var result = k.commandChannelOn(8);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 9', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'Q';
+            var result = k.commandChannelOn(9);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 10', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'W';
+            var result = k.commandChannelOn(10);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 11', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'E';
+            var result = k.commandChannelOn(11);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 12', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'R';
+            var result = k.commandChannelOn(12);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 13', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'T';
+            var result = k.commandChannelOn(13);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 14', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'Y';
+            var result = k.commandChannelOn(14);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 15', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'U';
+            var result = k.commandChannelOn(15);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Channel 16', function() {
-            var expectation = '!';
-            var result = k.commandChannelOn(1);
+            var expectation = 'I';
+            var result = k.commandChannelOn(16);
             return expect(result).to.eventually.equal(expectation);
         });
         it('Invalid channel request', function() {

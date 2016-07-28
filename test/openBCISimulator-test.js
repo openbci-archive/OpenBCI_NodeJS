@@ -638,21 +638,26 @@ describe('openBCISimulator',function() {
         it("should emit a time sync set packet followed by a time synced accel packet after sync up call", function(done) {
             simulator.synced = false;
             var emitCounter = 0;
+            var maxPacketsBetweenSetPacket = 5;
             var newData = data => {
                 if (emitCounter === 0) { // the time sync packet is emitted here
                     // Make a call to start streaming
                     simulator.write(k.OBCIStreamStart, err => {
                         if (err) done(err);
                     });
-                } else if (emitCounter === 1) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketAccelTimeSyncSet);
-                } else if (emitCounter === 2) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketAccelTimeSynced);
-                    simulator.write(k.OBCIStreamStop, err => {
-                        if (err) done(err);
+                } else if (emitCounter < maxPacketsBetweenSetPacket) {
+                    if (openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte]) === k.OBCIStreamPacketAccelTimeSyncSet) {
                         simulator.removeListener('data', newData);
-                        done();
-                    });
+                        simulator.write(k.OBCIStreamStop, err => {
+                            if (err) done(err);
+                            done();
+                        });
+                    } else {
+                        expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketAccelTimeSynced);
+
+                    }
+                } else {
+                    done("Failed to get set packet in time")
                 }
                 emitCounter++;
             };
@@ -669,22 +674,27 @@ describe('openBCISimulator',function() {
             simulator.synced = false;
             simulator.options.accel = false;
             var emitCounter = 0;
+            var maxPacketsBetweenSetPacket = 5;
             var newData = data => {
                 if (emitCounter === 0) { // the time sync packet is emitted here
                     // Make a call to start streaming
                     simulator.write(k.OBCIStreamStart, err => {
                         if (err) done(err);
                     });
-                } else if (emitCounter === 1) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketRawAuxTimeSyncSet);
-                } else if (emitCounter === 2) {
-                    expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketRawAuxTimeSynced);
-                    simulator.write(k.OBCIStreamStop, err => {
-                        if (err) done(err);
+                } else if (emitCounter < maxPacketsBetweenSetPacket) {
+                    if (openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte]) === k.OBCIStreamPacketRawAuxTimeSyncSet) {
                         simulator.removeListener('data', newData);
-                        done();
-                    });
+                        simulator.write(k.OBCIStreamStop, err => {
+                            if (err) done(err);
+                            done();
+                        });
+                    } else {
+                        expect(openBCISample.getRawPacketType(data[k.OBCIPacketPositionStopByte])).to.equal(k.OBCIStreamPacketRawAuxTimeSynced);
+                    }
+                } else {
+                    done("Failed to get set packet in time")
                 }
+
                 emitCounter++;
             };
 
