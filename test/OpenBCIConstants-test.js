@@ -474,13 +474,13 @@ describe('OpenBCIConstants', function() {
     });
     describe('Time synced with accel packet',function() {
         it('X axis',function () {
-            assert.equal(0, k.OBCIAccelAxisX);
+            assert.equal(7, k.OBCIAccelAxisX);
         });
         it('Y axis',function () {
-            assert.equal(1, k.OBCIAccelAxisY);
+            assert.equal(8, k.OBCIAccelAxisY);
         });
         it('Z axis',function () {
-            assert.equal(2, k.OBCIAccelAxisZ);
+            assert.equal(9, k.OBCIAccelAxisZ);
         });
     });
     describe('Time sync useful numbers',function() {
