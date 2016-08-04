@@ -776,9 +776,9 @@ function getFromTimePacketTime(dataBuf) {
 
 /**
  * @description Grabs an accel value from a raw but time synced packet. Important that this utilizes the fact that:
- *      X axis data is sent with every sampleNumber % 10 === 0
- *      Y axis data is sent with every sampleNumber % 10 === 1
- *      Z axis data is sent with every sampleNumber % 10 === 2
+ *      X axis data is sent with every sampleNumber % 10 === 7
+ *      Y axis data is sent with every sampleNumber % 10 === 8
+ *      Z axis data is sent with every sampleNumber % 10 === 9
  * @param dataBuf {Buffer} - The 33byte raw time synced accel packet
  * @param accelArray {Array} - A 3 element array that allows us to have inter packet memory of x and y axis data and emit only on the z axis packets.
  * @returns {Promise} - Fulfills with a boolean that is true only when the accel array is ready to be emitted... i.e. when this is a Z axis packet
@@ -791,15 +791,15 @@ function getFromTimePacketAccel(dataBuf, accelArray) {
         var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
         switch (sampleNumber % 10) { // The accelerometer is on a 25Hz sample rate, so every ten channel samples, we can get new data
             case k.OBCIAccelAxisX:
-                accelArray[k.OBCIAccelAxisX] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
+                accelArray[0] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
                 resolve(false);
                 break;
             case k.OBCIAccelAxisY:
-                accelArray[k.OBCIAccelAxisY] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
+                accelArray[1] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
                 resolve(false);
                 break;
             case k.OBCIAccelAxisZ:
-                accelArray[k.OBCIAccelAxisZ] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
+                accelArray[2] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
                 resolve(true);
                 break;
             default:

@@ -162,7 +162,7 @@ Time Syncing
 ------------
 You must be using OpenBCI firmware version 2 in order to do time syncing. After you `.connect()` and send a `.softReset()`, you can call `.usingVersionTwoFirmware()` to get a boolean response as to if you are using `v1` or `v2`.
 
-Now using firmware `v2`, the fun begins! We synchronize the Board's clock with the module's time. In firmware `v2` we leverage samples with time stamps and different time stamps and unique new features to calculate a time sync strategy. Time syncing has been verified to +/- 4ms and a test report is on the way. We are still working on the synchronize of this module and an NTP server, this is an open call for any NTP experts out there! With a global NTP server you could use several different devices and all sync to the same time server. That way you can really do some serious cloud computing!
+Now using firmware `v2`, the fun begins! We synchronize the Board's clock with the module's time. In firmware `v2` we leverage samples with time stamps and _ACKs_ from the Dongle to form a time synchronization strategy. Time syncing has been verified to +/- 4ms and a test report is on the way. We are still working on the synchronize of this module and an NTP server, this is an open call for any NTP experts out there! With a global NTP server you could use several different devices and all sync to the same time server. That way you can really do some serious cloud computing!
 
 Keep your resync interval above 50ms. While it's important to resync every couple minutes due to drifting of clocks, please do not try to sync without getting the last sync event! We can only support one sync operation at a time!
 
@@ -376,10 +376,10 @@ Board optional configurations.
   * `None` - Do not inject line noise.
 * `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that setting and this sample rate will be used. (Default is `250`)
 * `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely due to a OpenBCI dongle not being plugged in.
-* `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source of truth instead of local computer time. (Default `true`)
+* `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source of truth instead of local computer time. If you are running experiments on your local computer, keep this `false`. (Default `false`)
 * `sntpTimeSyncHost` - {String} The sntp server to use, can be either sntp or ntp (Defaults `pool.ntp.org`).
 * `sntpTimeSyncPort` - {Number} The port to access the sntp server (Defaults `123`)
-* `verbose` {Boolean} - Print out useful debugging events
+* `verbose` {Boolean} - Print out useful debugging events (Default `false`)
 
 **Note, we have added support for either all lowercase OR camel case for the options, use whichever style you prefer.**
 
@@ -879,6 +879,8 @@ Send the command to tell the board to start the syncing protocol. Must be connec
 
 **Example**
 
+Syncing multiple times to base the offset of the average of the four syncs.
+
 ```javascript
 var OpenBCIBoard = require('openbci').OpenBCIBoard,
     ourBoard = new OpenBCIBoard({
@@ -1068,7 +1070,7 @@ The name of the simulator port.
 
 ### LabStreamingLayer
 
-[LabStreamingLayer](https://github.com/sccn/labstreaminglayer) by SCCN is a stream management tool designed to time-synchronize multiple data streams, potentially from different sources, over a LAN network with millisecond accuracy (given configuration). 
+[LabStreamingLayer](https://github.com/sccn/labstreaminglayer) by SCCN is a stream management tool designed to time-synchronize multiple data streams, potentially from different sources, over a LAN network with millisecond accuracy (given configuration).
 
 For example, a VR display device running a Unity simulation may, using the [LSL4Unity](https://github.com/xfleckx/LSL4Unity) library, emit string markers into LSL corresponding to events of interest (For the P300 ERP, this event would be the onset of an attended, unusual noise in a pattern of commonplace ones). The computer doing data collection via the OpenBCI_NodeJS library (potentially with 4ms accuracy) would then output into an LSL stream the EEG and AUX data. LSL can then synchronize the two clocks relative to each other before inputting into a different program or toolkit, like [BCILAB](https://github.com/sccn/BCILAB) for analysis to trigger responses in the Unity display.
 

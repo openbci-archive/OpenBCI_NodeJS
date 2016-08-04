@@ -7,7 +7,7 @@ var EventEmitter = require('events').EventEmitter,
     openBCISample = require('./openBCISample'),
     k = openBCISample.k,
     openBCISimulator = require('./openBCISimulator'),
-    now = require("performance-now"),
+    now = require('performance-now'),
     Sntp = require('sntp'),
     StreamSearch = require('streamsearch'),
     bufferEqual = require('buffer-equal'),
@@ -1525,7 +1525,7 @@ function OpenBCIFactory() {
 
     /**
      * @description Send the command to tell the board to start the syncing protocol. Must be connected,
-     *      streaming and using version +2 firmware.
+     *      streaming and using at least version 2.0.0 firmware.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.0.0
      * @returns {Promise} - Resolves if sent, rejects if not connected or using firmware verison +2.
@@ -1546,7 +1546,7 @@ function OpenBCIFactory() {
 
     /**
      * @description Send the command to tell the board to start the syncing protocol. Must be connected,
-     *      streaming and using version +2 firmware. Uses the `synced` event to ensure multiple syncs
+     *      streaming and using at least version 2.0.0 firmware. Uses the `synced` event to ensure multiple syncs
      *      don't overlap.
      *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
      * @since 1.1.0
@@ -1889,7 +1889,7 @@ function OpenBCIFactory() {
                     //    n                                   n      t packet
                     //     t                                   t confirmation
                     if ((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSentConfirmation) < k.OBCITimeSyncThresholdTransFailureMS) {
-                        // Estimate that 75% of the time between sent and set packet was spent on the packet making it's way from board to this point
+                        // Estimate that 75% of the time between sent and set packet was spent on the packet making its way from board to this point
                         this.sync.curSyncObj.timeTransmission = math.floor((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSent) * k.OBCITimeSyncMultiplierWithSyncConf);
                         if (this.options.verbose) console.log(`Had to correct transmission time`);
                         this.sync.curSyncObj.correctedTransmissionTime = true;

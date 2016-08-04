@@ -1,3 +1,13 @@
+# 1.2.0
+
+### New Features
+
+* Add tutorial/sample code for interfacing the module with lab streaming layer.
+
+### Breaking Changes
+
+* Fixed time synced accel to work OpenBCI_32bit_Library release candidate 5 and newer.
+
 # 1.1.0
 
 ### New Features

@@ -275,9 +275,9 @@ const OBCIStreamPacketRawAuxTimeSynced   = 6; // 0110
 const OBCIStreamPacketTimeByteSize = 4;
 
 /** Time synced with accel packet */
-const OBCIAccelAxisX = 0;
-const OBCIAccelAxisY = 1;
-const OBCIAccelAxisZ = 2;
+const OBCIAccelAxisX = 7;
+const OBCIAccelAxisY = 8;
+const OBCIAccelAxisZ = 9;
 
 /** Firmware version indicator */
 const OBCIFirmwareV1 = 'v1';

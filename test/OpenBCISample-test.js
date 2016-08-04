@@ -259,9 +259,9 @@ describe('openBCISample',function() {
     describe('#getFromTimePacketAccel',function() {
         var packet;
 
-        it('should emit and array if z axis i.e. sampleNumber % 10 === 2', function(done) {
+        it('should emit and array if z axis i.e. sampleNumber % 10 === 9', function(done) {
             // Make a packet with a sample number that represents z axis
-            packet = openBCISample.samplePacketAccelTimeSynced(2);
+            packet = openBCISample.samplePacketAccelTimeSynced(9);
             openBCISample.getFromTimePacketAccel(packet,accelArray)
                 .then(isZAxis => {
                     // accel array ready
@@ -272,19 +272,19 @@ describe('openBCISample',function() {
                     done(err);
                 })
         });
-        it('false if sample number is not sampleNumber % 10 === 2', function(done) {
+        it(`false if sample number is not sampleNumber % 10 === ${k.OBCIAccelAxisZ}`, function(done) {
             // Make a packet that is anything but the z axis
-            packet = openBCISample.samplePacketAccelTimeSynced(0);
+            packet = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisX);
             openBCISample.getFromTimePacketAccel(packet,accelArray)
                 .then(isZAxis => {
-                    // Accel array not ready for sampleNumber % 10 === 0
+                    // Accel array not ready for sampleNumber % 10 === 7
                     isZAxis.should.equal(false);
 
-                    packet = openBCISample.samplePacketAccelTimeSynced(1);
+                    packet = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisY);
                     return openBCISample.getFromTimePacketAccel(packet,accelArray);
                 })
                 .then(isZAxis => {
-                    // Accel array not ready for sampleNumber % 10 === 1
+                    // Accel array not ready for sampleNumber % 10 === 8
                     isZAxis.should.equal(false);
 
                     packet = openBCISample.samplePacketAccelTimeSynced(34);
@@ -294,11 +294,11 @@ describe('openBCISample',function() {
                     // Accel array not ready for sampleNumber % 10 === 4
                     isZAxis.should.equal(false);
 
-                    packet = openBCISample.samplePacketAccelTimeSynced(99);
+                    packet = openBCISample.samplePacketAccelTimeSynced(100);
                     return openBCISample.getFromTimePacketAccel(packet,accelArray);
                 })
                 .then(isZAxis => {
-                    // Accel array not ready for sampleNumber % 10 === 9
+                    // Accel array not ready for sampleNumber % 10 === 0
                     isZAxis.should.equal(false);
                     done();
                 })
@@ -316,14 +316,14 @@ describe('openBCISample',function() {
         // Global array (at least it's global in practice) to store accel data between packets
         var packet1, packet2, packet3;
 
-        it('should only include accel data array on sampleNumber%10 === 2', function(done) {
+        it(`should only include accel data array on sampleNumber%10 === ${k.OBCIAccelAxisZ}`, function(done) {
             // Generate three packets, packets only get one axis value per packet
-            //  X axis data is sent with every sampleNumber % 10 === 0
-            packet1 = openBCISample.samplePacketAccelTimeSynced(0);
-            //  Y axis data is sent with every sampleNumber % 10 === 1
-            packet2 = openBCISample.samplePacketAccelTimeSynced(1);
-            //  Z axis data is sent with every sampleNumber % 10 === 2
-            packet3 = openBCISample.samplePacketAccelTimeSynced(2);
+            //  X axis data is sent with every sampleNumber % 10 === 7
+            packet1 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisX);
+            //  Y axis data is sent with every sampleNumber % 10 === 8
+            packet2 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisY);
+            //  Z axis data is sent with every sampleNumber % 10 === 9
+            packet3 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisZ);
 
             openBCISample.parsePacketTimeSyncedAccel(packet1,defaultChannelSettingsArray,0,accelArray)
                 .then(sampleObject => {
@@ -342,12 +342,12 @@ describe('openBCISample',function() {
         });
         it('should convert raw numbers into g\'s with scale factor',function(done) {
             // Generate three packets, packets only get one axis value per packet
-            //  X axis data is sent with every sampleNumber % 10 === 0
-            packet1 = openBCISample.samplePacketAccelTimeSynced(0);
-            //  Y axis data is sent with every sampleNumber % 10 === 1
-            packet2 = openBCISample.samplePacketAccelTimeSynced(1);
-            //  Z axis data is sent with every sampleNumber % 10 === 2
-            packet3 = openBCISample.samplePacketAccelTimeSynced(2);
+            //  X axis data is sent with every sampleNumber % 10 === 7
+            packet1 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisX);
+            //  Y axis data is sent with every sampleNumber % 10 === 8
+            packet2 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisY);
+            //  Z axis data is sent with every sampleNumber % 10 === 9
+            packet3 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisZ);
 
             openBCISample.parsePacketTimeSyncedAccel(packet1,defaultChannelSettingsArray,0,accelArray)
                 .then(() => {
