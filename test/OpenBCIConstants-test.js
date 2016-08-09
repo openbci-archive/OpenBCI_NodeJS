@@ -770,7 +770,7 @@ describe('OpenBCIConstants', function() {
             expect(k.OBCIRadioChannelMax).to.be.equal(25);
         });
         it("should get the right channel number min",function () {
-            expect(k.OBCIRadioChannelMin).to.be.equal(0);
+            expect(k.OBCIRadioChannelMin).to.be.equal(1);
         });
         it("should get the right poll time max",function () {
             expect(k.OBCIRadioPollTimeMax).to.be.equal(255);
