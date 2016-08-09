@@ -1,3 +1,9 @@
+# 1.2.1
+
+### Bug Fixes
+
+* Fixed bug where set channel function allowed for channel 0 to be set. Cannot set system to channel 0; lower limit is 1.
+
 # 1.2.0
 
 ### New Features

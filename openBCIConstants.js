@@ -306,7 +306,7 @@ const OBCISimulatorStandard = 'standard';
 
 /** OpenBCI Radio Limits */
 const OBCIRadioChannelMax   = 25;
-const OBCIRadioChannelMin   = 0;
+const OBCIRadioChannelMin   = 1;
 const OBCIRadioPollTimeMax  = 255;
 const OBCIRadioPollTimeMin  = 0;
 

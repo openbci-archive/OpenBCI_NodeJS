@@ -400,9 +400,6 @@ describe('openbci-sdk',function() {
                 }).catch(err => done(err));
         });
     });
-
-
-
     describe('#boardTests', function() {
         this.timeout(3000);
         before(function() {
@@ -2530,7 +2527,7 @@ describe('openbci-sdk',function() {
     });
 
     describe('#radioTestsWithBoard',function() {
-        this.timeout(3000);
+        this.timeout(0);
         before(function(done) {
             ourBoard = new openBCIBoard.OpenBCIBoard({
                 verbose: true
@@ -2583,11 +2580,11 @@ describe('openbci-sdk',function() {
                 done();
             }).catch(err => done(err));
         });
-        it("should be able to set the channel to 0", function(done) {
+        it("should be able to set the channel to 5", function(done) {
             // Don't test if not using real board
             if (!realBoard) return done();
-            ourBoard.radioChannelSet(0).then(channelNumber => {
-                expect(channelNumber).to.equal(0);
+            ourBoard.radioChannelSet(5).then(channelNumber => {
+                expect(channelNumber).to.equal(5);
                 done();
             }).catch(err => done(err));
         });
@@ -2596,11 +2593,13 @@ describe('openbci-sdk',function() {
             if (!realBoard) return done();
             var systemChanNumber = 0;
             var newChanNum = 0;
+            // var timey = Date.now();
             // Get the current system channel
             ourBoard.radioChannelGet()
                 .then(res => {
                     // Store it
                     systemChanNumber = res.channelNumber;
+                    // console.log(`system channel number: ${res.channelNumber}`);
                     if (systemChanNumber == 25) {
                         newChanNum = 24;
                     } else {
@@ -2611,9 +2610,24 @@ describe('openbci-sdk',function() {
                 })
                 .then(newChanNumActual => {
                     expect(newChanNumActual).to.equal(newChanNum);
-                    return ourBoard.radioSystemStatusGet();
+                    // timey = Date.now();
+                    // console.log(`new chan ${newChanNumActual} got`, timey, '0ms');
+                    return new Promise((resolve, reject) => {
+                        setTimeout(function() {
+                            // console.log(`get status`, Date.now(), `${Date.now() - timey}ms`);
+                            ourBoard.radioSystemStatusGet().
+                                then(isUp => {
+                                    // console.log('resolving', Date.now(), `${Date.now() - timey}ms`);
+                                    resolve(isUp);
+                                })
+                                .catch(err => {
+                                    reject(err);
+                                })
+                        }, 270); // Should be accurate after 270 seconds
+                    });
                 })
                 .then(isUp => {
+                    // console.log(`isUp test`, Date.now(), `${Date.now() - timey}ms`);
                     expect(isUp).to.be.false;
                     return ourBoard.radioChannelSetHostOverride(systemChanNumber); // Set back to good
                 })
