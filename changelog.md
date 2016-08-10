@@ -1,3 +1,9 @@
+# 1.2.2
+
+### Enhancements
+
+* Upgrade serialport to 4.x
+
 # 1.2.1
 
 ### Bug Fixes

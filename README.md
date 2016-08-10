@@ -2,6 +2,8 @@
 [![Join the chat at https://gitter.im/OpenBCI/OpenBCI_NodeJS](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/OpenBCI/OpenBCI_NodeJS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/OpenBCI/OpenBCI_NodeJS.svg?branch=master)](https://travis-ci.org/OpenBCI/OpenBCI_NodeJS)
 [![codecov](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS/branch/master/graph/badge.svg)](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS)
+[![Dependency Status](https://david-dm.org/OpenBCI/OpenBCI_NodeJS.svg)](https://david-dm.org/OpenBCI/OpenBCI_NodeJS)
+[![npm](https://img.shields.io/npm/dm/openbci.svg?maxAge=2592000)](http://npmjs.com/package/openbci)
 
 # OpenBCI Node.js SDK
 
