@@ -3,7 +3,7 @@
 var EventEmitter = require('events').EventEmitter,
     util = require('util'),
     stream = require('stream'),
-    serialPort = require('serialport'),
+    SerialPort = require('serialport'),
     openBCISample = require('./openBCISample'),
     k = openBCISample.k,
     openBCISimulator = require('./openBCISimulator'),
@@ -240,7 +240,7 @@ function OpenBCIFactory() {
             } else {
                 /* istanbul ignore if */
                 if (this.options.verbose) console.log('using real board ' + portName);
-                boardSerial = new serialPort.SerialPort(portName, {
+                boardSerial = new SerialPort(portName, {
                     baudRate: this.options.baudRate
                 },(err) => {
                     if (err) reject(err);
@@ -473,14 +473,14 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype._writeAndDrain = function(data) {
         return new Promise((resolve,reject) => {
             if(!this.serial) reject('Serial port not open');
-            this.serial.write(data,(error,results) => {
-                if(results) {
+            this.serial.write(data,(error) => {
+                if(error) {
+                    console.log('Error [writeAndDrain]: ' + error);
+                    reject(error);
+                } else {
                     this.serial.drain(function() {
                         resolve();
                     });
-                } else {
-                    console.log('Error [writeAndDrain]: ' + error);
-                    reject(error);
                 }
             })
         });
@@ -504,7 +504,7 @@ function OpenBCIFactory() {
                 if (this.options.verbose) console.log('auto found sim board');
                 resolve(k.OBCISimulatorPortName);
             } else {
-                serialPort.list((err, ports) => {
+                SerialPort.list((err, ports) => {
                     if(err) {
                         if (this.options.verbose) console.log('serial port err');
                         reject(err);
@@ -921,7 +921,7 @@ function OpenBCIFactory() {
      */
     OpenBCIBoard.prototype.listPorts = function() {
         return new Promise((resolve, reject) => {
-            serialPort.list((err, ports) => {
+            SerialPort.list((err, ports) => {
                 if(err) reject(err);
                 else {
                     ports.push( {
