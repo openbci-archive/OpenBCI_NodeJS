@@ -1,3 +1,10 @@
+# 1.2.3
+
+### Enhancements
+
+* Add table of contents to read me
+* Reduce size of repo by removing impedance test report
+
 # 1.2.2
 
 ### Enhancements
