@@ -82,6 +82,8 @@ describe('openbci-sdk',function() {
             expect(board.options.verbose).to.be.false;
             expect(board.sampleRate()).to.equal(250);
             expect(board.numberOfChannels()).to.equal(8);
+            expect(board.connected).to.be.false;
+            expect(board.streaming).to.be.false;
         });
         it('should be able to set ganglion mode', () => {
             var board = new openBCIBoard.OpenBCIBoard({
