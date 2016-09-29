@@ -145,6 +145,9 @@ function OpenBCIFactory() {
         this.accelArray = [0,0,0]; // X, Y, Z
         this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
         this.writeOutArray = new Array(100);
+        // Booleans
+        this.connected = false;
+        this.streaming = false;
         // Buffers
         this.buffer = null;
         this.masterBuffer = masterBufferMaker();
