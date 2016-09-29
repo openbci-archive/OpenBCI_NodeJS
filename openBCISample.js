@@ -586,6 +586,7 @@ function newSyncObject() {
         timeRoundTrip: 0,
         timeTransmission: 0,
         timeOffset: 0,
+        timeOffsetMaster: 0,
         valid: false
     }
 }

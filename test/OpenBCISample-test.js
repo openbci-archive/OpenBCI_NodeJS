@@ -1352,6 +1352,9 @@ describe('openBCISample',function() {
         it("should have property timeOffset",function() {
             expect(syncObj).to.have.property("timeOffset",0);
         });
+        it("should have property timeOffsetMaster",function() {
+            expect(syncObj).to.have.property("timeOffsetMaster",0);
+        });
         it("should have property timeRoundTrip",function() {
             expect(syncObj).to.have.property("timeRoundTrip",0);
         });
