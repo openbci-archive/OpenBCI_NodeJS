@@ -1040,13 +1040,17 @@ ourBoard.write('o');
 
 Emitted when the serial connection to the board is closed.
 
+### <a name="event-close"></a> .on('droppedPacket', callback)
+
+Emitted when a packet (or packets) are dropped. Returns an array.
+
 ### <a name="event-error"></a> .on('error', callback)
 
 Emitted when there is an on the serial port.
 
 ### <a name="event-impedance-array"></a> .on('impedanceArray', callback)
 
-Emitted when there is a new impedanceArray available.
+Emitted when there is a new impedanceArray available. Returns an array.
 
 ### <a name="event-query"></a> .on('query', callback)
 

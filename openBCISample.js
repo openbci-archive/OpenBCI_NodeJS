@@ -522,7 +522,42 @@ var sampleModule = {
     isTimeSyncSetConfirmationInBuffer,
     makeTailByteFromPacketType,
     isStopByte,
-    newSyncObject
+    newSyncObject,
+    /**
+     * @description Checks to make sure the previous sample number is one less
+     *  then the new sample number. Takes into account sample numbers wrapping
+     *  around at 255.
+     * @param `previousSampleNumber` {Number} - An integer number of the previous
+     *  sample number.
+     * @param `newSampleNumber` {Number} - An integer number of the new sample
+     *  number.
+     * @returns {Array} - Returns null if there is no dropped packets, otherwise,
+     *  or on a missed packet, an array of their packet numbers is returned.
+     */
+    droppedPacketCheck: (previousSampleNumber, newSampleNumber) => {
+        if (previousSampleNumber === k.OBCISampleNumberMax && newSampleNumber === 0) {
+            return null;
+        }
+
+        if (newSampleNumber - previousSampleNumber === 1) {
+            return null;
+        }
+
+        var missedPacketArray = [];
+
+        if (previousSampleNumber > newSampleNumber) {
+          var numMised = k.OBCISampleNumberMax - previousSampleNumber;
+          for (var i = 0; i < numMised; i++) {
+              missedPacketArray.push(previousSampleNumber + i + 1);
+          }
+          previousSampleNumber = -1;
+        }
+
+        for (var i = 1; i < (newSampleNumber - previousSampleNumber); i++) {
+            missedPacketArray.push(previousSampleNumber + i);
+        }
+        return missedPacketArray;
+    }
 };
 
 module.exports = sampleModule;
