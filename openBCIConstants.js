@@ -199,6 +199,9 @@ const OBCISimulatorLineNoiseNone = 'None';
 const OBCISampleRate125 = 125;
 const OBCISampleRate250 = 250;
 
+/** Max sample number */
+const OBCISampleNumberMax = 255;
+
 /** Packet Size */
 const OBCIPacketSize = 33;
 
@@ -729,6 +732,8 @@ module.exports = {
     /** Possible Sample Rates */
     OBCISampleRate125,
     OBCISampleRate250,
+    /** Max sample number */
+    OBCISampleNumberMax,
     /** Packet Size */
     OBCIPacketSize,
     /** Notable Bytes */

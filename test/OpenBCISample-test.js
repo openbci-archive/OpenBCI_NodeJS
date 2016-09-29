@@ -5,9 +5,9 @@ var assert = require('assert');
 var openBCISample = require('../openBCISample');
 var sinon = require('sinon');
 var chai = require('chai'),
-    expect = chai.expect,
     should = chai.should(),
-    expect = chai.expect;
+    expect = chai.expect,
+    assert = chai.assert;
 
 var chaiAsPromised = require("chai-as-promised");
 var sinonChai = require("sinon-chai");
@@ -1373,7 +1373,41 @@ describe('openBCISample',function() {
         it("should have property boardTime",function() {
             expect(syncObj).to.have.property("boardTime",0);
         });
-    })
+    });
+    describe('#droppedPacketCheck',function() {
+        it("should return an array of missed packet numbers",function() {
+            previous = 0;
+            current = previous + 2;
+            assert.sameMembers(openBCISample.droppedPacketCheck(previous, current), [1], "dropped one packet");
+
+            previous = 0;
+            current = previous + 4;
+            assert.sameMembers(openBCISample.droppedPacketCheck(previous, current), [1,2,3], "dropped three packets");
+
+            previous = 255;
+            current = 2;
+            assert.sameMembers(openBCISample.droppedPacketCheck(previous, current), [0,1], "dropped two packets on wrap edge!");
+
+            previous = 254;
+            current = 2;
+            assert.sameMembers(openBCISample.droppedPacketCheck(previous, current), [255,0,1], "dropped three packets on wrap!");
+
+            previous = 250;
+            current = 1;
+            assert.sameMembers(openBCISample.droppedPacketCheck(previous, current), [251,252,253,254,255,0], "dropped a bunch of packets on wrap!");
+
+        });
+        it("should roll over when 255 was previous and current is 0", function() {
+            previous = 255;
+            current = 0;
+            expect(openBCISample.droppedPacketCheck(previous, current)).to.be.null;
+        });
+        it("should return null when previous is one less then new sample number", function() {
+            previous = 0;
+            current = previous + 1;
+            expect(openBCISample.droppedPacketCheck(previous, current)).to.be.null;
+        });
+    });
 });
 
 

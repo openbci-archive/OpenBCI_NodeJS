@@ -185,9 +185,10 @@ function OpenBCIFactory() {
         this.curParsingMode = k.OBCIParsingReset;
         this.commandsToWrite = 0;
         this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
-        this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
+        this.previousSampleNumber = -1;
         this.sampleCount = 0;
         this.timeOfPacketArrival = 0;
+        this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
         // Strings
 
         // NTP
@@ -1735,6 +1736,11 @@ function OpenBCIFactory() {
     OpenBCIBoard.prototype._processQualifiedPacket = function(rawDataPacketBuffer) {
         if (!rawDataPacketBuffer) return;
         if (rawDataPacketBuffer.byteLength !== k.OBCIPacketSize) return;
+        var missedPacketArray = openBCISample.droppedPacketCheck(this.previousSampleNumber, rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber]);
+        if (missedPacketArray) {
+            this.emit('droppedPacket', missedPacketArray);
+        }
+        this.previousSampleNumber = rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber];
         var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
         switch (packetType) {
             case k.OBCIStreamPacketStandardAccel:

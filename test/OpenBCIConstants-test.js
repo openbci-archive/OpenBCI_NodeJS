@@ -765,6 +765,11 @@ describe('OpenBCIConstants', function() {
             assert.equal(250, k.OBCISampleRate250);
         });
     });
+    describe('Max sample number',function() {
+        it('should be 255',function () {
+            assert.equal(255, k.OBCISampleNumberMax);
+        });
+    });
     describe("Radio Channel Limits", function() {
         it("should get the right channel number max",function () {
             expect(k.OBCIRadioChannelMax).to.be.equal(25);

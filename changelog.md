@@ -1,3 +1,9 @@
+# 1.3.0
+
+### New Features
+
+* Add dropped packet detection, new event `droppedPacket` can be added to get an array of dropped packet numbers in the case of the dropped packet event.
+
 # 1.2.3
 
 ### Enhancements
