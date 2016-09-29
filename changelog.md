@@ -1,3 +1,9 @@
+# 1.3.2
+
+### Enhancements
+
+* Added master time offset `timeOffsetMaster` to `syncObj` which is a running average across sync attempts.
+
 # 1.3.1
 
 ### Bug Fixes

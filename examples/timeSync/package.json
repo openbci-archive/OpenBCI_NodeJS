@@ -1,0 +1,19 @@
+{
+  "name": "timesync",
+  "version": "1.0.0",
+  "description": "Time sync example",
+  "main": "timeSync.js",
+  "scripts": {
+    "start": "node timeSync.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "time",
+    "sync"
+  ],
+  "author": "AJ Keller",
+  "license": "MIT",
+  "dependencies": {
+    "openbci": "^1.3.1"
+  }
+}

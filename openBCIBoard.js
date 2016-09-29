@@ -1933,6 +1933,8 @@ function OpenBCIFactory() {
                         this.sync.timeOffsetMaster = this.sync.curSyncObj.timeOffset;
                     }
 
+                    this.sync.curSyncObj.timeOffsetMaster = this.sync.timeOffsetMaster;
+
                     if (this.options.verbose) {
                         console.log(`Master offset ${this.sync.timeOffsetMaster} ms`);
                     }
