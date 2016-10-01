@@ -9,6 +9,7 @@
 * Fixed log statement on impedance setting function
 * Remove event emitter with time sync on reject of sync clock full
 
+
 # 1.3.2
 
 ### Enhancements
