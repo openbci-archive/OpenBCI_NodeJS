@@ -614,7 +614,7 @@ describe('openbci-sdk', function () {
       });
       afterEach(function (done) {
         if (ourBoard.isConnected()) {
-          ourBoard.disconnect().then(done, () => done());
+          ourBoard.disconnect().then(done, done);
         } else {
           done();
         }
@@ -640,12 +640,10 @@ describe('openbci-sdk', function () {
         var writeSpy1 = sinon.spy(ourBoard.serial, 'write');
         var byteToWrite = k.OBCISDLogStop;
         var writeWhileConnected = function () {
-          var commands = [];
-          while (commands.length < 4) commands.push(byteToWrite);
-          ourBoard.write(commands).then(() => {
+          ourBoard.write(byteToWrite).then(() => {
             if (ourBoard.isConnected()) {
               writeSpy1.reset();
-              setTimeout(writeWhileConnected, 10 * (commands.length - 1));
+              writeWhileConnected();
             } else {
               done('wrote when not connected');
             }
@@ -653,15 +651,17 @@ describe('openbci-sdk', function () {
             if (ourBoard.isConnected()) {
               done(err);
             } else {
-              ourBoard.connect(masterPortName).catch(done);
-              var writeSpy2 = sinon.spy(ourBoard.serial, 'write');
-              ourBoard.once('ready', () => {
-                writeSpy2.should.equal(ourBoard.serial.write);
-                writeSpy1.should.have.not.been.called;
-                writeSpy2.should.have.not.been.calledWith(byteToWrite);
-                writeSpy1.restore();
-                writeSpy2.restore();
-                done();
+              process.nextTick(() => {
+                ourBoard.connect(masterPortName).catch(done);
+                var writeSpy2 = sinon.spy(ourBoard.serial, 'write');
+                ourBoard.once('ready', () => {
+                  writeSpy2.should.equal(ourBoard.serial.write);
+                  writeSpy1.should.have.not.been.called;
+                  writeSpy2.should.have.not.been.calledWith(byteToWrite);
+                  writeSpy1.restore();
+                  writeSpy2.restore();
+                  done();
+                });
               });
             }
           });

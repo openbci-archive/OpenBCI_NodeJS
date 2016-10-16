@@ -157,7 +157,7 @@ function OpenBCIFactory () {
     // Arrays
     this.accelArray = [0, 0, 0]; // X, Y, Z
     this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
-    this.writeOutArray = new Array(100);
+    this.writeOutArray = [];
     // Booleans
     this._streaming = false;
     // Buffers
@@ -200,7 +200,6 @@ function OpenBCIFactory () {
     // Numbers
     this.badPackets = 0;
     this.curParsingMode = k.OBCIParsingReset;
-    this.commandsToWrite = 0;
     this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
     this.previousSampleNumber = -1;
     this.sampleCount = 0;
@@ -298,12 +297,12 @@ function OpenBCIFactory () {
       this.serial.once('close', () => {
         if (this.options.verbose) console.log('Serial Port Closed');
         // 'close' is emitted in _disconnected()
-        this._disconnected();
+        this._disconnected('port closed');
       });
       this.serial.once('error', (err) => {
         if (this.options.verbose) console.log('Serial Port Error');
         this.emit('error', err);
-        this._disconnected();
+        this._disconnected(err);
       });
     });
   };
@@ -312,10 +311,9 @@ function OpenBCIFactory () {
   * @description Called once when for any reason the serial port is no longer open.
   * @private
   */
-  OpenBCIBoard.prototype._disconnected = function () {
+  OpenBCIBoard.prototype._disconnected = function (err) {
     this._streaming = false;
 
-    this.commandsToWrite = 0;
     clearTimeout(this.writer);
     this.writer = null;
 
@@ -323,6 +321,11 @@ function OpenBCIFactory () {
     this.serial = null;
 
     this.emit('close');
+
+    while (this.writeOutArray.length > 0) {
+      var command = this.writeOutArray.pop();
+      if (command.reject) command.reject(err);
+    }
   };
 
   /**
@@ -462,50 +465,55 @@ function OpenBCIFactory () {
 
   /**
   * @description To be able to easily write to the board but ensure that we never send commands
-  *              with less than a 10ms spacing between sends. This uses an array and pops off
-  *              the entries until there are none left.
+  *              with less than a 10ms spacing between sends in early version boards. This uses
+  *              an array and shifts off the entries until there are none left.
   * @param dataToWrite - Either a single character or an Array of characters
   * @returns {Promise}
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.write = function (dataToWrite) {
-    var writerFunction = () => {
-      /* istanbul ignore else */
-      if (this.commandsToWrite > 0) {
-        var command = this.writeOutArray.shift();
-        this.commandsToWrite--;
-        if (this.commandsToWrite === 0) {
-          this.writer = null;
+    return new Promise((resolve, reject) => {
+      if (!this.isConnected()) {
+        reject('not connected');
+      } else {
+        if (Array.isArray(dataToWrite)) { // Got an input array
+          var len = dataToWrite.length;
+          for (var i = 0; i < len; i++) {
+            this.writeOutArray.push({ cmd: dataToWrite[i], reject: reject });
+          }
+          this.writeOutArray[this.writeOutArray.length - 1].resolve = resolve;
         } else {
+          this.writeOutArray.push({ cmd: dataToWrite, reject: reject, resolve: resolve });
+        }
+
+        if (!this.writer) { // there is no writer started
+          var writerFunction = () => {
+            if (this.writeOutArray.length === 0) {
+              this.writer = null;
+              return;
+            }
+
+            var command = this.writeOutArray.shift();
+            var promise = this._writeAndDrain(command.cmd);
+
+            promise.then(() => {
+              this.writer = setTimeout(writerFunction, this.writeOutDelay);
+            }, () => {
+              // write failed but more commands may be pending that need a result
+              writerFunction();
+            });
+
+            if (command.reject) {
+              promise.catch(err => {
+                if (this.options.verbose) console.log('write failure: ' + err);
+                command.reject(err);
+              });
+            }
+            if (command.resolve) promise.then(command.resolve);
+          };
           this.writer = setTimeout(writerFunction, this.writeOutDelay);
         }
-        this._writeAndDrain(command)
-          .catch(err => {
-            /* istanbul ignore if */
-            if (this.options.verbose) console.log('write failure: ' + err);
-          });
-      } else {
-        if (this.options.verbose) console.log('Big problem! Writer started with no commands to write');
       }
-    };
-
-    return new Promise((resolve, reject) => {
-      // console.log('write method called')
-      if (!this.isConnected()) return reject('not connected');
-      if (Array.isArray(dataToWrite)) { // Got an input array
-        var len = dataToWrite.length;
-        for (var i = 0; i < len; i++) {
-          this.writeOutArray[this.commandsToWrite] = dataToWrite[i];
-          this.commandsToWrite++;
-        }
-      } else {
-        this.writeOutArray[this.commandsToWrite] = dataToWrite;
-        this.commandsToWrite++;
-      }
-      if (this.writer === null || this.writer === undefined) { // there is no writer started
-        this.writer = setTimeout(writerFunction, this.writeOutDelay);
-      }
-      resolve();
     });
   };
 
@@ -1494,7 +1502,7 @@ function OpenBCIFactory () {
   *      response from the board.
   * @param recordingDuration {String} - The duration you want to log SD information for. Limited to:
   *      '14sec', '5min', '15min', '30min', '1hour', '2hour', '4hour', '12hour', '24hour'
-  * @returns {Promise} - Resolves if the command was added to write queue.
+  * @returns {Promise} - Resolves when the command has been written.
   * @private
   * @author AJ Keller (@pushtheworldllc)
   */
@@ -1517,7 +1525,7 @@ function OpenBCIFactory () {
   /**
   * @description Sends the stop SD logging command to the board. If not streaming then `eot` event will be emitted
   *      with request response from the board.
-  * @returns {Promise} - Resovles if added to the write queue
+  * @returns {Promise} - Resolves when written
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.sdStop = function () {
