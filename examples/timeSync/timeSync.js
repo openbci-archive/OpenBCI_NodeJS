@@ -63,16 +63,16 @@ var sampleFunc = sample => {
     // Resynchronize every every second
     if (sample._count % (sampleRate * 1) === 0) {
         ourBoard.syncClocksFull()
-        .then(syncObj => {
-            // Sync was successful
-            if (syncObj.valid) {
-                // Log the object to check it out!
-                console.log(`timeOffset`,syncObj.timeOffsetMaster);
-            } else {
-                // Retry it
-                console.log(`Was not able to sync... retry!`);
-            }
-        });
+            .then(syncObj => {
+                // Sync was successful
+                if (syncObj.valid) {
+                    // Log the object to check it out!
+                    console.log(`timeOffset`,syncObj.timeOffsetMaster);
+                } else {
+                    // Retry it
+                    console.log(`Was not able to sync... retry!`);
+                }
+            });
     }
 
     if (sample.timeStamp) { // true after the first successful sync

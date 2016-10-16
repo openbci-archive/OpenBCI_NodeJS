@@ -296,6 +296,16 @@ describe('openbci-sdk',function() {
             (ourBoard.impedanceTest.onChannel).should.equal(0);
             (ourBoard.impedanceTest.sampleNumber).should.equal(0);
         });
+        it('configures sync object correctly', function() {
+            ourBoard = new openBCIBoard.OpenBCIBoard();
+            expect(ourBoard.sync.curSyncObj).to.be.null;
+            expect(ourBoard.sync.eventEmitter).to.be.null;
+            expect(ourBoard.sync.objArray.length).to.equal(0);
+            (ourBoard.sync.sntpActive).should.equal(false);
+            (ourBoard.sync.timeOffsetMaster).should.equal(0);
+            (ourBoard.sync.timeOffsetAvg).should.equal(0);
+            expect(ourBoard.sync.timeOffsetArray.length).to.equal(0);
+        });
         it('configures impedance array with the correct amount of channels for default', function() {
             ourBoard = new openBCIBoard.OpenBCIBoard();
             (ourBoard.impedanceArray.length).should.equal(8);
@@ -1085,18 +1095,63 @@ describe('openbci-sdk',function() {
                 .catch(function(err) {
                     expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
                     expect(ourBoard.sync.curSyncObj).to.be.null;
+                    expect(ourBoard.sync.eventEmitter).to.be.null;
                     done();
                 });
         });
         it("should emit sycned event with valid false", function(done) {
             var timeSetPacketArrived = ourBoard.time();
+            var expectedTimeSyncOffsetMaster = 72;
             ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
             ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
             ourBoard.once('synced',obj => {
                 expect(obj.valid).to.be.false;
+                expect(obj.timeOffsetMaster).to.equal(expectedTimeSyncOffsetMaster);
                 done();
-            })
+            });
             ourBoard._processPacketTimeSyncSet(timeSyncSetPacket,timeSetPacketArrived);
+        });
+        it("should reset when bad raw packet", function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            var badPacket;
+            if (k.getVersionNumber(process.version) >= 6) {
+                // from introduced in node version 6.x.x
+                badPacket = Buffer.from(timeSyncSetPacket.slice(0,30));
+            } else {
+                badPacket = new Buffer(timeSyncSetPacket.slice(0,30));
+            }
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            ourBoard._processPacketTimeSyncSet(badPacket,timeSetPacketArrived)
+                .then(() => {
+                    done("failed to get rejected");
+                })
+                .catch(function(err) {
+                    expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
+                    expect(ourBoard.sync.curSyncObj).to.be.null;
+                    expect(ourBoard.sync.eventEmitter).to.be.null;
+                    done();
+                });
+        });
+        it("should emit bad synced object bad raw packet", function(done) {
+            var timeSetPacketArrived = ourBoard.time();
+            var expectedTimeSyncOffsetMaster = 72;
+            var badPacket;
+            if (k.getVersionNumber(process.version) >= 6) {
+                // from introduced in node version 6.x.x
+                badPacket = Buffer.from(timeSyncSetPacket.slice(0,30));
+            } else {
+                badPacket = new Buffer(timeSyncSetPacket.slice(0,30));
+            }
+            ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+            ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+            ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
+            ourBoard.once('synced',obj => {
+                expect(obj.valid).to.be.false;
+                expect(obj.timeOffsetMaster).to.equal(expectedTimeSyncOffsetMaster);
+                done();
+            });
+            ourBoard._processPacketTimeSyncSet(badPacket,timeSetPacketArrived);
         });
         it("should calculate round trip time as the difference between time sent and time set packet arrived",function(done) {
             var timeSetPacketArrived = ourBoard.time();
@@ -1554,7 +1609,7 @@ describe('openbci-sdk',function() {
                 // Pretend that half of buf1 got sent in the first serial flush
                 //  and that the last half of it will arrive a lil later
                 var splitPoint = 15;
-                if (process.version > 6) {
+                if (k.getVersionNumber(process.version) >= 6) {
                     // from introduced in node version 6.x.x
                     ourBoard.buffer = Buffer.from(buf1.slice(0,splitPoint));
                 } else {
@@ -1593,7 +1648,7 @@ describe('openbci-sdk',function() {
 
                 ourBoard["buffer"] = null;
                 var bufFirstHalf, bufLastHalf;
-                if (process.version > 6) {
+                if (k.getVersionNumber(process.version) >= 6) {
                     // from introduced in node version 6.x.x
                     bufFirstHalf = Buffer.from(buf3.slice(0,splitPoint));
                     bufLastHalf = Buffer.from(buf3.slice(splitPoint));
@@ -2881,7 +2936,7 @@ describe('#daisy', function () {
     });
 });
 
-describe('#sync', function() {
+describe('#syncWhileStreaming', function() {
     var ourBoard;
     this.timeout(4000);
     before(function (done) {
@@ -2943,42 +2998,127 @@ describe('#sync', function() {
         it('can sync while streaming', done => {
             var syncAfterSamples = 50;
             var notSynced = true;
+            var syncFunc = obj => {
+                ourBoard.removeListener('sample',samp);
+                done();
+            };
             var samp = sample => {
                 if (sample.sampleNumber >= syncAfterSamples && notSynced) {
                     notSynced = false;
                     // Call the first one
-                    ourBoard.syncClocks().catch(err => done);
+                    ourBoard.syncClocks()
+                        .catch((err) => {
+                            ourBoard.removeListener('sample',samp);
+                            ourBoard.removeListener('synced',syncFunc);
+                            done();
+                        });
                 }
             };
             ourBoard.on('sample',samp);
-            // Attached the emitted
-            ourBoard.once('synced',obj => {
-                console.log('syhnc obj', obj);
-                ourBoard.removeListener('sample',samp);
-                done();
-            });
+            ourBoard.once('synced', syncFunc);
         });
     });
     describe('#syncClocksFull', function() {
         it('can run a full clock sync', done => {
             var notSynced = true;
             var sampleFun = sample => {
-                console.log('sample',sample);
-
                 if (notSynced) {
                     notSynced = false;
                     // Call the first one
                     ourBoard.syncClocksFull()
                         .then(syncObj => {
-                            console.log(syncObj);
                             if (syncObj.valid) {
+                                ourBoard.removeListener('sample',sampleFun);
                                 done();
                             } else {
+                                ourBoard.removeListener('sample',sampleFun);
                                 done("Not able to sync");
                             }
-                        }).catch(err => done);
+                        }).catch((err) => {
+                            ourBoard.removeListener('sample',sampleFun);
+                            done();
+                        });
                 }
             };
+            ourBoard.on('sample',sampleFun);
+        });
+    });
+});
+
+describe('#syncErrors', function() {
+    var ourBoard;
+    this.timeout(4000);
+    before(function (done) {
+        ourBoard = new openBCIBoard.OpenBCIBoard({
+            verbose:true,
+            simulatorFirmwareVersion: 'v2'
+        });
+        var useSim = () => {
+            ourBoard.simulatorEnable()
+                .then(() => {
+                    return ourBoard.connect(k.OBCISimulatorPortName);
+                })
+                .then(() => {
+                    return ourBoard.softReset();
+                })
+                .catch(err => console.log(err));
+        };
+        ourBoard.autoFindOpenBCIBoard()
+            .then(portName => {
+                return setTimeout(() => {
+                    console.log('Issuing connect');
+                    ourBoard.connect(portName);
+                },500);
+            })
+            .catch((err) => {
+                useSim();
+            })
+            .then(() => {
+                //console.log('connected');
+            })
+            .catch(err => {
+                console.log('Error: ' + err);
+            });
+
+
+        ourBoard.once('ready', () => {
+            done();
+        });
+    });
+    after(function(done) {
+        if (ourBoard.connected) {
+            ourBoard.disconnect().then(() => {
+                done();
+            }).catch(() => done);
+        } else {
+            done();
+        }
+    });
+    afterEach(() => {
+        this.buffer = null;
+    });
+    describe('#syncClocksFull', function() {
+        it('should reject syncClocksFull request because of timeout', done => {
+            var notSynced = true;
+            var sampleFun = sample => {
+                if (notSynced) {
+                    notSynced = false;
+                    // Call the first one
+                    ourBoard.syncClocksFull()
+                        .then(syncObj => {
+                            done("Should not be able to sync");
+                        }).catch((err) => {
+                            ourBoard.removeListener('sample',sampleFun);
+                            done();
+                        });
+                    ourBoard.streamStop();
+                }
+            };
+            ourBoard.streamStart()
+                .catch(err => {
+                    ourBoard.removeListener('sample',sampleFun);
+                    done('coulnd not start stime sync')
+                });
             ourBoard.on('sample',sampleFun);
         });
     });

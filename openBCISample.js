@@ -707,7 +707,6 @@ function parsePacketTimeSyncedAccel(dataBuf,channelSettingsArray,boardOffsetTime
     return new Promise((resolve, reject) => {
         // The sample object we are going to build
         var sampleObject = {};
-
         if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [parsePacketTimeSyncedAccel]: input buffer must be " + k.OBCIPacketSize + " bytes!");
 
         // Get the sample number
@@ -803,10 +802,12 @@ function getFromTimePacketTime(dataBuf) {
     // Ths packet has 'A0','00'....,'00','00','FF','FF','FF','FF','C3' where the 'FF's are times
     const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus 1 for the stop byte and another two for the aux channel or the
     return new Promise((resolve, reject) => {
-        if (dataBuf.byteLength != k.OBCIPacketSize) reject("Error [getFromTimePacketTime]: input buffer must be " + k.OBCIPacketSize + " bytes!");
-
-        // Grab the time from the packet
-        resolve(dataBuf.readUInt32BE(lastBytePosition - k.OBCIStreamPacketTimeByteSize));
+        if (dataBuf.byteLength != k.OBCIPacketSize) {
+            reject("Error [getFromTimePacketTime]: input buffer must be " + k.OBCIPacketSize + " bytes!");
+        } else {
+            // Grab the time from the packet
+            resolve(dataBuf.readUInt32BE(lastBytePosition - k.OBCIStreamPacketTimeByteSize));
+        }
     });
 }
 

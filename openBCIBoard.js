@@ -176,6 +176,7 @@ function OpenBCIFactory() {
         this._lowerChannelsSampleObject = null;
         this.sync = {
             curSyncObj: null,
+            eventEmitter: null,
             objArray: [],
             sntpActive: false,
             timeOffsetMaster: 0,
@@ -1327,7 +1328,6 @@ function OpenBCIFactory() {
             if (this.options.verbose) console.log('pInput: ' + pInput + ' nInput: ' + nInput);
             // Get impedance settings to send the board
             k.getImpedanceSetter(channelNumber,pInput,nInput).then((commandsArray) => {
-                console.log(commandsArray);
                 this.write(commandsArray);
                 //delayInMS += commandsArray.length * k.OBCIWriteIntervalDelayMSLong;
                 delayInMS += this.commandsToWrite * k.OBCIWriteIntervalDelayMSShort; // Account for commands waiting to be sent in the write buffer
@@ -1564,10 +1564,11 @@ function OpenBCIFactory() {
             if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on v1 firmware, please update to v2');
             setTimeout(() => {
                 return reject('syncClocksFull timeout after 500ms with no sync');
-            }, 1000); // Should not take more than 1s to sync up
-            this.once('synced',syncObj => {
+            }, 500); // Should not take more than 1s to sync up
+            this.sync.eventEmitter = syncObj => {
                 return resolve(syncObj);
-            });
+            };
+            this.once('synced', this.sync.eventEmitter);
             this.sync.curSyncObj = openBCISample.newSyncObject();
             this.sync.curSyncObj.timeSyncSent = this.time();
             this.curParsingMode = k.OBCIParsingTimeSyncSent;
@@ -1853,7 +1854,9 @@ function OpenBCIFactory() {
                 // Fix the curParsingMode back to normal
                 this.curParsingMode = k.OBCIParsingNormal;
                 // Emit the bad sync object for fun
-                this.emit('synced',openBCISample.newSyncObject());
+                var badObject = openBCISample.newSyncObject();
+                badObject.timeOffsetMaster = this.sync.timeOffsetMaster;
+                this.emit('synced', badObject);
                 // Set back to null
                 this.sync.curSyncObj = null;
                 // Return will exit this method with the err
@@ -1951,6 +1954,12 @@ function OpenBCIFactory() {
                     return resolve(rawPacket);
                 })
                 .catch(err => {
+                    // Emit the bad sync object for fun
+                    var badObject = openBCISample.newSyncObject();
+                    badObject.timeOffsetMaster = this.sync.timeOffsetMaster;
+                    this.emit('synced', badObject);
+                    // Set back to null
+                    this.sync.curSyncObj = null;
                     console.log('Error in _processPacketTimeSyncSet', err)
                     return reject(err);
                 });
