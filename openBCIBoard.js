@@ -280,19 +280,32 @@ function OpenBCIFactory () {
         this._processBytes(data);
       });
       this.serial.once('open', () => {
-        var timeoutLength = this.options.simulate ? 50 : 300;
         if (this.options.verbose) console.log('Serial port open');
-        setTimeout(() => {
+        new Promise(resolve => {
+          // TODO: document why this 300 ms delay is needed
+          setTimeout(resolve, this.options.simulate ? 50 : 300);
+        }).then(() => {
           if (this.options.verbose) console.log('Sending stop command, in case the device was left streaming...');
-          this.write(k.OBCIStreamStop);
-          if (this.serial) this.serial.flush();
-        }, timeoutLength);
-        setTimeout(() => {
+          return this.write(k.OBCIStreamStop);
+        }).then(() => {
+          return new Promise(resolve => this.serial.flush(resolve));
+        }).then(() => {
+          // TODO: document why this 250 ms delay is needed
+          return new Promise(resolve => setTimeout(resolve, 250));
+        }).then(() => {
           if (this.options.verbose) console.log('Sending soft reset');
-          this.softReset();
+          // TODO: this promise chain resolves early because
+          //  A. some legacy code (in tests) sets the ready handler after this resolves
+          // and
+          //  B. other legacy code (in tests) needs the simulator to reply with segmented packets, never fragmented
+          // which is C. not implemented yet except in a manner such that replies occur in the write handler,
+          // resulting in the EOT arriving before this resolves
+          // Fix one or more of the above 3 situations, then move resolve() to the next block.
           resolve();
+          return this.softReset();
+        }).then(() => {
           if (this.options.verbose) console.log("Waiting for '$$$'");
-        }, timeoutLength + 250);
+        });
       });
       this.serial.once('close', () => {
         if (this.options.verbose) console.log('Serial Port Closed');
@@ -335,9 +348,6 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.disconnect = function () {
-    if (!this.isConnected()) return Promise.reject('no board connected');
-
-    // no need for timeout here; streamStop already performs a delay
     return Promise.resolve()
       .then(() => {
         if (this.isStreaming()) {
@@ -346,12 +356,16 @@ function OpenBCIFactory () {
         }
       })
       .then(() => {
-        return new Promise((resolve, reject) => {
-          // serial emitting 'close' will call _disconnected
-          this.serial.close(() => {
-            resolve();
+        if (!this.isConnected()) {
+          return Promise.reject('no board connected');
+        } else {
+          return new Promise((resolve, reject) => {
+            // serial emitting 'close' will call _disconnected
+            this.serial.close(() => {
+              resolve();
+            });
           });
-        });
+        }
       });
   };
 
@@ -385,13 +399,7 @@ function OpenBCIFactory () {
       if (this.isStreaming()) return reject('Error [.streamStart()]: Already streaming');
       this._streaming = true;
       this._reset_ABANDONED(); // framework is incomplete but looks useful
-      this.write(k.OBCIStreamStart)
-        .then(() => {
-          setTimeout(() => {
-            resolve();
-          }, 10); // allow time for command to get sent
-        })
-        .catch(err => reject(err));
+      this.write(k.OBCIStreamStart).then(resolve, reject);
     });
   };
 
@@ -407,13 +415,7 @@ function OpenBCIFactory () {
     return new Promise((resolve, reject) => {
       if (!this.isStreaming()) return reject('Error [.streamStop()]: No stream to stop');
       this._streaming = false;
-      this.write(k.OBCIStreamStop)
-        .then(() => {
-          setTimeout(() => {
-            resolve();
-          }, 10); // allow time for command to get sent
-        })
-        .catch(err => reject(err));
+      this.write(k.OBCIStreamStop).then(resolve, reject);
     });
   };
 
@@ -659,7 +661,7 @@ function OpenBCIFactory () {
       this.curParsingMode = k.OBCIParsingEOT;
 
       // Send the radio channel query command
-      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdChannelSet, channelNumber]));
+      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdChannelSet, channelNumber])).catch(reject);
     });
   };
 
@@ -709,7 +711,7 @@ function OpenBCIFactory () {
       this.curParsingMode = k.OBCIParsingEOT;
 
       // Send the radio channel query command
-      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdChannelSetOverride, channelNumber]));
+      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdChannelSetOverride, channelNumber])).catch(reject);
     });
   };
 
@@ -759,7 +761,7 @@ function OpenBCIFactory () {
       this.curParsingMode = k.OBCIParsingEOT;
 
       // Send the radio channel query command
-      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdChannelGet]));
+      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdChannelGet])).catch(reject);
     });
   };
 
@@ -805,7 +807,7 @@ function OpenBCIFactory () {
       this.curParsingMode = k.OBCIParsingEOT;
 
       // Send the radio channel query command
-      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdPollTimeGet]));
+      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdPollTimeGet])).catch(reject);
     });
   };
 
@@ -856,7 +858,7 @@ function OpenBCIFactory () {
       this.curParsingMode = k.OBCIParsingEOT;
 
       // Send the radio channel query command
-      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdPollTimeSet, pollTime]));
+      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdPollTimeSet, pollTime])).catch(reject);
     });
   };
 
@@ -928,9 +930,9 @@ function OpenBCIFactory () {
 
       // Send the radio channel query command
       if (speed === k.OBCIRadioBaudRateFastStr) {
-        this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdBaudRateSetFast]));
+        this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdBaudRateSetFast])).catch(reject);
       } else {
-        this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdBaudRateSetDefault]));
+        this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdBaudRateSetDefault])).catch(reject);
       }
     });
   };
@@ -978,7 +980,7 @@ function OpenBCIFactory () {
       this.curParsingMode = k.OBCIParsingEOT;
 
       // Send the radio channel query command
-      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdSystemStatus]));
+      this._writeAndDrain(new Buffer([k.OBCIRadioKey, k.OBCIRadioCmdSystemStatus])).catch(reject);
     });
   };
 
@@ -1103,10 +1105,8 @@ function OpenBCIFactory () {
         .then((val) => {
           arrayOfCommands = val.commandArray;
           this.channelSettingsArray[channelNumber - 1] = val.newChannelSettingsObject;
-          resolve(this.write(arrayOfCommands));
-        }, function (err) {
-          reject(err);
-        });
+          return this.write(arrayOfCommands);
+        }).then(resolve, reject);
     });
   };
 
@@ -1154,12 +1154,13 @@ function OpenBCIFactory () {
       this.impedanceTest.active = true;
       this.impedanceTest.continuousMode = true;
 
+      var chain = Promise.resolve();
       for (var i = 0; i < this.numberOfChannels(); i++) {
-        k.getImpedanceSetter(i + 1, false, true).then((commandsArray) => {
-          this.write(commandsArray);
-        });
+        chain = chain
+          .then(() => k.getImpedanceSetter(i + 1, false, true))
+          .then((commandsArray) => this.write(commandsArray));
       }
-      resolve();
+      chain.then(resolve, reject);
     });
   };
 
@@ -1176,12 +1177,13 @@ function OpenBCIFactory () {
       this.impedanceTest.active = false;
       this.impedanceTest.continuousMode = false;
 
+      var chain = Promise.resolve();
       for (var i = 0; i < this.numberOfChannels(); i++) {
-        k.getImpedanceSetter(i + 1, false, false).then((commandsArray) => {
-          this.write(commandsArray);
-        });
+        chain = chain
+          .then(() => k.getImpedanceSetter(i + 1, false, false))
+          .then((commandsArray) => this.write(commandsArray));
       }
-      resolve();
+      chain.then(resolve, reject);
     });
   };
 
@@ -1366,8 +1368,6 @@ function OpenBCIFactory () {
     return new Promise((resolve, reject) => {
       if (!this.isConnected()) return reject('Must be connected');
 
-      var delayInMS = 0;
-
       /* istanbul ignore if */
       if (this.options.verbose) {
         if (pInput && !nInput) {
@@ -1390,18 +1390,15 @@ function OpenBCIFactory () {
       if (this.options.verbose) console.log('pInput: ' + pInput + ' nInput: ' + nInput);
       // Get impedance settings to send the board
       k.getImpedanceSetter(channelNumber, pInput, nInput).then((commandsArray) => {
-        this.write(commandsArray);
-        // delayInMS += commandsArray.length * k.OBCIWriteIntervalDelayMSLong
-        delayInMS += this.commandsToWrite * k.OBCIWriteIntervalDelayMSShort; // Account for commands waiting to be sent in the write buffer
-        setTimeout(() => {
-          /**
-          * If either pInput or nInput are true then we should start calculating impedance. Setting
-          *  this.impedanceTest.active to true here allows us to route every sample for an impedance
-          *  calculation instead of the normal sample output.
-          */
-          if (pInput || nInput) this.impedanceTest.active = true;
-          resolve(channelNumber);
-        }, delayInMS); // Prevents emitting .impedanceArray before all setting commands have been applied
+        return this.write(commandsArray);
+      }).then(() => {
+        /**
+        * If either pInput or nInput are true then we should start calculating impedance. Setting
+        *  this.impedanceTest.active to true here allows us to route every sample for an impedance
+        *  calculation instead of the normal sample output.
+        */
+        if (pInput || nInput) this.impedanceTest.active = true;
+        resolve(channelNumber);
       }, (err) => {
         reject(err);
       });
@@ -1601,8 +1598,7 @@ function OpenBCIFactory () {
       this.sync.curSyncObj = openBCISample.newSyncObject();
       this.sync.curSyncObj.timeSyncSent = this.time();
       this.curParsingMode = k.OBCIParsingTimeSyncSent;
-      this._writeAndDrain(k.OBCISyncTimeSet);
-      resolve();
+      this._writeAndDrain(k.OBCISyncTimeSet).then(resolve, reject);
     });
   };
 
