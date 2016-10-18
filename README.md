@@ -389,6 +389,10 @@ Board optional configurations.
 * `simulatorFirmwareVersion` {String} - Allows the simulator to use firmware version 2 features. (2 Possible Options)
   * `v1` - Firmware Version 1 (Default)
   * `v2` - Firmware Version 2
+* `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation. (3 Possible Options)
+  * `Random` - output randomly-lengthed chunks of data (Default)
+  * `OneByOne` - output each byte separately
+  * `None` - do not fragment packets; output complete chunks immediately after they are produced
 * `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
 * `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
 * `simulatorInjectLineNoise` {String} - Injects line noise on channels. (3 Possible Options)

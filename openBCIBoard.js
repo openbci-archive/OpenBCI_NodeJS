@@ -25,6 +25,7 @@ function OpenBCIFactory () {
     simulatorBoardFailure: false,
     simulatorDaisyModuleAttached: false,
     simulatorFirmwareVersion: k.OBCIFirmwareV1,
+    simulatorFragmentation: 'Random',
     simulatorHasAccelerometer: true,
     simulatorInternalClockDrift: 0,
     simulatorInjectAlpha: true,
@@ -65,6 +66,12 @@ function OpenBCIFactory () {
   *          2 Possible Options:
   *              `v1` - Firmware Version 1 (Default)
   *              `v2` - Firmware Version 2
+  *
+  *     - `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation.
+  *          3 Possible Options:
+  *              `Random` - output randomly-lengthed chunks of data (Default)
+  *              `OneByOne` - output each byte separately
+  *              `None` - do not fragment packets; output complete chunks immediately after they are produced
   *
   *     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
   *
@@ -111,6 +118,10 @@ function OpenBCIFactory () {
     opts.simulatorFirmwareVersion = options.simulatorFirmwareVersion || options.simulatorfirmwareversion || _options.simulatorFirmwareVersion;
     if (opts.simulatorFirmwareVersion !== k.OBCIFirmwareV1 && opts.simulatorFirmwareVersion !== k.OBCIFirmwareV2) {
       opts.simulatorFirmwareVersion = k.OBCIFirmwareV1;
+    }
+    opts.simulatorFragmentation = options.simulatorFragmentation || options.simulatorfragmentation || _options.simulatorFragmentation;
+    if (opts.simulatorFragmentation !== 'Random' && opts.simulatorFragmentation !== 'OneByOne' && opts.simulatorFragmentation !== 'None') {
+      opts.simulatorFragmentation = 'Random';
     }
     if (options.simulatorHasAccelerometer === false || options.simulatorhasaccelerometer === false) {
       opts.simulatorHasAccelerometer = false;

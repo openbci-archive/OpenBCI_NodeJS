@@ -195,6 +195,11 @@ const obciSimulatorLineNoiseHz60 = '60Hz';
 const obciSimulatorLineNoiseHz50 = '50Hz';
 const obciSimulatorLineNoiseNone = 'None';
 
+/** Possible Simulator Fragmentation modes */
+const obciSimulatorFragmentationRandom = 'Random';
+const obciSimulatorFragmentationOneByOne = 'OneByOne';
+const obciSimulatorFragmentationNone = 'None';
+
 /** Possible Sample Rates */
 const obciSampleRate125 = 125;
 const obciSampleRate250 = 250;
@@ -821,6 +826,10 @@ module.exports = {
   OBCISimulatorLineNoiseHz60: obciSimulatorLineNoiseHz60,
   OBCISimulatorLineNoiseHz50: obciSimulatorLineNoiseHz50,
   OBCISimulatorLineNoiseNone: obciSimulatorLineNoiseNone,
+  /** Possible Simulator Fragmentation modes */
+  OBCISimulatorFragmentationRandom: obciSimulatorFragmentationRandom,
+  OBCISimulatorFragmentationOneByOne: obciSimulatorFragmentationOneByOne,
+  OBCISimulatorFragmentationNone: obciSimulatorFragmentationNone,
   /** Firmware version indicator */
   OBCIFirmwareV1: obciFirmwareV1,
   OBCIFirmwareV2: obciFirmwareV2,
