@@ -586,40 +586,40 @@ describe('openBCISimulator', function () {
     });
   });
   describe('fragmentation', function () {
+    var simulator;
+    afterEach(done => {
+      simulator.removeAllListeners();
+      simulator.write(k.OBCIStreamStop);
+      simulator.close(done);
+    });
     it('Should accumulate packets if set to FullBuffers', function (done) {
       var bufferSize = 64;
-      var simulator = new openBCISimulator.OpenBCISimulator(portName, {
+      simulator = new openBCISimulator.OpenBCISimulator(portName, {
         fragmentation: k.OBCISimulatorFragmentationFullBuffers,
         bufferSize: bufferSize,
         latencyTime: 1000
       });
       simulator.on('data', function (buffer) {
         expect(buffer.length).to.equal(bufferSize);
-
-        simulator.removeAllListeners();
-        simulator.write(k.OBCIStreamStop);
-        simulator.close(done);
+        done();
       });
       simulator.write(k.OBCIStreamStart);
     });
     it('Should emit partial packets after latencyTime', function (done) {
       var bufferSize = 4096;
-      var simulator = new openBCISimulator.OpenBCISimulator(portName, {
+      simulator = new openBCISimulator.OpenBCISimulator(portName, {
         fragmentation: k.OBCISimulatorFragmentationFullBuffers,
         bufferSize: 4096,
         latencyTime: 0
       });
       simulator.on('data', function (buffer) {
         expect(buffer.length).to.be.lessThan(bufferSize);
-
-        simulator.write(k.OBCIStreamStop);
-        simulator.removeAllListeners();
-        simulator.close(done);
+        done();
       });
       simulator.write(k.OBCIStreamStart);
     });
     it('Should emit single bytes if set to OneByOne', function (done) {
-      var simulator = new openBCISimulator.OpenBCISimulator(portName, {
+      simulator = new openBCISimulator.OpenBCISimulator(portName, {
         fragmentation: k.OBCISimulatorFragmentationOneByOne
       });
       var counter = 0;
@@ -627,10 +627,24 @@ describe('openBCISimulator', function () {
         expect(buffer.length).to.equal(1);
         ++counter;
 
-        if (counter > 5) {
-          simulator.write(k.OBCIStreamStop);
-          simulator.removeAllListeners();
-          simulator.close(done);
+        if (counter === 5) done();
+      });
+      simulator.write(k.OBCIStreamStart);
+    });
+    it('should properly split packets, retaining valid packets', function (done) {
+      simulator = new openBCISimulator.OpenBCISimulator(portName, {
+        fragmentation: k.OBCISimulatorFragmentationRandom
+      });
+      var buffer = new Buffer(0);
+      var counter = 0;
+      simulator.on('data', function (data) {
+        buffer = Buffer.concat([buffer, data], buffer.length + data.length);
+        if (buffer.length >= 33) {
+          openBCISample.parseRawPacketStandard(buffer.slice(0, 33)).then((sample) => {
+            buffer = buffer.slice(33);
+            ++counter;
+            if (counter === 5) done();
+          }, done);
         }
       });
       simulator.write(k.OBCIStreamStart);
