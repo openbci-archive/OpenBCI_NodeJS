@@ -7,6 +7,7 @@
 ### Enhancements
 
 * Implement and adapt semi-standard code style. Closes #83
+* autoFindOpenBCIBoard now notices and uses the stock dongle on Linux
 
 ### Breaking Changes
 
