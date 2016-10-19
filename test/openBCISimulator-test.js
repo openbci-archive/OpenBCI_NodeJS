@@ -35,6 +35,7 @@ describe('openBCISimulator', function () {
       expect(simulator.options.sampleRate).to.equal(k.OBCISampleRate250);
       expect(simulator.options.serialPortFailure).to.be.false;
       expect(simulator.options.verbose).to.be.false;
+      expect(simulator.options.fragmentation).to.equal(k.OBCISimulatorFragmentationRandom);
     });
     it('should be able to get into daisy mode', function () {
       simulator = new openBCISimulator.OpenBCISimulator(portName, {
@@ -113,7 +114,9 @@ describe('openBCISimulator', function () {
   });
   describe(`_startStream`, function () {
     it('should return a packet with sample data in it', function (done) {
-      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
+        fragmentation: k.OBCISimulatorFragmentationNone
+      });
       var sampleCounter = 0;
       var sampleTestSize = 5;
 
@@ -137,7 +140,9 @@ describe('openBCISimulator', function () {
       simulator._startStream();
     });
     it('should return a sync set packet with accel', function (done) {
-      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
+        fragmentation: k.OBCISimulatorFragmentationNone
+      });
       var sampleCounter = 0;
       var sampleTestSize = 5;
 
@@ -170,7 +175,8 @@ describe('openBCISimulator', function () {
     });
     it('should return a sync set packet with raw aux', function (done) {
       var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
-        accel: false
+        accel: false,
+        fragmentation: k.OBCISimulatorFragmentationNone
       });
       var sampleCounter = 0;
       var sampleTestSize = 5;
@@ -207,7 +213,8 @@ describe('openBCISimulator', function () {
     var simulator;
     beforeEach(() => {
       simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
-        firmwareVersion: 'v2'
+        firmwareVersion: 'v2',
+        fragmentation: k.OBCISimulatorFragmentationNone
       });
     });
     afterEach(() => {
@@ -589,7 +596,8 @@ describe('openBCISimulator', function () {
     var simulator;
     beforeEach(function (done) {
       simulator = new openBCISimulator.OpenBCISimulator(portName, {
-        firmwareVersion: 'v2'
+        firmwareVersion: 'v2',
+        fragmentation: k.OBCISimulatorFragmentationNone
       });
       simulator.once('open', () => {
         done();
