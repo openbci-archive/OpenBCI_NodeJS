@@ -15,7 +15,8 @@ describe('#impedanceTesting', function () {
 
   before(function (done) {
     ourBoard = new openBCIBoard.OpenBCIBoard({
-      verbose: true
+      verbose: true,
+      fragmentation: k.OBCISimulatorFragmentationRandom
     });
     var useSim = () => {
       ourBoard.simulatorEnable().then(() => {

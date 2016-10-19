@@ -422,7 +422,8 @@ describe('openbci-sdk', function () {
     before(function () {
       ourBoard = new openBCIBoard.OpenBCIBoard({
         simulate: !realBoard,
-        verbose: true
+        verbose: true,
+        simulatorFragmentation: k.OBCISimulatorFragmentationRandom
       });
       spy = sinon.spy(ourBoard, '_writeAndDrain');
     });
@@ -2612,11 +2613,13 @@ $$$`);
     });
   });
 
-  describe('#radioTestsWithBoard', function () {
+  describe('#radioTests', function () {
     this.timeout(0);
     before(function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
-        verbose: true
+        verbose: true,
+        simulatorFirmwareVersion: 'v2',
+        fragmentation: k.OBCISimulatorFragmentationRandom
       });
       ourBoard.connect(masterPortName).catch(err => done(err));
 
@@ -2634,8 +2637,8 @@ $$$`);
       }
     });
     it('should be able to get the channel number', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       // The channel number should be between 0 and 25. Those are hard limits.
       ourBoard.radioChannelGet().then(res => {
         expect(res.channelNumber).to.be.within(0, 25);
@@ -2643,40 +2646,40 @@ $$$`);
       }).catch(err => done(err));
     });
     it('should be able to set the channel to 1', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioChannelSet(1).then(channelNumber => {
         expect(channelNumber).to.equal(1);
         done();
       }).catch(err => done(err));
     });
     it('should be able to set the channel to 2', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioChannelSet(2).then(channelNumber => {
         expect(channelNumber).to.equal(2);
         done();
       }).catch(err => done(err));
     });
     it('should be able to set the channel to 25', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioChannelSet(25).then(channelNumber => {
         expect(channelNumber).to.equal(25);
         done();
       }).catch(err => done(err));
     });
     it('should be able to set the channel to 5', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioChannelSet(5).then(channelNumber => {
         expect(channelNumber).to.equal(5);
         done();
       }).catch(err => done(err));
     });
     it('should be able to override host channel number, verify system is down, set the host back and verify system is up', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       var systemChanNumber = 0;
       var newChanNum = 0;
       // var timey = Date.now()
@@ -2728,23 +2731,23 @@ $$$`);
         .catch(err => done(err));
     });
     it('should be able to get the poll time', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioPollTimeGet().should.eventually.be.greaterThan(0).and.notify(done);
     });
     it('should be able to set the poll time', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioPollTimeSet(80).should.become(80).and.notify(done);
     });
     it('should be able to change to default baud rate', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioBaudRateSet('default').should.become(115200).and.notify(done);
     });
     it('should be able to change to fast baud rate', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioBaudRateSet('fast').then(newBaudRate => {
         expect(newBaudRate).to.equal(230400);
         return ourBoard.radioBaudRateSet('default');
@@ -2753,8 +2756,8 @@ $$$`);
       }).catch(err => done(err));
     });
     it('should be able to set the system status', function (done) {
-      // Don't test if not using real board
-      if (!realBoard) return done();
+      // Don't test if not using v2
+      if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioSystemStatusGet().then(isUp => {
         expect(isUp).to.be.true;
         done();
@@ -2773,7 +2776,8 @@ $$$`);
       }
       if (runHardwareValidation) {
         board = new openBCIBoard.OpenBCIBoard({
-          verbose: true
+          verbose: true,
+          fragmentation: k.OBCISimulatorFragmentationRandom
         });
         // Use the line below to output the
         wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
@@ -2856,7 +2860,8 @@ describe('#daisy', function () {
     ourBoard = new openBCIBoard.OpenBCIBoard({
       verbose: true,
       simulatorFirmwareVersion: 'v2',
-      simulatorDaisyModuleAttached: true
+      simulatorDaisyModuleAttached: true,
+      fragmentation: k.OBCISimulatorFragmentationRandom
     });
 
     var useSim = () => {
@@ -2934,7 +2939,8 @@ describe('#syncWhileStreaming', function () {
   before(function (done) {
     ourBoard = new openBCIBoard.OpenBCIBoard({
       verbose: true,
-      simulatorFirmwareVersion: 'v2'
+      simulatorFirmwareVersion: 'v2',
+      fragmentation: k.OBCISimulatorFragmentationRandom
     });
     var useSim = () => {
       ourBoard.simulatorEnable()
