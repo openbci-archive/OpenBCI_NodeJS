@@ -1168,6 +1168,9 @@ function isTimeSyncSetConfirmationInBuffer (dataBuffer) {
           return false;
         }
       default:
+        if (dataBuffer[0] === k.OBCISyncTimeSent.charCodeAt(0) && dataBuffer[1] === k.OBCIByteStart) {
+          return true;
+        }
         for (var i = 1; i < bufferLength; i++) {
           // The base case (last one)
           // console.log(i)

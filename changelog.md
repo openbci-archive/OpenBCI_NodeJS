@@ -15,7 +15,8 @@
 
 ### Bug Fixes
 
-* Don't drop early packet fragments after board reset
+* Fixed bug where early packet fragments were dropped after board reset
+* Fixed bug where time sync replies that began a buffered chunk were ignored
 
 # 1.3.3
 
