@@ -514,7 +514,18 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.autoFindOpenBCIBoard = function () {
-    var macSerialPrefix = 'usbserial-D';
+    var serialPatterns = [
+      { // mac
+        comName: /usbserial-D/
+      },
+      { // linux
+        comName: /^\/dev\/ttyUSB/,
+        manufacturer: /^FTDI$/,
+        serialNumber: /^FTDI_FT231X_USB_UART/,
+        vendorId: /^0x0403$/,
+        productId: /^0x6015$/
+      }
+    ];
     return new Promise((resolve, reject) => {
       /* istanbul ignore else  */
       if (this.options.simulate) {
@@ -529,10 +540,15 @@ function OpenBCIFactory () {
           }
           // This is one big if statement
           if (ports.some(port => {
-            if (port.comName.includes(macSerialPrefix)) {
+            return serialPatterns.some(patterns => {
+              for (var attribute in patterns) {
+                if (!String(port[attribute]).match(patterns[attribute])) {
+                  return false;
+                }
+              }
               this.portName = port.comName;
               return true;
-            }
+            });
           })) {
             if (this.options.verbose) console.log('auto found board');
             resolve(this.portName);
