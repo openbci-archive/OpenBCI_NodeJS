@@ -17,11 +17,11 @@ function OpenBCISimulatorFactory () {
     boardFailure: false,
     daisy: false,
     drift: 0,
-    firmwareVersion: k.OBCIFirmwareV1,
-    fragmentation: k.OBCISimulatorFragmentationNone,
+    firmwareVersion: [k.OBCIFirmwareV1, k.OBCIFirmwareV2],
+    fragmentation: [k.OBCISimulatorFragmentationNone, k.OBCISimulatorFragmentationRandom, k.OBCISimulatorFragmentationFullBuffers, k.OBCISimulatorFragmentationOneByOne],
     latencyTime: 16,
     bufferSize: 4096,
-    lineNoise: '60Hz',
+    lineNoise: [k.OBCISimulatorLineNoiseHz60, k.OBCISimulatorLineNoiseHz50, k.OBCISimulatorLineNoiseNone],
     sampleRate: 250,
     serialPortFailure: false,
     verbose: false
@@ -34,31 +34,28 @@ function OpenBCISimulatorFactory () {
     stream.Stream.call(this);
 
     /** Configuring Options */
-    if (options.accel === false) {
-      opts.accel = false;
-    } else {
-      opts.accel = _options.accel;
+    for (var o in _options) {
+      var userValue = options[o];
+
+      if (typeof _options[o] === 'object') {
+        // an array specifying a list of choices
+        // if the choice is not in the list, the first one is defaulted to
+
+        if (_options[o].indexOf(userValue) !== -1) {
+          opts[o] = userValue;
+        } else {
+          opts[o] = _options[o][0];
+        }
+      } else {
+        // anything else takes the user value if provided, otherwise is a default
+
+        if (userValue !== undefined) {
+          opts[o] = userValue;
+        } else {
+          opts[o] = _options[o];
+        }
+      }
     }
-    if (options.alpha === false) {
-      opts.alpha = false;
-    } else {
-      opts.alpha = _options.alpha;
-    }
-    opts.boardFailure = options.boardFailure || _options.boardFailure;
-    opts.daisy = options.daisy || _options.daisy;
-    opts.drift = options.drift || _options.drift;
-    opts.firmwareVersion = options.firmwareVersion || _options.firmwareVersion;
-    opts.lineNoise = options.lineNoise || _options.lineNoise;
-    if (options.sampleRate) {
-      opts.sampleRate = options.sampleRate;
-    } else {
-      opts.sampleRate = k.OBCISampleRate250;
-    }
-    opts.serialPortFailure = options.serialPortFailure || _options.serialPortFailure;
-    opts.verbose = options.verbose || _options.verbose;
-    opts.fragmentation = options.fragmentation || _options.fragmentation;
-    opts.latencyTime = options.latencyTime || _options.latencyTime;
-    opts.bufferSize = options.bufferSize || _options.bufferSize;
 
     this.options = opts;
 
