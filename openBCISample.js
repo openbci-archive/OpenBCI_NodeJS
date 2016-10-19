@@ -1087,7 +1087,7 @@ function doesBufferHaveEOT (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
@@ -1105,7 +1105,7 @@ function findV2Firmware (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
@@ -1123,7 +1123,7 @@ function isFailureInBuffer (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
@@ -1141,7 +1141,7 @@ function isSuccessInBuffer (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
