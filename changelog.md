@@ -13,6 +13,10 @@
 
 * The setting for simulatorInjectLineNoise has changed from `None` to `none`
 
+### Bug Fixes
+
+* Don't drop early packet fragments after board reset
+
 # 1.3.3
 
 ### New Features

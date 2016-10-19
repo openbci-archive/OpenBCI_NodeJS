@@ -1073,6 +1073,10 @@ function countADSPresent (dataBuffer) {
 * @param dataBuffer - The buffer of some length to parse
 * @returns {boolean} - True if the `$$$` was found.
 */
+// TODO: StreamSearch is optimized to search incoming chunks of data, streaming in,
+//       but a new search is constructed here with every call.  This is not making use
+//       of StreamSearch's optimizations; the object should be preserved between chunks,
+//       and only fed the new data.  TODO: also check other uses of StreamSearch
 function doesBufferHaveEOT (dataBuffer) {
   const s = new StreamSearch(new Buffer(k.OBCIParseEOT));
 

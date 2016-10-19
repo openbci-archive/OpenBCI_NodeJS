@@ -1449,8 +1449,7 @@ $$$`);
         var buf1 = new Buffer(`OpenBCI V3 Simulator
 On Board ADS1299 Device ID: 0x12345
 `);
-        var buf2 = new Buffer(`On Daisy ADS1299 Device ID: 0xFFFFF
-LIS3DH Device ID: `);
+        var buf2 = new Buffer(`LIS3DH Device ID: `);
         var buf3 = new Buffer(`0x38422
 $$$`);
 
