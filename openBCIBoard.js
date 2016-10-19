@@ -130,8 +130,8 @@ function OpenBCIFactory () {
       opts.simulatorFirmwareVersion = k.OBCIFirmwareV1;
     }
     opts.simulatorFragmentation = options.simulatorFragmentation || options.simulatorfragmentation || _options.simulatorFragmentation;
-    if (opts.simulatorFragmentation !== 'random' && opts.simulatorFragmentation !== 'fullBuffers' && opts.simulatorFragmentation !== 'oneByOne' && opts.simulatorFragmentation !== 'none') {
-      opts.simulatorFragmentation = 'random';
+    if (opts.simulatorFragmentation !== k.OBCISimulatorFragmentationRandom && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationFullBuffers && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationOneByOne && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationNone) {
+      opts.simulatorFragmentation = k.OBCISimulatorFragmentationNone;
     }
     opts.simulatorLatencyTime = options.simulatorLatencyTime || options.simulatorlatencytime || _options.simulatorLatencyTime;
     opts.simulatorBufferSize = options.simulatorBufferSize || options.simulatorbuffersize || _options.simulatorBufferSize;
