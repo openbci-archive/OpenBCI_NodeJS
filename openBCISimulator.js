@@ -18,11 +18,13 @@ function OpenBCISimulatorFactory () {
     daisy: false,
     drift: 0,
     firmwareVersion: k.OBCIFirmwareV1,
+    fragmentation: 'random',
+    latencyTime: 16,
+    bufferSize: 4096,
     lineNoise: '60Hz',
     sampleRate: 250,
     serialPortFailure: false,
-    verbose: false,
-    fragmentation: 'Random'
+    verbose: false
   };
 
   function OpenBCISimulator (portName, options) {
@@ -55,6 +57,8 @@ function OpenBCISimulatorFactory () {
     opts.serialPortFailure = options.serialPortFailure || _options.serialPortFailure;
     opts.verbose = options.verbose || _options.verbose;
     opts.fragmentation = options.fragmentation || _options.fragmentation;
+    opts.latencyTime = options.latencyTime || _options.latencyTime;
+    opts.bufferSize = options.bufferSize || _options.bufferSize;
 
     this.options = opts;
 
@@ -68,7 +72,7 @@ function OpenBCISimulatorFactory () {
     this.synced = false;
     this.sendSyncSetPacket = false;
     // Buffers
-    this.outputBuffer = new Buffer(500);
+    this.outputBuffer = new Buffer(this.options.bufferSize);
     this.outputBuffered = 0;
     // Numbers
     this.channelNumber = 1;
@@ -117,36 +121,54 @@ function OpenBCISimulatorFactory () {
 
   // queue some data for output and send it out depending on options.fragmentation
   OpenBCISimulator.prototype._output = function (dataBuffer) {
-    if (this.outputBuffered + dataBuffer.length > this.outputBuffer.length) {
-      this._partialDrain(this.outputBuffered + dataBuffer.length - this.outputBuffer.length);
+    // drain full buffers until there is no overflow
+    while (this.outputBuffered + dataBuffer.length > this.outputBuffer.length) {
+      var len = dataBuffer.copy(this.outputBuffer, this.outputBuffered);
+      dataBuffer = dataBuffer.slice(len);
+      this.outputBuffered += len;
+
+      this._partialDrain(this.outputBuffered);
+      this.flush();
     }
 
     dataBuffer.copy(this.outputBuffer, this.outputBuffered);
     this.outputBuffered += dataBuffer.length;
 
     if (!this.outputLoopHandle) {
+      var latencyTime = this.options.latencyTime;
+      if (this.options.fragmentation === k.OBCISimulatorFragmentationOneByOne ||
+          this.options.fragmentation === k.OBCISimulatorFragmentationNone) {
+        // no need to wait for latencyTime
+        // note that this is the only difference between 'none' and 'fullBuffers'
+        latencyTime = 0;
+      }
       var outputLoop = () => {
         var size;
         switch (this.options.fragmentation) {
           case k.OBCISimulatorFragmentationRandom:
-            size = Math.ceil(Math.random() * this.outputBuffered);
-            break;
-          case k.OBCISimulatorFragmentationOneByOne:
-            size = 1;
-            break;
+            if (Math.random() < 0.5) {
+              // randomly picked to send out a fragment
+              size = Math.ceil(Math.random() * Math.max(this.outputBuffered, 62));
+              break;
+            } // else, randomly picked to send a complete buffer in next block
+            /* falls through */
+          case k.OBCISimulatorFragmentationFullBuffers:
           case k.OBCISimulatorFragmentationNone:
           case false:
             size = this.outputBuffered;
             break;
+          case k.OBCISimulatorFragmentationOneByOne:
+            size = 1;
+            break;
         }
         this._partialDrain(size);
         if (this.outputBuffered) {
-          this.outputLoopHandle = setTimeout(outputLoop, 0);
+          this.outputLoopHandle = setTimeout(outputLoop, latencyTime);
         } else {
           this.outputLoopHandle = null;
         }
       };
-      this.outputLoopHandle = setTimeout(outputLoop, 0);
+      this.outputLoopHandle = setTimeout(outputLoop, latencyTime);
     }
   };
 

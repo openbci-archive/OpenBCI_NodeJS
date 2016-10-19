@@ -1,8 +1,16 @@
 # 1.4.0
 
+### New Features
+
+* Now simulates configurable packet fragmentation, buffer size, and latency timer
+
 ### Enhancements
 
 * Implement and adapt semi-standard code style. Closes #83
+
+### Breaking Changes
+
+* The setting for simulatorInjectLineNoise has changed from `None` to `none`
 
 # 1.3.3
 

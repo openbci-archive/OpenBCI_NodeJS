@@ -211,7 +211,7 @@ describe('openbci-sdk', function () {
     });
     it('can turn no line noise on', function () {
       ourBoard = new openBCIBoard.OpenBCIBoard({
-        simulatorInjectLineNoise: 'None'
+        simulatorInjectLineNoise: 'none'
       });
       (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseNone);
     });
@@ -386,7 +386,7 @@ describe('openbci-sdk', function () {
         simulatorHasAccelerometer: false,
         simulatorInternalClockDrift: -1,
         simulatorInjectAlpha: false,
-        simulatorInjectLineNoise: 'None',
+        simulatorInjectLineNoise: 'none',
         simulatorSampleRate: 16,
         simulatorSerialPortFailure: true
       });
@@ -1754,7 +1754,7 @@ $$$`);
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true
       });
-      randomSampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'None');
+      randomSampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'none');
     });
     beforeEach(() => {
       // Clear the global var

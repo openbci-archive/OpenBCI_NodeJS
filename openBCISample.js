@@ -302,7 +302,7 @@ var sampleModule = {
   * @param lineNoise {String} - A string that can be either:
   *              `60Hz` - 60Hz line noise (Default) (ex. __United States__)
   *              `50Hz` - 50Hz line noise (ex. __Europe__)
-  *              `None` - Do not inject line noise.
+  *              `none` - Do not inject line noise.
   *
   * @returns {Function}
   */

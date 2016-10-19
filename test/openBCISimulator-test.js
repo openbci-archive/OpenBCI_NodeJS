@@ -82,7 +82,7 @@ describe('openBCISimulator', function () {
     });
     it('can turn no line noise on', function () {
       simulator = new openBCISimulator.OpenBCISimulator(portName, {
-        lineNoise: 'None'
+        lineNoise: 'none'
       });
       (simulator.options.lineNoise).should.equal(k.OBCISimulatorLineNoiseNone);
     });

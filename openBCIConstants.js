@@ -193,12 +193,13 @@ const obciBoardGanglion = 'ganglion';
 /** Possible Simulator Line Noise injections */
 const obciSimulatorLineNoiseHz60 = '60Hz';
 const obciSimulatorLineNoiseHz50 = '50Hz';
-const obciSimulatorLineNoiseNone = 'None';
+const obciSimulatorLineNoiseNone = 'none';
 
 /** Possible Simulator Fragmentation modes */
-const obciSimulatorFragmentationRandom = 'Random';
-const obciSimulatorFragmentationOneByOne = 'OneByOne';
-const obciSimulatorFragmentationNone = 'None';
+const obciSimulatorFragmentationRandom = 'random';
+const obciSimulatorFragmentationFullBuffers = 'fullBuffers';
+const obciSimulatorFragmentationOneByOne = 'oneByOne';
+const obciSimulatorFragmentationNone = 'none';
 
 /** Possible Sample Rates */
 const obciSampleRate125 = 125;
@@ -828,6 +829,7 @@ module.exports = {
   OBCISimulatorLineNoiseNone: obciSimulatorLineNoiseNone,
   /** Possible Simulator Fragmentation modes */
   OBCISimulatorFragmentationRandom: obciSimulatorFragmentationRandom,
+  OBCISimulatorFragmentationFullBuffers: obciSimulatorFragmentationFullBuffers,
   OBCISimulatorFragmentationOneByOne: obciSimulatorFragmentationOneByOne,
   OBCISimulatorFragmentationNone: obciSimulatorFragmentationNone,
   /** Firmware version indicator */
