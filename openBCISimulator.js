@@ -173,6 +173,8 @@ function OpenBCISimulatorFactory () {
   };
 
   OpenBCISimulator.prototype.write = function (data, callback) {
+    // TODO: this function assumes a type of Buffer for radio, and a type of String otherwise
+    //       FIX THIS it makes it unusable outside the api code
     switch (data[0]) {
       case k.OBCIRadioKey:
         this._processPrivateRadioMessage(data);
