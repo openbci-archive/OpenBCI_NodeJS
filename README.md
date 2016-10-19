@@ -71,7 +71,7 @@ Want to know if the module really works? Check out some projects and organizatio
 
 Still not satisfied it works?? Check out this [detailed report](http://s132342840.onlinehome.us/pushtheworld/files/voltageVerificationTestPlanAndResults.pdf) that scientifically validates the output voltages of this module.
 
-How are you still doubting and not using this already? Fine, go look at some of the [700 **_automatic_** tests](https://codecov.io/github/OpenBCI/openbci-js-sdk?branch=master) written for it!
+How are you still doubting and not using this already? Fine, go look at some of the [700 **_automatic_** tests](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS) written for it!
 
 ### <a name="general-overview"></a> General Overview:
 
