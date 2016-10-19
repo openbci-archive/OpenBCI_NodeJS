@@ -131,6 +131,8 @@ function OpenBCIFactory () {
     if (opts.simulatorFragmentation !== 'random' && opts.simulatorFragmentation !== 'fullBuffers' && opts.simulatorFragmentation !== 'oneByOne' && opts.simulatorFragmentation !== 'none') {
       opts.simulatorFragmentation = 'random';
     }
+    opts.simulatorLatencyTime = options.simulatorLatencyTime || options.simulatorlatencytime || _options.simulatorLatencyTime;
+    opts.simulatorBufferSize = options.simulatorBufferSize || options.simulatorbuffersize || _options.simulatorBufferSize;
     if (options.simulatorHasAccelerometer === false || options.simulatorhasaccelerometer === false) {
       opts.simulatorHasAccelerometer = false;
     } else {

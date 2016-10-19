@@ -386,7 +386,10 @@ describe('openbci-sdk', function () {
         simulatorHasAccelerometer: false,
         simulatorInternalClockDrift: -1,
         simulatorInjectAlpha: false,
-        simulatorInjectLineNoise: 'none',
+        simulatorFragmentation: k.OBCISimulatorFragmentationOneByOne,
+        simulatorLatencyTime: 314,
+        simulatorBufferSize: 2718,
+        simulatorInjectLineNoise: k.OBCISimulatorLineNoiseNone,
         simulatorSampleRate: 16,
         simulatorSerialPortFailure: true
       });
@@ -402,6 +405,9 @@ describe('openbci-sdk', function () {
             expect(simOptions.daisy).to.be.true;
             expect(simOptions.drift).to.be.below(0);
             expect(simOptions.firmwareVersion).to.be.equal(k.OBCIFirmwareV2);
+            expect(simOptions.fragmentation).to.be.equal(k.OBCISimulatorFragmentationOneByOne);
+            expect(simOptions.latencyTime).to.be.equal(314);
+            expect(simOptions.bufferSize).to.be.equal(2718);
             expect(simOptions.lineNoise).to.be.equal(k.OBCISimulatorLineNoiseNone);
             expect(simOptions.sampleRate).to.be.equal(16);
             expect(simOptions.serialPortFailure).to.be.true;
