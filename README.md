@@ -389,13 +389,13 @@ Board optional configurations.
 * `simulatorFirmwareVersion` {String} - Allows the simulator to use firmware version 2 features. (2 Possible Options)
   * `v1` - Firmware Version 1 (Default)
   * `v2` - Firmware Version 2
-* `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation. (4 Possible Options)
-  * `random` - output random small chunks of data interspersed with full buffers (Default)
+* `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which occurs commonly in real devices.  It is recommended to test code with this enabled.  (4 Possible Options)
+  * `none` - do not fragment packets; output complete chunks immediately when produced (Default)
+  * `random` - output random small chunks of data interspersed with full buffers
   * `fullBuffers` - allow buffers to fill up until latency timer has expired
   * `oneByOne` - output each byte separately
-  * `none` - do not fragment packets; output complete chunks immediately after they are produced
-* `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers of data.  (Default `16`)
-* `simulatorBufferSize` {Number} - The size of a full buffer of data. (Default `4096`)
+* `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers of data, if `simulatorFragmentation` is specified.  (Default `16`)
+* `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is specified. (Default `4096`)
 * `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
 * `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
 * `simulatorInjectLineNoise` {String} - Injects line noise on channels. (3 Possible Options)

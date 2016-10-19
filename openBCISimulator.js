@@ -18,7 +18,7 @@ function OpenBCISimulatorFactory () {
     daisy: false,
     drift: 0,
     firmwareVersion: k.OBCIFirmwareV1,
-    fragmentation: 'random',
+    fragmentation: k.OBCISimulatorFragmentationNone,
     latencyTime: 16,
     bufferSize: 4096,
     lineNoise: '60Hz',

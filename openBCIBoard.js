@@ -25,7 +25,7 @@ function OpenBCIFactory () {
     simulatorBoardFailure: false,
     simulatorDaisyModuleAttached: false,
     simulatorFirmwareVersion: k.OBCIFirmwareV1,
-    simulatorFragmentation: 'random',
+    simulatorFragmentation: k.OBCISimulatorFragmentationNone,
     simulatorLatencyTime: 16,
     simulatorBufferSize: 4096,
     simulatorHasAccelerometer: true,
@@ -69,17 +69,19 @@ function OpenBCIFactory () {
   *              `v1` - Firmware Version 1 (Default)
   *              `v2` - Firmware Version 2
   *
-  *     - `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation.
+  *     - `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which
+  *                  occurs commonly in real devices.  It is recommended to test code with this enabled.
   *          4 Possible Options:
-  *              `random` - output random small chunks of data interspersed with full buffers (Default)
+  *              `none` - do not fragment packets; output complete chunks immediately when produced (Default)
+  *              `random` - output random small chunks of data interspersed with full buffers
   *              `fullBuffers` - allow buffers to fill up until the latency timer has expired
   *              `oneByOne` - output each byte separately
-  *              `none` - do not fragment packets; output complete chunks immediately after they are produced
   *
-  *     - `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers.
-  *                  (Default `16`)
+  *     - `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers,
+                     if `simulatorFragmentation` is specified. (Default `16`)
   *
-  *     - `simulatorBufferSize` {Number} - The size of a full buffer of data. (Default `4096`)
+  *     - `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is
+  *                  specified. (Default `4096`)
   *
   *     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
   *
