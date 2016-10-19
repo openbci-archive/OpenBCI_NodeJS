@@ -1,8 +1,22 @@
 # 1.4.0
 
+### New Features
+
+* Now simulates configurable packet fragmentation, buffer size, and latency timer
+
 ### Enhancements
 
 * Implement and adapt semi-standard code style. Closes #83
+* autoFindOpenBCIBoard now notices and uses the stock dongle on Linux
+
+### Breaking Changes
+
+* The setting for simulatorInjectLineNoise has changed from `None` to `none`
+
+### Bug Fixes
+
+* Fixed bug where early packet fragments were dropped after board reset
+* Fixed bug where time sync replies that began a buffered chunk were ignored
 
 # 1.3.3
 

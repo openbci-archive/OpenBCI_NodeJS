@@ -25,6 +25,9 @@ function OpenBCIFactory () {
     simulatorBoardFailure: false,
     simulatorDaisyModuleAttached: false,
     simulatorFirmwareVersion: k.OBCIFirmwareV1,
+    simulatorFragmentation: k.OBCISimulatorFragmentationNone,
+    simulatorLatencyTime: 16,
+    simulatorBufferSize: 4096,
     simulatorHasAccelerometer: true,
     simulatorInternalClockDrift: 0,
     simulatorInjectAlpha: true,
@@ -66,6 +69,20 @@ function OpenBCIFactory () {
   *              `v1` - Firmware Version 1 (Default)
   *              `v2` - Firmware Version 2
   *
+  *     - `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which
+  *                  occurs commonly in real devices.  It is recommended to test code with this enabled.
+  *          4 Possible Options:
+  *              `none` - do not fragment packets; output complete chunks immediately when produced (Default)
+  *              `random` - output random small chunks of data interspersed with full buffers
+  *              `fullBuffers` - allow buffers to fill up until the latency timer has expired
+  *              `oneByOne` - output each byte separately
+  *
+  *     - `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers,
+                     if `simulatorFragmentation` is specified. (Default `16`)
+  *
+  *     - `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is
+  *                  specified. (Default `4096`)
+  *
   *     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
   *
   *     - `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
@@ -74,7 +91,7 @@ function OpenBCIFactory () {
   *          3 Possible Options:
   *              `60Hz` - 60Hz line noise (Default) [America]
   *              `50Hz` - 50Hz line noise [Europe]
-  *              `None` - Do not inject line noise.
+  *              `none` - Do not inject line noise.
   *
   *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if
   *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that
@@ -112,6 +129,12 @@ function OpenBCIFactory () {
     if (opts.simulatorFirmwareVersion !== k.OBCIFirmwareV1 && opts.simulatorFirmwareVersion !== k.OBCIFirmwareV2) {
       opts.simulatorFirmwareVersion = k.OBCIFirmwareV1;
     }
+    opts.simulatorFragmentation = options.simulatorFragmentation || options.simulatorfragmentation || _options.simulatorFragmentation;
+    if (opts.simulatorFragmentation !== k.OBCISimulatorFragmentationRandom && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationFullBuffers && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationOneByOne && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationNone) {
+      opts.simulatorFragmentation = k.OBCISimulatorFragmentationNone;
+    }
+    opts.simulatorLatencyTime = options.simulatorLatencyTime || options.simulatorlatencytime || _options.simulatorLatencyTime;
+    opts.simulatorBufferSize = options.simulatorBufferSize || options.simulatorbuffersize || _options.simulatorBufferSize;
     if (options.simulatorHasAccelerometer === false || options.simulatorhasaccelerometer === false) {
       opts.simulatorHasAccelerometer = false;
     } else {
@@ -124,7 +147,7 @@ function OpenBCIFactory () {
       opts.simulatorInjectAlpha = _options.simulatorInjectAlpha;
     }
     opts.simulatorInjectLineNoise = options.simulatorInjectLineNoise || options.simulatorinjectlinenoise || _options.simulatorInjectLineNoise;
-    if (opts.simulatorInjectLineNoise !== '60Hz' && opts.simulatorInjectLineNoise !== '50Hz' && opts.simulatorInjectLineNoise !== 'None') {
+    if (opts.simulatorInjectLineNoise !== '60Hz' && opts.simulatorInjectLineNoise !== '50Hz' && opts.simulatorInjectLineNoise !== 'none') {
       opts.simulatorInjectLineNoise = '60Hz';
     }
     opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
@@ -234,6 +257,9 @@ function OpenBCIFactory () {
           daisy: this.options.simulatorDaisyModuleAttached,
           drift: this.options.simulatorInternalClockDrift,
           firmwareVersion: this.options.simulatorFirmwareVersion,
+          fragmentation: this.options.simulatorFragmentation,
+          latencyTime: this.options.simulatorLatencyTime,
+          bufferSize: this.options.simulatorBufferSize,
           lineNoise: this.options.simulatorInjectLineNoise,
           sampleRate: this.options.simulatorSampleRate,
           serialPortFailure: this.options.simulatorSerialPortFailure,
@@ -1613,6 +1639,8 @@ function OpenBCIFactory () {
           this.curParsingMode = k.OBCIParsingNormal;
           this.buffer = null;
           this.emit('ready');
+        } else {
+          this.buffer = data;
         }
         break;
       case k.OBCIParsingTimeSyncSent:

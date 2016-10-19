@@ -389,12 +389,19 @@ Board optional configurations.
 * `simulatorFirmwareVersion` {String} - Allows the simulator to use firmware version 2 features. (2 Possible Options)
   * `v1` - Firmware Version 1 (Default)
   * `v2` - Firmware Version 2
+* `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which occurs commonly in real devices.  It is recommended to test code with this enabled.  (4 Possible Options)
+  * `none` - do not fragment packets; output complete chunks immediately when produced (Default)
+  * `random` - output random small chunks of data interspersed with full buffers
+  * `fullBuffers` - allow buffers to fill up until latency timer has expired
+  * `oneByOne` - output each byte separately
+* `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers of data, if `simulatorFragmentation` is specified.  (Default `16`)
+* `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is specified. (Default `4096`)
 * `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
 * `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
 * `simulatorInjectLineNoise` {String} - Injects line noise on channels. (3 Possible Options)
   * `60Hz` - 60Hz line noise (Default) [America]
   * `50Hz` - 50Hz line noise [Europe]
-  * `None` - Do not inject line noise.
+  * `none` - Do not inject line noise.
 * `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that setting and this sample rate will be used. (Default is `250`)
 * `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely due to a OpenBCI dongle not being plugged in.
 * `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source of truth instead of local computer time. If you are running experiments on your local computer, keep this `false`. (Default `false`)

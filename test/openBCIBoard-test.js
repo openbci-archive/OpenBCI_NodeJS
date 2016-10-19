@@ -211,7 +211,7 @@ describe('openbci-sdk', function () {
     });
     it('can turn no line noise on', function () {
       ourBoard = new openBCIBoard.OpenBCIBoard({
-        simulatorInjectLineNoise: 'None'
+        simulatorInjectLineNoise: 'none'
       });
       (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseNone);
     });
@@ -386,7 +386,10 @@ describe('openbci-sdk', function () {
         simulatorHasAccelerometer: false,
         simulatorInternalClockDrift: -1,
         simulatorInjectAlpha: false,
-        simulatorInjectLineNoise: 'None',
+        simulatorFragmentation: k.OBCISimulatorFragmentationOneByOne,
+        simulatorLatencyTime: 314,
+        simulatorBufferSize: 2718,
+        simulatorInjectLineNoise: k.OBCISimulatorLineNoiseNone,
         simulatorSampleRate: 16,
         simulatorSerialPortFailure: true
       });
@@ -402,6 +405,9 @@ describe('openbci-sdk', function () {
             expect(simOptions.daisy).to.be.true;
             expect(simOptions.drift).to.be.below(0);
             expect(simOptions.firmwareVersion).to.be.equal(k.OBCIFirmwareV2);
+            expect(simOptions.fragmentation).to.be.equal(k.OBCISimulatorFragmentationOneByOne);
+            expect(simOptions.latencyTime).to.be.equal(314);
+            expect(simOptions.bufferSize).to.be.equal(2718);
             expect(simOptions.lineNoise).to.be.equal(k.OBCISimulatorLineNoiseNone);
             expect(simOptions.sampleRate).to.be.equal(16);
             expect(simOptions.serialPortFailure).to.be.true;
@@ -1449,8 +1455,7 @@ $$$`);
         var buf1 = new Buffer(`OpenBCI V3 Simulator
 On Board ADS1299 Device ID: 0x12345
 `);
-        var buf2 = new Buffer(`On Daisy ADS1299 Device ID: 0xFFFFF
-LIS3DH Device ID: `);
+        var buf2 = new Buffer(`LIS3DH Device ID: `);
         var buf3 = new Buffer(`0x38422
 $$$`);
 
@@ -1754,7 +1759,7 @@ $$$`);
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true
       });
-      randomSampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'None');
+      randomSampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'none');
     });
     beforeEach(() => {
       // Clear the global var

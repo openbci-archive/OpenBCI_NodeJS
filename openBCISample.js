@@ -302,7 +302,7 @@ var sampleModule = {
   * @param lineNoise {String} - A string that can be either:
   *              `60Hz` - 60Hz line noise (Default) (ex. __United States__)
   *              `50Hz` - 50Hz line noise (ex. __Europe__)
-  *              `None` - Do not inject line noise.
+  *              `none` - Do not inject line noise.
   *
   * @returns {Function}
   */
@@ -1073,6 +1073,10 @@ function countADSPresent (dataBuffer) {
 * @param dataBuffer - The buffer of some length to parse
 * @returns {boolean} - True if the `$$$` was found.
 */
+// TODO: StreamSearch is optimized to search incoming chunks of data, streaming in,
+//       but a new search is constructed here with every call.  This is not making use
+//       of StreamSearch's optimizations; the object should be preserved between chunks,
+//       and only fed the new data.  TODO: also check other uses of StreamSearch
 function doesBufferHaveEOT (dataBuffer) {
   const s = new StreamSearch(new Buffer(k.OBCIParseEOT));
 
@@ -1083,7 +1087,7 @@ function doesBufferHaveEOT (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
@@ -1101,7 +1105,7 @@ function findV2Firmware (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
@@ -1119,7 +1123,7 @@ function isFailureInBuffer (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
@@ -1137,7 +1141,7 @@ function isSuccessInBuffer (dataBuffer) {
   s.push(dataBuffer);
 
   // Check and see if there is a match
-  return s.matches === 1;
+  return s.matches >= 1;
 }
 
 /**
@@ -1164,6 +1168,9 @@ function isTimeSyncSetConfirmationInBuffer (dataBuffer) {
           return false;
         }
       default:
+        if (dataBuffer[0] === k.OBCISyncTimeSent.charCodeAt(0) && dataBuffer[1] === k.OBCIByteStart) {
+          return true;
+        }
         for (var i = 1; i < bufferLength; i++) {
           // The base case (last one)
           // console.log(i)
