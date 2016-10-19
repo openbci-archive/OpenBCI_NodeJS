@@ -335,7 +335,7 @@ function OpenBCISimulatorFactory () {
       case k.OBCIRadioCmdChannelSet:
         if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
           if (!this.options.boardFailure) {
-            if (dataBuffer[2] < k.OBCIRadioChannelMax) {
+            if (dataBuffer[2] <= k.OBCIRadioChannelMax) {
               this.channelNumber = dataBuffer[2];
               this.hostChannelNumber = this.channelNumber;
               this._printSuccess();
@@ -354,7 +354,7 @@ function OpenBCISimulatorFactory () {
         break;
       case k.OBCIRadioCmdChannelSetOverride:
         if (this.options.firmwareVersion === k.OBCIFirmwareV2) {
-          if (dataBuffer[2] < k.OBCIRadioChannelMax) {
+          if (dataBuffer[2] <= k.OBCIRadioChannelMax) {
             if (dataBuffer[2] === this.channelNumber) {
               this.options.boardFailure = false;
             } else {
