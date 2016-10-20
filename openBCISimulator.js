@@ -34,8 +34,10 @@ function OpenBCISimulatorFactory () {
     stream.Stream.call(this);
 
     /** Configuring Options */
-    for (var o in _options) {
+    var o;
+    for (o in _options) {
       var userValue = options[o];
+      delete options[o];
 
       if (typeof _options[o] === 'object') {
         // an array specifying a list of choices
@@ -56,6 +58,8 @@ function OpenBCISimulatorFactory () {
         }
       }
     }
+
+    for (o in options) throw new Error('"' + o + '" is not a valid option');
 
     this.options = opts;
 
