@@ -19,19 +19,19 @@ function OpenBCIFactory () {
   var factory = this;
 
   var _options = {
-    boardType: k.OBCIBoardDefault,
-    baudrate: 115200,
+    boardType: [k.OBCIBoardDefault, k.OBCIBoardDaisy, k.OBCIBoardGanglion],
+    baudRate: 115200,
     simulate: false,
     simulatorBoardFailure: false,
     simulatorDaisyModuleAttached: false,
-    simulatorFirmwareVersion: k.OBCIFirmwareV1,
-    simulatorFragmentation: k.OBCISimulatorFragmentationNone,
+    simulatorFirmwareVersion: [k.OBCIFirmwareV1, k.OBCIFirmwareV2],
+    simulatorFragmentation: [k.OBCISimulatorFragmentationNone, k.OBCISimulatorFragmentationRandom, k.OBCISimulatorFragmentationFullBuffers, k.OBCISimulatorFragmentationOneByOne],
     simulatorLatencyTime: 16,
     simulatorBufferSize: 4096,
     simulatorHasAccelerometer: true,
     simulatorInternalClockDrift: 0,
     simulatorInjectAlpha: true,
-    simulatorInjectLineNoise: '60Hz',
+    simulatorInjectLineNoise: [k.OBCISimulatorLineNoiseHz60, k.OBCISimulatorLineNoiseHz50, k.OBCISimulatorLineNoiseNone],
     simulatorSampleRate: 250,
     simulatorSerialPortFailure: false,
     sntpTimeSync: false,
@@ -120,42 +120,28 @@ function OpenBCIFactory () {
     stream.Stream.call(this);
 
     /** Configuring Options */
-    opts.boardType = options.boardType || options.boardtype || _options.boardType;
-    opts.baudRate = options.baudRate || options.baudrate || _options.baudrate;
-    opts.simulate = options.simulate || _options.simulate;
-    opts.simulatorBoardFailure = options.simulatorBoardFailure || options.simulatorboardfailure || _options.simulatorBoardFailure;
-    opts.simulatorDaisyModuleAttached = options.simulatorDaisyModuleAttached || options.simulatordaisymoduleattached || _options.simulatorDaisyModuleAttached;
-    opts.simulatorFirmwareVersion = options.simulatorFirmwareVersion || options.simulatorfirmwareversion || _options.simulatorFirmwareVersion;
-    if (opts.simulatorFirmwareVersion !== k.OBCIFirmwareV1 && opts.simulatorFirmwareVersion !== k.OBCIFirmwareV2) {
-      opts.simulatorFirmwareVersion = k.OBCIFirmwareV1;
+    for (var o in _options) {
+      var userValue = (o in options) ? options[o] : options[o.toLowerCase()];
+
+      if (typeof _options[o] === 'object') {
+        // an array specifying a list of choices
+        // if the choice is not in the list, the first one is defaulted to
+
+        if (_options[o].indexOf(userValue) !== -1) {
+          opts[o] = userValue;
+        } else {
+          opts[o] = _options[o][0];
+        }
+      } else {
+        // anything else takes the user value if provided, otherwise is a default
+
+        if (userValue !== undefined) {
+          opts[o] = userValue;
+        } else {
+          opts[o] = _options[o];
+        }
+      }
     }
-    opts.simulatorFragmentation = options.simulatorFragmentation || options.simulatorfragmentation || _options.simulatorFragmentation;
-    if (opts.simulatorFragmentation !== k.OBCISimulatorFragmentationRandom && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationFullBuffers && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationOneByOne && opts.simulatorFragmentation !== k.OBCISimulatorFragmentationNone) {
-      opts.simulatorFragmentation = k.OBCISimulatorFragmentationNone;
-    }
-    opts.simulatorLatencyTime = options.simulatorLatencyTime || options.simulatorlatencytime || _options.simulatorLatencyTime;
-    opts.simulatorBufferSize = options.simulatorBufferSize || options.simulatorbuffersize || _options.simulatorBufferSize;
-    if (options.simulatorHasAccelerometer === false || options.simulatorhasaccelerometer === false) {
-      opts.simulatorHasAccelerometer = false;
-    } else {
-      opts.simulatorHasAccelerometer = _options.simulatorHasAccelerometer;
-    }
-    opts.simulatorInternalClockDrift = options.simulatorInternalClockDrift || options.simulatorinternalclockdrift || _options.simulatorInternalClockDrift;
-    if (options.simulatorInjectAlpha === false || options.simulatorinjectalpha === false) {
-      opts.simulatorInjectAlpha = false;
-    } else {
-      opts.simulatorInjectAlpha = _options.simulatorInjectAlpha;
-    }
-    opts.simulatorInjectLineNoise = options.simulatorInjectLineNoise || options.simulatorinjectlinenoise || _options.simulatorInjectLineNoise;
-    if (opts.simulatorInjectLineNoise !== '60Hz' && opts.simulatorInjectLineNoise !== '50Hz' && opts.simulatorInjectLineNoise !== 'none') {
-      opts.simulatorInjectLineNoise = '60Hz';
-    }
-    opts.simulatorSampleRate = options.simulatorSampleRate || options.simulatorsamplerate || _options.simulatorSampleRate;
-    opts.simulatorSerialPortFailure = options.simulatorSerialPortFailure || options.simulatorserialportfailure || _options.simulatorSerialPortFailure;
-    opts.sntpTimeSync = options.sntpTimeSync || options.sntptimesync || _options.sntpTimeSync;
-    opts.sntpTimeSyncHost = options.sntpTimeSyncHost || options.sntptimesynchost || _options.sntpTimeSyncHost;
-    opts.sntpTimeSyncPort = options.sntpTimeSyncPort || options.sntptimesyncport || _options.sntpTimeSyncPort;
-    opts.verbose = options.verbose || _options.verbose;
 
     // Set to global options object
     this.options = opts;
