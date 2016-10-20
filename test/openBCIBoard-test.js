@@ -525,18 +525,113 @@ describe('openbci-sdk', function () {
         });
       });
     });
-    describe('#write', function () {
-      before(function (done) {
+    describe('#connected', function () {
+      beforeEach(function (done) {
+        ourBoard.connect(masterPortName).catch(done);
+
+        ourBoard.once('ready', done);
+      });
+      afterEach(function (done) {
         if (ourBoard.connected) {
-          ourBoard.disconnect().then(() => {
-            done();
-          });
+          ourBoard.disconnect().then(done, () => done());
         } else {
           done();
         }
       });
-      it('rejects when not connected', function (done) {
-        ourBoard.write('b').should.be.rejected.and.notify(done);
+      it('is connected after connection', function () {
+        expect(ourBoard.connected).to.be.true;
+      });
+      it('is no longer connected after clean disconnection', function (done) {
+        ourBoard.disconnect().then(() => {
+          expect(ourBoard.connected).to.be.false;
+          done();
+        }, done);
+      });
+      it('is no longer connected if stream closes itself', function (done) {
+        ourBoard.serial.close(() => {
+          expect(ourBoard.connected).to.be.false;
+          done();
+        });
+      });
+      it('is no longer connected after a stream error', function () {
+        var errorDamper = () => true;
+        ourBoard.on('error', errorDamper);
+        ourBoard.serial.emit('error', new Error('test error'));
+        expect(ourBoard.connected).to.be.false;
+        ourBoard.removeListener('error', errorDamper);
+      });
+    });
+    describe('#write', function () {
+      beforeEach(function (done) {
+        ourBoard.connect(masterPortName).catch(done);
+
+        ourBoard.once('ready', done);
+      });
+      afterEach(function (done) {
+        if (ourBoard.connected) {
+          ourBoard.disconnect().then(done, () => done());
+        } else {
+          done();
+        }
+      });
+      it('rejects after clean disconnection', function (done) {
+        ourBoard.disconnect().then(() => {
+          ourBoard.write(k.OBCIMiscSoftReset).should.be.rejected.and.notify(done);
+        }, done);
+      });
+      it('rejects if stream closes itself', function (done) {
+        ourBoard.serial.close(() => {
+          ourBoard.write(k.OBCIMiscSoftReset).should.be.rejected.and.notify(done);
+        });
+      });
+      it('rejects after a stream error', function (done) {
+        var errorDamper = () => true;
+        ourBoard.on('error', errorDamper);
+        ourBoard.serial.emit('error', new Error('test error'));
+        ourBoard.write(k.OBCIMiscSoftReset).should.be.rejected.and.notify(done);
+        ourBoard.removeListener('error', errorDamper);
+      });
+      it('does not allow data to be sent after clean disconnection', function (done) {
+        var writeSpy1 = sinon.spy(ourBoard.serial, 'write');
+        var byteToWrite = k.OBCISDLogStop;
+        var writeWhileConnected = function () {
+          var commands = [];
+          while (commands.length < 4) commands.push(byteToWrite);
+          ourBoard.write(commands).then(() => {
+            if (ourBoard.connected) {
+              writeSpy1.reset();
+              setTimeout(writeWhileConnected, 10 * (commands.length - 1));
+            } else {
+              done('wrote when not connected');
+            }
+          }, err => {
+            if (ourBoard.connected) {
+              done(err);
+            } else {
+              ourBoard.connect(masterPortName).catch(done);
+              var writeSpy2 = sinon.spy(ourBoard.serial, 'write');
+              ourBoard.once('ready', () => {
+                writeSpy2.should.equal(ourBoard.serial.write);
+                writeSpy1.should.have.not.been.called;
+                writeSpy2.should.have.not.been.calledWith(byteToWrite);
+                writeSpy1.restore();
+                writeSpy2.restore();
+                done();
+              });
+            }
+          });
+        };
+        writeWhileConnected();
+        ourBoard.disconnect().catch(done);
+      });
+      it('disconnects immediately without performing buffered writes', function (done) {
+        var writeSpy = sinon.spy(ourBoard.serial, 'write');
+        ourBoard.write(k.OBCISDLogStop);
+        ourBoard.disconnect().then(() => {
+          writeSpy.should.have.not.been.called;
+          writeSpy.restore();
+          done();
+        });
       });
     });
     // good

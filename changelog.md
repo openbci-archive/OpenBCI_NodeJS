@@ -22,6 +22,8 @@
 * Fixed bug where time sync replies that began a buffered chunk were ignored
 * Fixed bug where simulator would output wrong version in its reset message
 * Fixed bug where resources were not cleaned up if connect was called twice
+* Fixed bug where serial data was written after disconnection
+* Fixed bug where unexpected disconnection was not detected
 
 # 1.3.3
 
