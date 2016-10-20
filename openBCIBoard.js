@@ -295,14 +295,24 @@ function OpenBCIFactory () {
       });
       boardSerial.once('close', () => {
         if (this.options.verbose) console.log('Serial Port Closed');
-        this.emit('close');
+        this._disconnected();
       });
       /* istanbul ignore next */
       boardSerial.once('error', (err) => {
         if (this.options.verbose) console.log('Serial Port Error');
         this.emit('error', err);
+        this._disconnected();
       });
     });
+  };
+
+  /**
+  * @description Called once when for any reason the serial port is no longer open.
+  * @private
+  */
+  OpenBCIBoard.prototype._disconnected = function () {
+    this.connected = false;
+    this.emit('close');
   };
 
   /**
@@ -324,12 +334,13 @@ function OpenBCIFactory () {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         if (!this.connected) reject('no board connected');
-        this.connected = false;
         if (this.serial) {
+          // serial emitting 'close' will call _disconnected
           this.serial.close(() => {
             resolve();
           });
         } else {
+          this._disconnected();
           resolve();
         }
       }, timeout);
@@ -348,7 +359,7 @@ function OpenBCIFactory () {
     return new Promise((resolve, reject) => {
       if (this.streaming) reject('Error [.streamStart()]: Already streaming');
       this.streaming = true;
-      this._reset();
+      this._reset_ABANDONED(); // framework is incomplete but looks useful
       this.write(k.OBCIStreamStart)
         .then(() => {
           setTimeout(() => {
@@ -2111,7 +2122,8 @@ function OpenBCIFactory () {
   * @description Reset the master buffer and reset the number of bad packets.
   * @author AJ Keller (@pushtheworldllc)
   */
-  OpenBCIBoard.prototype._reset = function () {
+  // TODO: nothing is using these constructs, but they look like good constructs.  See contents of masterBufferMaker()
+  OpenBCIBoard.prototype._reset_ABANDONED = function () {
     this.masterBuffer = masterBufferMaker();
     this.badPackets = 0;
   };
