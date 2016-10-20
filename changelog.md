@@ -12,12 +12,14 @@
 ### Breaking Changes
 
 * The setting for simulatorInjectLineNoise has changed from `None` to `none`
+* connect() will now fail if already connected
 
 ### Bug Fixes
 
 * Fixed bug where early packet fragments were dropped after board reset
 * Fixed bug where time sync replies that began a buffered chunk were ignored
 * Fixed bug where simulator would output wrong version in its reset message
+* Fixed bug where resources were not cleaned up if connect was called twice
 
 # 1.3.3
 
