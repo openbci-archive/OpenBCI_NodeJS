@@ -417,6 +417,40 @@ describe('openbci-sdk', function () {
         }).catch(err => done(err));
     });
   });
+  describe('#debug', function () {
+    before(function (done) {
+      ourBoard = new openBCIBoard.OpenBCIBoard({
+        simulate: true,
+        fragmentation: k.OBCISimulatorFragmentationNone,
+        debug: true
+      });
+      ourBoard.connect(k.OBCISimulatorPortName).catch(done);
+      ourBoard.once('ready', () => {
+        sinon.spy(console, 'log');
+        done();
+      });
+    });
+    after(function (done) {
+      console.log.restore();
+      ourBoard.disconnect().then(done, done);
+    });
+    it('outputs a packet when written', done => {
+      console.log.reset();
+      ourBoard.write(k.OBCIStreamStop).catch(done);
+      setTimeout(() => {
+        console.log.should.have.been.calledWithMatch(k.OBCIStreamStop);
+        done();
+      }, 20);
+    });
+    it('outputs a packet when received', done => {
+      console.log.reset();
+      ourBoard.sdStop().catch(done);
+      ourBoard.once('eot', () => {
+        console.log.should.have.been.calledWithMatch('$');
+        done();
+      });
+    });
+  });
   describe('#boardTests', function () {
     this.timeout(3000);
     before(function () {
