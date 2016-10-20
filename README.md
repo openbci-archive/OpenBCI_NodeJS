@@ -408,6 +408,7 @@ Board optional configurations.
 * `sntpTimeSyncHost` - {String} The sntp server to use, can be either sntp or ntp (Defaults `pool.ntp.org`).
 * `sntpTimeSyncPort` - {Number} The port to access the sntp server (Defaults `123`)
 * `verbose` {Boolean} - Print out useful debugging events (Default `false`)
+* `debug` {Boolean} - Print out a raw dump of bytes sent and received (Default `false`)
 
 **Note, we have added support for either all lowercase OR camel case for the options, use whichever style you prefer.**
 

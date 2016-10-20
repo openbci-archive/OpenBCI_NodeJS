@@ -37,7 +37,8 @@ function OpenBCIFactory () {
     sntpTimeSync: false,
     sntpTimeSyncHost: 'pool.ntp.org',
     sntpTimeSyncPort: 123,
-    verbose: false
+    verbose: false,
+    debug: false
   };
 
   /**
@@ -109,6 +110,8 @@ function OpenBCIFactory () {
   *     - `sntpTimeSyncPort` - {Number} The port to access the ntp server. (Defaults `123`)
   *
   *     - `verbose` {Boolean} - Print out useful debugging events
+  *
+  *     - `debug` {Boolean} - Print out a raw dump of bytes sent and received
   *
   * @constructor
   * @author AJ Keller (@pushtheworldllc)
@@ -479,6 +482,8 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype._writeAndDrain = function (data) {
+    this._debugBytes('>>>', data);
+
     return new Promise((resolve, reject) => {
       if (!this.serial) reject('Serial port not open');
       this.serial.write(data, (error) => {
@@ -1589,6 +1594,39 @@ function OpenBCIFactory () {
   };
 
   /**
+  * @description Output passed bytes on the console as a hexdump, if enabled
+  * @param prefix - label to show to the left of bytes
+  * @param data - bytes to output, a buffer or string
+  * @private
+  */
+  OpenBCIBoard.prototype._debugBytes = function (prefix, data) {
+    if (!this.options.debug) return;
+
+    if (typeof data === 'string') data = new Buffer(data);
+
+    console.log('Debug bytes:');
+
+    for (var j = 0; j < data.length;) {
+      var hexPart = '';
+      var ascPart = '';
+      for (var end = Math.min(data.length, j + 16); j < end; ++j) {
+        var byt = data[j];
+
+        var hex = ('0' + byt.toString(16)).slice(-2);
+        hexPart += hex + (((j & 0xf) === 0x8) ? '  ' : ' '); // puts an extra space 8 bytes in
+
+        var asc = (byt >= 0x20 && byt < 0x7f) ? String.fromCharCode(byt) : '.';
+        ascPart += asc;
+      }
+
+      // pad to fixed width for alignment
+      hexPart = (hexPart + '                                                   ').substring(0, 3 * 16 + 2);
+
+      console.log(prefix + '  ' + hexPart + '|' + ascPart + '|');
+    }
+  };
+
+  /**
   * @description Consider the '_processBytes' method to be the work horse of this
   *              entire framework. This method gets called any time there is new
   *              data coming in on the serial port. If you are familiar with the
@@ -1601,6 +1639,8 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype._processBytes = function (data) {
+    this._debugBytes(this.curParsingMode + '<<', data);
+
     // Concat old buffer
     var oldDataBuffer = null;
     if (this.buffer) {

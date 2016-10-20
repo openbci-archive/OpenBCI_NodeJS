@@ -3,6 +3,7 @@
 ### New Features
 
 * Now simulates configurable packet fragmentation, buffer size, and latency timer
+* Provide option to give a debug dump of serial traffic
 
 ### Enhancements
 
