@@ -205,7 +205,27 @@ describe('openBCISimulator', function () {
       simulator._startStream();
     });
   });
-  describe(`firmwareVersion1`, function () {});
+  describe(`firmwareVersion1`, function () {
+    var simulator;
+    beforeEach(() => {
+      simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
+        firmwareVersion: 'v1'
+      });
+    });
+    afterEach(() => {
+      simulator = null;
+    });
+    describe('reset', function () {
+      it('should not be v2', function (done) {
+        simulator.on('data', function (data) {
+          console.log(data.toString());
+          expect(data.toString().match('v2')).to.equal(null);
+          done();
+        });
+        simulator.write(k.OBCIMiscSoftReset);
+      });
+    });
+  });
   describe(`firmwareVersion2`, function () {
     var simulator;
     beforeEach(() => {
@@ -215,6 +235,16 @@ describe('openBCISimulator', function () {
     });
     afterEach(() => {
       simulator = null;
+    });
+    describe('reset', function () {
+      it('should be v2', function (done) {
+        simulator.on('data', function (data) {
+          console.log(data.toString());
+          expect(data.toString().match('v2')).to.not.equal(null);
+          done();
+        });
+        simulator.write(k.OBCIMiscSoftReset);
+      });
     });
     describe('_processPrivateRadioMessage', function () {
       describe('OBCIRadioCmdChannelGet', function () {
