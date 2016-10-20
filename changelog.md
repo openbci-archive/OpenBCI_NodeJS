@@ -17,6 +17,7 @@
 
 * Fixed bug where early packet fragments were dropped after board reset
 * Fixed bug where time sync replies that began a buffered chunk were ignored
+* Fixed bug where simulator would output wrong version in its reset message
 
 # 1.3.3
 

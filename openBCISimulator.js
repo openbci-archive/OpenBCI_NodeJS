@@ -190,7 +190,7 @@ function OpenBCISimulatorFactory () {
       case k.OBCIMiscSoftReset:
         if (this.stream) clearInterval(this.stream);
         this.streaming = false;
-        this._output(new Buffer(`OpenBCI V3 Simulator On Board ADS1299 Device ID: 0x12345 ${this.options.daisy ? `On Daisy ADS1299 Device ID: 0xFFFFF\n` : ``} LIS3DH Device ID: 0x38422 ${this.options.firmware === k.OBCIFirmwareV2 ? `Firmware: v2.0.0\n` : ``}$$$`));
+        this._output(new Buffer(`OpenBCI V3 Simulator On Board ADS1299 Device ID: 0x12345 ${this.options.daisy ? `On Daisy ADS1299 Device ID: 0xFFFFF\n` : ``} LIS3DH Device ID: 0x38422 ${this.options.firmwareVersion === k.OBCIFirmwareV2 ? `Firmware: v2.0.0\n` : ``}$$$`));
         break;
       case k.OBCISDLogForHour1:
       case k.OBCISDLogForHour2:
