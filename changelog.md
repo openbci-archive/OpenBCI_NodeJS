@@ -2,7 +2,8 @@
 
 ### New Features
 
-* Three new initialization options: `simulatorFragmentation`, `simulatorBufferSize`, and `simulatorLatencyTimer`.  Together, these new options enable a more _realistic_ serial port simulation, mimicking different potential user computer systems.
+* Three new initialization options: `simulatorFragmentation`, `simulatorBufferSize`, and `simulatorLatencyTimer`.  Together, these enable a more _realistic_ serial port simulation, mimicking different potential user computer systems.
+* New option `debug` gives a live dump of serial traffic on the console if enabled
 
 ### Enhancements
 
