@@ -113,6 +113,14 @@ describe('openBCISimulator', function () {
       });
       expect(simulator.options.drift).to.be.lessThan(0);
     });
+    it('should throw if passed an invalid option', function (done) {
+      try {
+        simulator = new openBCISimulator.OpenBCISimulator(portName, {
+          foo: 'bar'
+        });
+        done('did not throw');
+      } catch (e) { done(); }
+    });
   });
   describe(`_startStream`, function () {
     it('should return a packet with sample data in it', function (done) {

@@ -2,7 +2,7 @@
 
 ### New Features
 
-* Now simulates configurable packet fragmentation, buffer size, and latency timer
+* Three new initialization options: `simulatorFragmentation`, `simulatorBufferSize`, and `simulatorLatencyTimer`.  Together, these new options enable a more _realistic_ serial port simulation, mimicking different potential user computer systems.
 
 ### Enhancements
 
@@ -13,6 +13,7 @@
 
 * The setting for simulatorInjectLineNoise has changed from `None` to `none`
 * connect() will now fail if already connected
+* The constructor will throw an error now if an invalid option is passed
 
 ### Bug Fixes
 
