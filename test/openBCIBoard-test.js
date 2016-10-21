@@ -420,8 +420,6 @@ describe('openbci-sdk', function () {
   describe('#debug', function () {
     before(function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
-        simulate: true,
-        fragmentation: k.OBCISimulatorFragmentationNone,
         debug: true
       });
       ourBoard.connect(k.OBCISimulatorPortName).catch(done);

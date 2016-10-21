@@ -109,9 +109,9 @@ function OpenBCIFactory () {
   *
   *     - `sntpTimeSyncPort` - {Number} The port to access the ntp server. (Defaults `123`)
   *
-  *     - `verbose` {Boolean} - Print out useful debugging events
+  *     - `verbose` {Boolean} - Print out useful debugging events. (Default `false`)
   *
-  *     - `debug` {Boolean} - Print out a raw dump of bytes sent and received
+  *     - `debug` {Boolean} - Print out a raw dump of bytes sent and received. (Default `false`)
   *
   * @constructor
   * @author AJ Keller (@pushtheworldllc)
@@ -1613,16 +1613,17 @@ function OpenBCIFactory () {
         var byt = data[j];
 
         var hex = ('0' + byt.toString(16)).slice(-2);
-        hexPart += hex + (((j & 0xf) === 0x8) ? '  ' : ' '); // puts an extra space 8 bytes in
+        hexPart += (((j & 0xf) === 0x8) ? '  ' : ' '); // puts an extra space 8 bytes in
+        hexPart += hex;
 
         var asc = (byt >= 0x20 && byt < 0x7f) ? String.fromCharCode(byt) : '.';
         ascPart += asc;
       }
 
       // pad to fixed width for alignment
-      hexPart = (hexPart + '                                                   ').substring(0, 3 * 16 + 2);
+      hexPart = (hexPart + '                                                   ').substring(0, 3 * 17);
 
-      console.log(prefix + '  ' + hexPart + '|' + ascPart + '|');
+      console.log(prefix + ' ' + hexPart + '|' + ascPart + '|');
     }
   };
 
