@@ -123,8 +123,11 @@ function OpenBCIFactory () {
     stream.Stream.call(this);
 
     /** Configuring Options */
-    for (var o in _options) {
-      var userValue = (o in options) ? options[o] : options[o.toLowerCase()];
+    var o;
+    for (o in _options) {
+      var userOption = (o in options) ? o : o.toLowerCase();
+      var userValue = options[userOption];
+      delete options[userOption];
 
       if (typeof _options[o] === 'object') {
         // an array specifying a list of choices
@@ -145,6 +148,8 @@ function OpenBCIFactory () {
         }
       }
     }
+
+    for (o in options) throw new Error('"' + o + '" is not a valid option');
 
     // Set to global options object
     this.options = opts;
@@ -230,9 +235,9 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.connect = function (portName) {
-    this.connected = false;
-
     return new Promise((resolve, reject) => {
+      if (this.connected) return reject('already connected!');
+
       // If we are simulating, set boardSerial to fake name
       var boardSerial;
       /* istanbul ignore else */

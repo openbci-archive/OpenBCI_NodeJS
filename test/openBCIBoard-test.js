@@ -321,6 +321,14 @@ describe('openbci-sdk', function () {
       });
       (ourBoard.impedanceArray.length).should.equal(4);
     });
+    it('should throw if passed an invalid option', function (done) {
+      try {
+        ourBoard = new openBCIBoard.OpenBCIBoard({
+          foo: 'bar'
+        });
+        done('did not throw');
+      } catch (e) { done(); }
+    });
   });
   describe('#simulator', function () {
     it('can enable simulator after constructor', function (done) {
@@ -472,6 +480,15 @@ describe('openbci-sdk', function () {
       if (spy) spy.reset();
     });
     describe('#connect/disconnect/streamStart/streamStop', function () {
+      it('rejects if already connected', function (done) {
+        ourBoard.connect(masterPortName).catch(err => done(err));
+
+        ourBoard.once('ready', () => {
+          ourBoard.connect(masterPortName).should.be.rejected
+            .then(() => ourBoard.disconnect())
+            .should.notify(done);
+        });
+      });
       it('gets the ready signal from the board and sends a stop streaming command before disconnecting', function (done) {
         // spy = sinon.spy(ourBoard,"_writeAndDrain")
 
@@ -2651,7 +2668,7 @@ $$$`);
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true,
         simulatorFirmwareVersion: 'v2',
-        fragmentation: k.OBCISimulatorFragmentationRandom
+        simulatorFragmentation: k.OBCISimulatorFragmentationRandom
       });
       ourBoard.connect(masterPortName).catch(err => done(err));
 
@@ -2809,7 +2826,7 @@ $$$`);
       if (runHardwareValidation) {
         board = new openBCIBoard.OpenBCIBoard({
           verbose: true,
-          fragmentation: k.OBCISimulatorFragmentationRandom
+          simulatorFragmentation: k.OBCISimulatorFragmentationRandom
         });
         // Use the line below to output the
         wstream = fs.createWriteStream('hardwareVoltageOutputAll.txt');
@@ -2893,7 +2910,7 @@ describe('#daisy', function () {
       verbose: true,
       simulatorFirmwareVersion: 'v2',
       simulatorDaisyModuleAttached: true,
-      fragmentation: k.OBCISimulatorFragmentationRandom
+      simulatorFragmentation: k.OBCISimulatorFragmentationRandom
     });
 
     var useSim = () => {
@@ -2972,7 +2989,7 @@ describe('#syncWhileStreaming', function () {
     ourBoard = new openBCIBoard.OpenBCIBoard({
       verbose: true,
       simulatorFirmwareVersion: 'v2',
-      fragmentation: k.OBCISimulatorFragmentationRandom
+      simulatorFragmentation: k.OBCISimulatorFragmentationRandom
     });
     var useSim = () => {
       ourBoard.simulatorEnable()
