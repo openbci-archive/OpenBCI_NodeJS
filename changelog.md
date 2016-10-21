@@ -12,13 +12,15 @@
 ### Breaking Changes
 
 * The setting for simulatorInjectLineNoise has changed from `None` to `none`
-* The constructor will throw an error now in an invalid option is passed
+* connect() will now fail if already connected
+* The constructor will throw an error now if an invalid option is passed
 
 ### Bug Fixes
 
 * Fixed bug where early packet fragments were dropped after board reset
 * Fixed bug where time sync replies that began a buffered chunk were ignored
 * Fixed bug where simulator would output wrong version in its reset message
+* Fixed bug where resources were not cleaned up if connect was called twice
 
 # 1.3.3
 

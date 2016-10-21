@@ -232,9 +232,9 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.connect = function (portName) {
-    this.connected = false;
-
     return new Promise((resolve, reject) => {
+      if (this.connected) return reject('already connected!');
+
       // If we are simulating, set boardSerial to fake name
       var boardSerial;
       /* istanbul ignore else */

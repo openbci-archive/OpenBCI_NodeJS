@@ -448,6 +448,15 @@ describe('openbci-sdk', function () {
       if (spy) spy.reset();
     });
     describe('#connect/disconnect/streamStart/streamStop', function () {
+      it('rejects if already connected', function (done) {
+        ourBoard.connect(masterPortName).catch(err => done(err));
+
+        ourBoard.once('ready', () => {
+          ourBoard.connect(masterPortName).should.be.rejected
+            .then(() => ourBoard.disconnect())
+            .should.notify(done);
+        });
+      });
       it('gets the ready signal from the board and sends a stop streaming command before disconnecting', function (done) {
         // spy = sinon.spy(ourBoard,"_writeAndDrain")
 
