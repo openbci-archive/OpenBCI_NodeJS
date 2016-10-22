@@ -81,8 +81,8 @@ describe('openbci-sdk', function () {
       expect(board.options.verbose).to.be.false;
       expect(board.sampleRate()).to.equal(250);
       expect(board.numberOfChannels()).to.equal(8);
-      expect(board.connected).to.be.false;
-      expect(board.streaming).to.be.false;
+      expect(board.isConnected()).to.be.false;
+      expect(board.isStreaming()).to.be.false;
     });
     it('should be able to set ganglion mode', () => {
       var board = new openBCIBoard.OpenBCIBoard({
@@ -337,18 +337,20 @@ describe('openbci-sdk', function () {
       });
       ourBoard.simulatorEnable().should.be.fulfilled.and.notify(done);
     });
-    it('should disable sim and call disconnected', function (done) {
+    it('should start sim and call disconnected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true
       });
-      var disconnectSpy = sinon.spy(ourBoard, 'disconnect');
+      var disconnectStub = sinon.stub(ourBoard, 'disconnect').returns(Promise.resolve());
+      var isConnectedStub = sinon.stub(ourBoard, 'isConnected').returns(true);
       ourBoard.options.simulate.should.equal(false);
-      ourBoard.connected = true;
       ourBoard.simulatorEnable().then(() => {
-        disconnectSpy.should.have.been.calledOnce;
+        disconnectStub.should.have.been.calledOnce;
+        disconnectStub.restore();
+        isConnectedStub.restore();
         ourBoard.options.simulate.should.equal(true);
         done();
-      });
+      }, done);
     });
     it('should not enable the simulator if already simulating', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -370,18 +372,21 @@ describe('openbci-sdk', function () {
       });
       ourBoard.simulatorDisable().should.be.rejected.and.notify(done);
     });
-    it('should start sim and call disconnected', function (done) {
+    it('should disable sim and call disconnected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true,
         simulate: true
       });
-      var disconnectSpy = sinon.spy(ourBoard, 'disconnect');
-      ourBoard.options.simulate.should.equal(true);
-      ourBoard.connected = true;
-      ourBoard.simulatorDisable().then(() => {
-        disconnectSpy.should.have.been.calledOnce;
-        ourBoard.options.simulate.should.equal(false);
-        done();
+      ourBoard.connect(k.OBCISimulatorPortName).catch(done);
+      ourBoard.on('ready', function () {
+        var disconnectSpy = sinon.spy(ourBoard, 'disconnect');
+        ourBoard.options.simulate.should.equal(true);
+        ourBoard.simulatorDisable().then(() => {
+          disconnectSpy.should.have.been.calledOnce;
+          disconnectSpy.restore();
+          ourBoard.options.simulate.should.equal(false);
+          done();
+        }, done);
       });
     });
     it('should be able to propagate constructor options to simulator', function (done) {
@@ -468,7 +473,7 @@ describe('openbci-sdk', function () {
       spy = sinon.spy(ourBoard, '_writeAndDrain');
     });
     after(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         });
@@ -499,7 +504,7 @@ describe('openbci-sdk', function () {
 
           ourBoard.once('sample', (sample) => { // wait till we get a sample
             ourBoard.disconnect().then(() => { // call disconnect
-              // console.log('Device is streaming: ' + ourBoard.streaming ? 'true' : 'false')
+              // console.log('Device is streaming: ' + ourBoard.isStreaming() ? 'true' : 'false')
               setTimeout(() => {
                 spy.should.have.been.calledWithMatch(k.OBCIStreamStop);
                 var conditionalTimeout = realBoard ? 300 : 0;
@@ -532,24 +537,24 @@ describe('openbci-sdk', function () {
         ourBoard.once('ready', done);
       });
       afterEach(function (done) {
-        if (ourBoard.connected) {
+        if (ourBoard.isConnected()) {
           ourBoard.disconnect().then(done, () => done());
         } else {
           done();
         }
       });
       it('is connected after connection', function () {
-        expect(ourBoard.connected).to.be.true;
+        expect(ourBoard.isConnected()).to.be.true;
       });
       it('is no longer connected after clean disconnection', function (done) {
         ourBoard.disconnect().then(() => {
-          expect(ourBoard.connected).to.be.false;
+          expect(ourBoard.isConnected()).to.be.false;
           done();
         }, done);
       });
       it('is no longer connected if stream closes itself', function (done) {
         ourBoard.serial.close(() => {
-          expect(ourBoard.connected).to.be.false;
+          expect(ourBoard.isConnected()).to.be.false;
           done();
         });
       });
@@ -557,7 +562,7 @@ describe('openbci-sdk', function () {
         var errorDamper = () => true;
         ourBoard.on('error', errorDamper);
         ourBoard.serial.emit('error', new Error('test error'));
-        expect(ourBoard.connected).to.be.false;
+        expect(ourBoard.isConnected()).to.be.false;
         ourBoard.removeListener('error', errorDamper);
       });
     });
@@ -568,7 +573,7 @@ describe('openbci-sdk', function () {
         ourBoard.once('ready', done);
       });
       afterEach(function (done) {
-        if (ourBoard.connected) {
+        if (ourBoard.isConnected()) {
           ourBoard.disconnect().then(done, () => done());
         } else {
           done();
@@ -598,14 +603,14 @@ describe('openbci-sdk', function () {
           var commands = [];
           while (commands.length < 4) commands.push(byteToWrite);
           ourBoard.write(commands).then(() => {
-            if (ourBoard.connected) {
+            if (ourBoard.isConnected()) {
               writeSpy1.reset();
               setTimeout(writeWhileConnected, 10 * (commands.length - 1));
             } else {
               done('wrote when not connected');
             }
           }, err => {
-            if (ourBoard.connected) {
+            if (ourBoard.isConnected()) {
               done(err);
             } else {
               ourBoard.connect(masterPortName).catch(done);
@@ -755,7 +760,7 @@ describe('openbci-sdk', function () {
     // bad
     describe('#channelOff', function () {
       before(function (done) {
-        if (!ourBoard.connected) {
+        if (!ourBoard.isConnected()) {
           ourBoard.connect(masterPortName)
             .then(done)
             .catch(err => done(err));
@@ -797,7 +802,7 @@ describe('openbci-sdk', function () {
     // good
     describe('#channelOn', function () {
       before(function (done) {
-        if (!ourBoard.connected) {
+        if (!ourBoard.isConnected()) {
           ourBoard.connect(masterPortName)
             .then(done)
             .catch(err => done(err));
@@ -830,7 +835,7 @@ describe('openbci-sdk', function () {
     describe('#channelSet', function () {
       this.timeout(6000);
       before(function (done) {
-        if (!ourBoard.connected) {
+        if (!ourBoard.isConnected()) {
           ourBoard.connect(masterPortName)
             .then(done)
             .catch(err => done(err));
@@ -868,7 +873,7 @@ describe('openbci-sdk', function () {
     describe('#impedancePrivates', function () {
       describe('disconnected', function () {
         before(function (done) {
-          if (ourBoard.connected) {
+          if (ourBoard.isConnected()) {
             ourBoard.disconnect()
               .then(done)
               .catch(err => done(err));
@@ -2023,7 +2028,7 @@ $$$`);
 
   describe('#radioChannelSet', function () {
     afterEach(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         }).catch(() => done);
@@ -2164,7 +2169,7 @@ $$$`);
   });
   describe('#radioChannelSetHostOverride', function () {
     afterEach(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         }).catch(() => done);
@@ -2272,7 +2277,7 @@ $$$`);
   });
   describe('#radioChannelGet', function () {
     afterEach(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         }).catch(() => done);
@@ -2353,7 +2358,7 @@ $$$`);
 
   describe('#radioPollTimeSet', function () {
     afterEach(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         }).catch(() => done);
@@ -2497,7 +2502,7 @@ $$$`);
 
   describe('#radioPollTimeGet', function () {
     afterEach(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         }).catch(() => done);
@@ -2578,7 +2583,7 @@ $$$`);
 
   describe('#radioBaudRateSet', function () {
     afterEach(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         }).catch(() => done);
@@ -2675,7 +2680,7 @@ $$$`);
 
   describe('#radioSystemStatusGet', function () {
     afterEach(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         }).catch(() => done);
@@ -2772,7 +2777,7 @@ $$$`);
       });
     });
     after(function (done) {
-      if (ourBoard.connected) {
+      if (ourBoard.isConnected()) {
         ourBoard.disconnect().then(() => {
           done();
         });
@@ -3041,7 +3046,7 @@ describe('#daisy', function () {
     });
   });
   after(function (done) {
-    if (ourBoard.connected) {
+    if (ourBoard.isConnected()) {
       ourBoard.disconnect().then(() => {
         done();
       }).catch(() => done);
@@ -3125,7 +3130,7 @@ describe('#syncWhileStreaming', function () {
     });
   });
   after(function (done) {
-    if (ourBoard.connected) {
+    if (ourBoard.isConnected()) {
       ourBoard.disconnect().then(() => {
         done();
       }).catch(() => done);
@@ -3227,7 +3232,7 @@ describe('#syncErrors', function () {
     });
   });
   after(function (done) {
-    if (ourBoard.connected) {
+    if (ourBoard.isConnected()) {
       ourBoard.disconnect().then(() => {
         done();
       }).catch(() => done);

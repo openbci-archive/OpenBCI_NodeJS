@@ -51,7 +51,7 @@ describe('#impedanceTesting', function () {
     });
   });
   after(done => {
-    if (ourBoard['connected']) {
+    if (ourBoard.isConnected()) {
       ourBoard.disconnect()
         .then(() => {
           done();

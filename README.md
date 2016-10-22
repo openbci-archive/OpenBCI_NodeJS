@@ -679,6 +679,16 @@ Sends command to turn off impedances for all channels and stop continuously calc
 
 **_Returns_** a promise, that fulfills when all the commands are sent to the internal write buffer
 
+### <a name="method-is-connected"></a> .isConnected()
+
+Checks if the driver is connected to a board.
+**_Returns_** a boolean, true if connected
+
+### <a name="method-is-streaming"></a> .isStreaming()
+
+Checks if the board is currently sending samples.
+**_Returns_** a boolean, true if streaming
+
 ### <a name="method-list-ports"></a> .listPorts()
 
 List available ports so the user can choose a device when not automatically found.
@@ -1026,13 +1036,13 @@ Either a single character or an Array of characters
 
 Sends a single character command to the board.
 ```js
-// ourBoard has fulfilled the promise on .connected() and 'ready' has been observed previously
+// ourBoard has fulfilled the promise on .connect() and 'ready' has been observed previously
 ourBoard.write('a');
 ```
 
 Sends an array of bytes
 ```js
-// ourBoard has fulfilled the promise on .connected() and 'ready' has been observed previously
+// ourBoard has fulfilled the promise on .connect() and 'ready' has been observed previously
 ourBoard.write(['x','0','1','0','0','0','0','0','0','X']);
 ```
 

@@ -109,6 +109,10 @@ function OpenBCISimulatorFactory () {
     this.outputLoopHandle = null;
   };
 
+  OpenBCISimulator.prototype.isOpen = function () {
+    return this.connected;
+  };
+
   // output only size bytes of the output buffer
   OpenBCISimulator.prototype._partialDrain = function (size) {
     if (size > this.outputBuffered) size = this.outputBuffered;
