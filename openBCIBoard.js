@@ -213,6 +213,12 @@ function OpenBCIFactory () {
     if (this.options.sntpTimeSync) {
       // establishing ntp connection
       this.sntpStart()
+        .catch(ignored => {
+          // try again once after a delay
+          return new Promise((resolve, reject) => {
+            setTimeout(resolve, 500);
+          }).then(() => this.sntpStart());
+        })
         .then(() => {
           if (this.options.verbose) console.log('SNTP: connected');
         })
@@ -2149,10 +2155,16 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.sntpGetOffset = function () {
+    this.options.sntpTimeSync = true;
+
     return new Promise((resolve, reject) => {
-      Sntp.offset(function (err, offset) {
+      Sntp.offset({
+        host: this.options.sntpTimeSyncHost, // Defaults to pool.ntp.org
+        port: this.options.sntpTimeSyncPort, // Defaults to 123 (NTP)
+        clockSyncRefresh: 30 * 60 * 1000 // Resync every 30 minutes
+      }, function (err, offset) {
         if (err) reject(err);
-        resolve(offset);
+        else resolve(offset);
       });
     });
   };
@@ -2175,20 +2187,19 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.sntpStart = function (options) {
     return new Promise((resolve, reject) => {
-      this.options.sntpTimeSync = true;
-      Sntp.start({
-        host: this.options.sntpTimeSyncHost, // Defaults to pool.ntp.org
-        port: this.options.sntpTimeSyncPort, // Defaults to 123 (NTP)
-        clockSyncRefresh: 30 * 60 * 1000 // Resync every 30 minutes
-      }, err => {
-        if (err) {
-          this.sync.sntpActive = false;
-          reject(err);
-        } else {
-          this.sync.sntpActive = true;
-          resolve();
+      this.sntpGetOffset().then(() => {
+        Sntp.start({
+          host: this.options.sntpTimeSyncHost, // Defaults to pool.ntp.org
+          port: this.options.sntpTimeSyncPort, // Defaults to 123 (NTP)
+          clockSyncRefresh: 30 * 60 * 1000 // Resync every 30 minutes
+        }, () => {
           this.emit('sntpTimeLock');
-        }
+        });
+        this.sync.sntpActive = true;
+        resolve();
+      }, (err) => {
+        this.sync.sntpActive = false;
+        reject(err);
       });
     });
   };

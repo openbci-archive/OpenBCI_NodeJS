@@ -122,6 +122,35 @@ describe('openBCISimulator', function () {
       } catch (e) { done(); }
     });
   });
+  describe('#write', function () {
+    it('should refuse to write when not connected', function (done) {
+      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+      try {
+        simulator.write('q');
+        done('did not throw on disconnected write');
+      } catch (e) {
+        simulator.write('q', err => {
+          if (err) {
+            done();
+          } else {
+            done('did not provide error on disconnected write');
+          }
+        });
+      }
+    });
+  });
+  describe('#close', function () {
+    it('should provide an error closing when already closed', function (done) {
+      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+      simulator.close(err => {
+        if (err) {
+          done();
+        } else {
+          done('closed successfully but had no time to open');
+        }
+      });
+    });
+  });
   describe(`_startStream`, function () {
     it('should return a packet with sample data in it', function (done) {
       var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);

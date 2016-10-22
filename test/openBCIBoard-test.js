@@ -242,15 +242,36 @@ describe('openbci-sdk', function () {
       expect(ourBoard2.options.simulatorSerialPortFailure).to.be.true;
     });
     it('should be able to enter sync mode', function () {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1, ourBoard2;
+
+      ourBoard1 = new openBCIBoard.OpenBCIBoard({
         sntpTimeSync: true
       });
       expect(ourBoard1.options.sntpTimeSync).to.be.true;
+
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      ourBoard2 = new openBCIBoard.OpenBCIBoard({
         sntptimesync: true
       });
       expect(ourBoard2.options.sntpTimeSync).to.be.true;
+
+      return Promise.all([
+        new Promise((resolve, reject) => {
+          ourBoard1.once('sntpTimeLock', resolve);
+          ourBoard1.once('error', reject);
+        }),
+        new Promise((resolve, reject) => {
+          ourBoard2.once('sntpTimeLock', resolve);
+          ourBoard2.once('error', reject);
+        })
+      ]).then(() => {
+        ourBoard1.sntpStop();
+        ourBoard2.sntpStop();
+      }, err => {
+        ourBoard1.sntpStop();
+        ourBoard2.sntpStop();
+        return Promise.reject(err);
+      });
     });
     it('should be able to change the ntp pool host', function () {
       var expectedPoolName = 'time.apple.com';
@@ -275,6 +296,19 @@ describe('openbci-sdk', function () {
         sntptimesyncport: expectedPortNumber
       });
       expect(ourBoard2.options.sntpTimeSyncPort).to.equal(expectedPortNumber);
+    });
+    it('should report when sntp fails', function (done) {
+      var ourBoard = new openBCIBoard.OpenBCIBoard({
+        sntpTimeSync: true,
+        sntpTimeSyncHost: 'no\'where'
+      });
+      ourBoard.once('error', () => {
+        done();
+      });
+      ourBoard.once('sntpTimeLock', () => {
+        ourBoard.sntpStop();
+        done('got a time lock with nowhere');
+      });
     });
     it('can enter verbose mode', function () {
       ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -1418,6 +1452,7 @@ describe('openbci-sdk', function () {
   });
 
   describe('#time', function () {
+    this.timeout(5000);
     it('should use sntp time when sntpTimeSync specified in options', function () {
       var board = new openBCIBoard.OpenBCIBoard({
         verbose: true,
@@ -1463,6 +1498,7 @@ describe('openbci-sdk', function () {
     after(() => {
       board.sntpStop();
     });
+    this.timeout(5000);
     it('should be able to start ntp server', done => {
       expect(board.sntp.isLive()).to.be.false;
       board.sntpStart()
@@ -1475,6 +1511,7 @@ describe('openbci-sdk', function () {
     });
   });
   describe('#sntpStop', function () {
+    this.timeout(5000);
     var board;
     before(done => {
       board = new openBCIBoard.OpenBCIBoard({
@@ -1500,6 +1537,19 @@ describe('openbci-sdk', function () {
       expect(board.options.sntpTimeSync).to.be.false;
       expect(board.sync.sntpActive).to.be.false;
       expect(board.sntp.isLive()).to.be.false;
+    });
+  });
+  describe('#sntpGetOffset', function () {
+    it('should get the sntp offset', function (done) {
+      var board = new openBCIBoard.OpenBCIBoard({
+        sntpTimeSync: true
+      });
+      board.once('sntpTimeLock', () => {
+        board.sntpGetOffset().then(offset => {
+          board.sntpStop();
+          done();
+        }, done);
+      });
     });
   });
   describe('#_processParseBufferForReset', function () {
