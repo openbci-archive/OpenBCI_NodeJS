@@ -1,3 +1,4 @@
+var bluebirdChecks = require('./bluebirdChecks');
 var sinon = require('sinon');
 var chai = require('chai');
 var expect = chai.expect;
@@ -54,6 +55,7 @@ describe('openbci-sdk', function () {
   describe('#constructor', function () {
     afterEach(() => {
       ourBoard = null;
+      return bluebirdChecks.noPendingPromises();
     });
     it('constructs with require', function () {
       var OpenBCIBoard = require('../openBCIBoard').OpenBCIBoard;
@@ -365,6 +367,7 @@ describe('openbci-sdk', function () {
     });
   });
   describe('#simulator', function () {
+    after(() => bluebirdChecks.noPendingPromises());
     it('can enable simulator after constructor', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true
@@ -479,6 +482,7 @@ describe('openbci-sdk', function () {
       console.log.restore();
       ourBoard.disconnect().then(done, done);
     });
+    after(() => bluebirdChecks.noPendingPromises());
     it('outputs a packet when written', done => {
       console.log.reset();
       ourBoard.write(k.OBCIStreamStop).catch(done);
@@ -515,6 +519,7 @@ describe('openbci-sdk', function () {
         done();
       }
     });
+    after(() => bluebirdChecks.noPendingPromises());
     afterEach(function () {
       if (spy) spy.reset();
     });
@@ -780,13 +785,10 @@ describe('openbci-sdk', function () {
       });
       it('can stop logging with sd', function (done) {
         // console.log('yoyoyo')
-        ourBoard.sdStop()
-          .then(() => {
-            // console.log('taco')
-            spy.should.have.been.calledWith('j');
-          })
-          .catch(err => done(err));
+        ourBoard.sdStop().catch(err => done(err));
         ourBoard.once('eot', () => {
+          // check here in case write was delayed
+          spy.should.have.been.calledWith('j');
           done();
         });
       });
@@ -937,6 +939,7 @@ describe('openbci-sdk', function () {
     });
     after(() => {
       ourBoard = null;
+      return bluebirdChecks.noPendingPromises();
     });
 
     it('should do nothing when empty buffer inserted', () => {
@@ -1115,6 +1118,7 @@ describe('openbci-sdk', function () {
     after(function () {
       // ourBoard = null
     });
+    after(() => bluebirdChecks.noPendingPromises());
 
     it('should process a standard packet', function () {
       var buffer = openBCISample.samplePacket(0);
@@ -1257,6 +1261,7 @@ describe('openbci-sdk', function () {
     afterEach(() => {
       ourBoard.sync.curSyncObj = null;
     });
+    after(() => bluebirdChecks.noPendingPromises());
     it('should reject if no sync in progress', function (done) {
       var timeSetPacketArrived = ourBoard.time();
       ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
@@ -1286,15 +1291,23 @@ describe('openbci-sdk', function () {
     it('should emit sycned event with valid false', function (done) {
       var timeSetPacketArrived = ourBoard.time();
       var expectedTimeSyncOffsetMaster = 72;
+      var emitted = false;
       ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
       ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
       ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
       ourBoard.once('synced', obj => {
         expect(obj.valid).to.be.false;
         expect(obj.timeOffsetMaster).to.equal(expectedTimeSyncOffsetMaster);
-        done();
+        emitted = true;
       });
-      ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived);
+      ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived)
+        .then(() => {
+          done('failed to get rejected');
+        })
+        .catch(() => {
+          expect(emitted).to.be.true;
+          done();
+        });
     });
     it('should reset when bad raw packet', function (done) {
       var timeSetPacketArrived = ourBoard.time();
@@ -1320,6 +1333,7 @@ describe('openbci-sdk', function () {
     it('should emit bad synced object bad raw packet', function (done) {
       var timeSetPacketArrived = ourBoard.time();
       var expectedTimeSyncOffsetMaster = 72;
+      var emitted = false;
       var badPacket;
       if (k.getVersionNumber(process.version) >= 6) {
         // from introduced in node version 6.x.x
@@ -1333,9 +1347,16 @@ describe('openbci-sdk', function () {
       ourBoard.once('synced', obj => {
         expect(obj.valid).to.be.false;
         expect(obj.timeOffsetMaster).to.equal(expectedTimeSyncOffsetMaster);
-        done();
+        emitted = true;
       });
-      ourBoard._processPacketTimeSyncSet(badPacket, timeSetPacketArrived);
+      ourBoard._processPacketTimeSyncSet(badPacket, timeSetPacketArrived)
+        .then(() => {
+          done('failed to get rejected');
+        })
+        .catch(() => {
+          expect(emitted).to.be.true;
+          done();
+        });
     });
     it('should calculate round trip time as the difference between time sent and time set packet arrived', function (done) {
       var timeSetPacketArrived = ourBoard.time();
@@ -1452,17 +1473,20 @@ describe('openbci-sdk', function () {
   });
 
   describe('#time', function () {
-    this.timeout(5000);
-    it('should use sntp time when sntpTimeSync specified in options', function () {
+    after(() => bluebirdChecks.noPendingPromises());
+    it('should use sntp time when sntpTimeSync specified in options', function (done) {
       var board = new openBCIBoard.OpenBCIBoard({
         verbose: true,
         sntpTimeSync: true
       });
-      var funcSpySntpNow = sinon.spy(board, '_sntpNow');
-      board.time();
-      funcSpySntpNow.should.have.been.calledOnce;
-      funcSpySntpNow.reset();
-      funcSpySntpNow = null;
+      board.on('sntpTimeLock', function () {
+        var funcSpySntpNow = sinon.spy(board, '_sntpNow');
+        board.time();
+        funcSpySntpNow.should.have.been.calledOnce;
+        funcSpySntpNow.restore();
+        board.sntpStop();
+        done();
+      });
     });
     it('should use Date.now() for time when sntpTimeSync is not specified in options', function () {
       var board = new openBCIBoard.OpenBCIBoard({
@@ -1485,28 +1509,26 @@ describe('openbci-sdk', function () {
       });
 
       board.once('sntpTimeLock', () => {
+        board.sntpStop();
         done();
       });
     });
   });
   describe('#sntpStart', function () {
-    var board;
-    before(() => {
-      board = new openBCIBoard.OpenBCIBoard();
-      board.sntpStop();
-    });
-    after(() => {
-      board.sntpStop();
-    });
-    this.timeout(5000);
-    it('should be able to start ntp server', done => {
+    after(() => bluebirdChecks.noPendingPromises());
+    it('should be able to start ntp server', () => {
+      var board = new openBCIBoard.OpenBCIBoard();
       expect(board.sntp.isLive()).to.be.false;
-      board.sntpStart()
-        .then(() => {
-          expect(board.sntp.isLive()).to.be.true;
-        });
-      board.once('sntpTimeLock', () => {
-        done();
+      return Promise.all([
+        board.sntpStart()
+          .then(() => {
+            expect(board.sntp.isLive()).to.be.true;
+          }),
+        new Promise(resolve => {
+          board.once('sntpTimeLock', resolve);
+        })
+      ]).then(() => {
+        board.sntpStop();
       });
     });
   });
@@ -1524,6 +1546,7 @@ describe('openbci-sdk', function () {
     after(() => {
       board.sntpStop();
     });
+    after(() => bluebirdChecks.noPendingPromises());
     it('should be able to stop the ntp server and set the globals correctly', function () {
       // Verify the before condition is correct
       expect(board.options.sntpTimeSync).to.be.true;
@@ -1540,6 +1563,7 @@ describe('openbci-sdk', function () {
     });
   });
   describe('#sntpGetOffset', function () {
+    after(() => bluebirdChecks.noPendingPromises());
     it('should get the sntp offset', function (done) {
       var board = new openBCIBoard.OpenBCIBoard({
         sntpTimeSync: true
@@ -1572,6 +1596,7 @@ describe('openbci-sdk', function () {
     after(() => {
       ourBoard = null;
     });
+    after(() => bluebirdChecks.noPendingPromises());
 
     it('should recognize firmware version 1 with no daisy', () => {
       var buf = new Buffer(`OpenBCI V3 Simulator
@@ -1642,6 +1667,7 @@ $$$`);
     afterEach(() => {
       ourBoard.buffer = null;
     });
+    after(() => bluebirdChecks.noPendingPromises());
 
     describe('#OBCIParsingReset', function () {
       var _processParseBufferForResetSpy;
@@ -1976,6 +2002,7 @@ $$$`);
         failTimeout = null;
       }
     });
+    after(() => bluebirdChecks.noPendingPromises());
     it('should store the sample to a global variable for next time', () => {
       var oddSample = randomSampleGenerator(0); // Previous was 0, so the next one will be 1 (odd)
 
@@ -2063,6 +2090,7 @@ $$$`);
   });
 
   describe('#usingVersionTwoFirmware', function () {
+    after(() => bluebirdChecks.noPendingPromises());
     it('should return true if firmware is version 2', () => {
       ourBoard = new openBCIBoard.OpenBCIBoard();
       ourBoard.info.firmware = 'v2';
@@ -2086,6 +2114,7 @@ $$$`);
         done();
       }
     });
+    afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not change the channel number if not connected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -2227,6 +2256,7 @@ $$$`);
         done();
       }
     });
+    afterEach(() => bluebirdChecks.noPendingPromises());
     it('should not change the channel number if not connected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true,
@@ -2335,6 +2365,7 @@ $$$`);
         done();
       }
     });
+    afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not query if not connected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -2416,6 +2447,7 @@ $$$`);
         done();
       }
     });
+    afterEach(() => bluebirdChecks.noPendingPromises());
     it('should not change the channel number if not connected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
         verbose: true,
@@ -2560,6 +2592,7 @@ $$$`);
         done();
       }
     });
+    afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not query if not connected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -2641,6 +2674,7 @@ $$$`);
         done();
       }
     });
+    afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not try to set baud rate if not connected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -2738,6 +2772,7 @@ $$$`);
         done();
       }
     });
+    afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not get system status if not connected', function (done) {
       ourBoard = new openBCIBoard.OpenBCIBoard({
@@ -2835,6 +2870,7 @@ $$$`);
         done();
       }
     });
+    after(() => bluebirdChecks.noPendingPromises());
     it('should be able to get the channel number', function (done) {
       // Don't test if not using v2
       if (!ourBoard.usingVersionTwoFirmware()) return done();
@@ -2996,6 +3032,7 @@ $$$`);
         board.disconnect();
       }
     });
+    after(() => bluebirdChecks.noPendingPromises());
     it('test all output signals', function (done) {
       if (runHardwareValidation) {
         board.streamStart()
@@ -3104,12 +3141,13 @@ describe('#daisy', function () {
       done();
     }
   });
+  after(() => bluebirdChecks.noPendingPromises());
   it('can get samples with channel array of length 16 if daisy', function (done) {
     var numberOfSamples = 130;
     var sampleCount = 0;
 
     if (ourBoard.info.boardType !== k.OBCIBoardDaisy) {
-      done();
+      return done();
     }
     var samp = sample => {
       expect(sample.channelData.length).to.equal(k.OBCINumberOfChannelsDaisy);
@@ -3188,6 +3226,7 @@ describe('#syncWhileStreaming', function () {
       done();
     }
   });
+  after(() => bluebirdChecks.noPendingPromises());
   afterEach(() => {
     this.buffer = null;
   });
@@ -3290,6 +3329,7 @@ describe('#syncErrors', function () {
       done();
     }
   });
+  after(() => bluebirdChecks.noPendingPromises());
   afterEach(() => {
     this.buffer = null;
   });

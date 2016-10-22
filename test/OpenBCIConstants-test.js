@@ -2,6 +2,7 @@
 * Created by ajk on 12/16/15.
 */
 'use strict';
+var bluebirdChecks = require('./bluebirdChecks');
 var assert = require('assert');
 var k = require('../openBCIConstants');
 var chai = require('chai');
@@ -11,6 +12,7 @@ var chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 
 describe('OpenBCIConstants', function () {
+  afterEach(() => bluebirdChecks.noPendingPromises());
   describe('Turning Channels Off', function () {
     it('channel 1', function () {
       assert.equal('1', k.OBCIChannelOff1);
@@ -793,7 +795,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(2, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('2');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -801,7 +803,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(5, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('5');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -809,7 +811,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(9, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('Q');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -817,7 +819,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(15, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('U');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -833,7 +835,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[2].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -841,7 +843,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, true, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[2].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -854,7 +856,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 1, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -862,7 +864,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 2, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -870,7 +872,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 4, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('2');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -878,7 +880,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 6, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('3');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -886,7 +888,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 8, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('4');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -894,7 +896,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 12, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('5');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -902,7 +904,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('6');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -918,7 +920,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -926,7 +928,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'shorted', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -934,7 +936,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'biasMethod', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('2');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -942,7 +944,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'mvdd', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('3');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -950,7 +952,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'temp', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('4');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -958,7 +960,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'testSig', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('5');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -966,7 +968,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'biasDrp', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('6');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -974,7 +976,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'biasDrn', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('7');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -990,7 +992,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[5].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -998,7 +1000,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', false, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[5].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1011,7 +1013,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[6].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1019,7 +1021,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, false, false).then(function (arrayOfCommands) {
           arrayOfCommands[6].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1032,7 +1034,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, true, true).then(function (arrayOfCommands) {
           arrayOfCommands[7].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1040,7 +1042,7 @@ describe('OpenBCIConstants', function () {
         k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[7].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1100,7 +1102,7 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(2, false, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('2');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1108,7 +1110,7 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(5, false, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('5');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1116,7 +1118,7 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(9, false, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('Q');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1124,7 +1126,7 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(15, false, false).then(function (arrayOfCommands) {
           arrayOfCommands[1].should.equal('U');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1135,12 +1137,12 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter('1', false, false).should.be.rejected.and.notify(done);
       });
     });
-    describe('P Input selection works', function (done) {
-      it('Test Signal Applied', function () {
+    describe('P Input selection works', function () {
+      it('Test Signal Applied', function (done) {
         k.getImpedanceSetter(1, true, false).then(function (arrayOfCommands) {
           arrayOfCommands[2].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1149,7 +1151,7 @@ describe('OpenBCIConstants', function () {
           console.log('\n\n\narray: ' + arrayOfCommands + '\n\n\n');
           arrayOfCommands[2].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1157,12 +1159,12 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(1, 'taco', false).should.be.rejected.and.notify(done);
       });
     });
-    describe('N Input selection works', function (done) {
-      it('Test Signal Applied', function () {
-        k.getImpedanceSetter(1, true, false).then(function (arrayOfCommands) {
+    describe('N Input selection works', function () {
+      it('Test Signal Applied', function (done) {
+        k.getImpedanceSetter(1, false, true).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('1');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1170,7 +1172,7 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(1, false, false).then(function (arrayOfCommands) {
           arrayOfCommands[3].should.equal('0');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1183,7 +1185,7 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(1, true, true).then(function (arrayOfCommands) {
           arrayOfCommands[0].should.equal('z');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });
@@ -1191,7 +1193,7 @@ describe('OpenBCIConstants', function () {
         k.getImpedanceSetter(1, true, true).then(function (arrayOfCommands) {
           arrayOfCommands[4].should.equal('Z');
           done();
-        }, function (err) {
+        }).catch(function (err) {
           done(err);
         });
       });

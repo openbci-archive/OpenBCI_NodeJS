@@ -1,6 +1,7 @@
 /**
 * Created by ajk on 12/15/15.
 */
+var bluebirdChecks = require('./bluebirdChecks');
 var openBCISample = require('../openBCISample');
 var chai = require('chai');
 var expect = chai.expect;
@@ -27,7 +28,9 @@ describe('openBCISample', function () {
   beforeEach(function () {
     accelArray = [0, 0, 0];
   });
+  afterEach(() => bluebirdChecks.noPendingPromises());
   describe('#parseRawPacketStandard', function () {
+    this.timeout(4000);
     it('should fulfill promise', function () {
       return openBCISample.parseRawPacketStandard(sampleBuf).should.be.fulfilled;
     });
@@ -1439,6 +1442,8 @@ describe('#goertzelProcessSample', function () {
   var numberOfChannels = k.OBCINumberOfChannelsDefault;
   var goertzelObj = openBCISample.goertzelNewObject(numberOfChannels);
   var newRandomSample = openBCISample.randomSample(numberOfChannels, k.OBCISampleRate250);
+
+  afterEach(() => bluebirdChecks.noPendingPromises());
 
   it('produces an array of impedances', function (done) {
     var passed = false;
