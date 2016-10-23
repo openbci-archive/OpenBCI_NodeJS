@@ -72,7 +72,7 @@ Want to know if the module really works? Check out some projects and organizatio
 
 Still not satisfied it works?? Check out this [detailed report](http://s132342840.onlinehome.us/pushtheworld/files/voltageVerificationTestPlanAndResults.pdf) that scientifically validates the output voltages of this module.
 
-How are you still doubting and not using this already? Fine, go look at some of the [700 **_automatic_** tests](https://codecov.io/github/OpenBCI/openbci-js-sdk?branch=master) written for it!
+How are you still doubting and not using this already? Fine, go look at some of the [700 **_automatic_** tests](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS) written for it!
 
 ### <a name="general-overview"></a> General Overview:
 
@@ -1164,10 +1164,12 @@ npm test
 
 1. Fork it!
 2. Create your feature branch: `git checkout -b my-new-feature`
-3. Make changes and ensure tests all pass. (`npm test`)
-4. Commit your changes: `git commit -m 'Add some feature'`
-5. Push to the branch: `git push origin my-new-feature`
-6. Submit a pull request :D
+3. Make changes
+4. If adding a feature, please add test coverage.
+5. Ensure tests all pass. (`npm test`)
+6. Commit your changes: `git commit -m 'Add some feature'`
+7. Push to the branch: `git push origin my-new-feature`
+8. Submit a pull request :D
 
 ## <a name="license"></a> License:
 
