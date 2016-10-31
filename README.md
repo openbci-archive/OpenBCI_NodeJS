@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS/branch/master/graph/badge.svg)](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS)
 [![Dependency Status](https://david-dm.org/OpenBCI/OpenBCI_NodeJS.svg)](https://david-dm.org/OpenBCI/OpenBCI_NodeJS)
 [![npm](https://img.shields.io/npm/dm/openbci.svg?maxAge=2592000)](http://npmjs.com/package/openbci)
+[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
 
 # OpenBCI Node.js SDK
 
@@ -24,8 +25,7 @@ The purpose of this module is to **get connected** and **start streaming** as fa
   1. [Constructor](#constructor)
   2. [Methods](#method)
   3. [Events](#event)
-  4. [Properties](#property)
-  5. [Constants](#constants)
+  4. [Constants](#constants)
 6. [Interfacing With Other Tools](#interfacing-with-other-tools)
 7. [Developing](#developing)
 8. [Testing](#testing)
@@ -388,18 +388,26 @@ Board optional configurations.
 * `simulatorFirmwareVersion` {String} - Allows the simulator to use firmware version 2 features. (2 Possible Options)
   * `v1` - Firmware Version 1 (Default)
   * `v2` - Firmware Version 2
+* `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which occurs commonly in real devices.  It is recommended to test code with this enabled.  (4 Possible Options)
+  * `none` - do not fragment packets; output complete chunks immediately when produced (Default)
+  * `random` - output random small chunks of data interspersed with full buffers
+  * `fullBuffers` - allow buffers to fill up until latency timer has expired
+  * `oneByOne` - output each byte separately
+* `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers of data, if `simulatorFragmentation` is specified.  (Default `16`)
+* `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is specified. (Default `4096`)
 * `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
 * `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
 * `simulatorInjectLineNoise` {String} - Injects line noise on channels. (3 Possible Options)
   * `60Hz` - 60Hz line noise (Default) [America]
   * `50Hz` - 50Hz line noise [Europe]
-  * `None` - Do not inject line noise.
+  * `none` - Do not inject line noise.
 * `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that setting and this sample rate will be used. (Default is `250`)
 * `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely due to a OpenBCI dongle not being plugged in.
 * `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source of truth instead of local computer time. If you are running experiments on your local computer, keep this `false`. (Default `false`)
 * `sntpTimeSyncHost` - {String} The sntp server to use, can be either sntp or ntp (Defaults `pool.ntp.org`).
 * `sntpTimeSyncPort` - {Number} The port to access the sntp server (Defaults `123`)
 * `verbose` {Boolean} - Print out useful debugging events (Default `false`)
+* `debug` {Boolean} - Print out a raw dump of bytes sent and received (Default `false`)
 
 **Note, we have added support for either all lowercase OR camel case for the options, use whichever style you prefer.**
 
@@ -669,6 +677,16 @@ Sends command to turn on impedances for all channels and continuously calculate 
 Sends command to turn off impedances for all channels and stop continuously calculate their impedances.
 
 **_Returns_** a promise, that fulfills when all the commands are sent to the internal write buffer
+
+### <a name="method-is-connected"></a> .isConnected()
+
+Checks if the driver is connected to a board.
+**_Returns_** a boolean, true if connected
+
+### <a name="method-is-streaming"></a> .isStreaming()
+
+Checks if the board is currently sending samples.
+**_Returns_** a boolean, true if streaming
 
 ### <a name="method-list-ports"></a> .listPorts()
 
@@ -1017,13 +1035,13 @@ Either a single character or an Array of characters
 
 Sends a single character command to the board.
 ```js
-// ourBoard has fulfilled the promise on .connected() and 'ready' has been observed previously
+// ourBoard has fulfilled the promise on .connect() and 'ready' has been observed previously
 ourBoard.write('a');
 ```
 
 Sends an array of bytes
 ```js
-// ourBoard has fulfilled the promise on .connected() and 'ready' has been observed previously
+// ourBoard has fulfilled the promise on .connect() and 'ready' has been observed previously
 ourBoard.write(['x','0','1','0','0','0','0','0','0','X']);
 ```
 
@@ -1069,15 +1087,9 @@ Emitted when the board is in a ready to start streaming state.
 
 Emitted when there is a new sample available.
 
-## <a name="property"></a> Properties:
+### <a name="event-sample"></a> .on('synced', callback)
 
-### <a name="property-connected"></a> connected
-
-A bool, true if connected to an OpenBCI board, false if not.
-
-### <a name="property-streaming"></a> streaming
-
-A bool, true if streaming data from an OpenBCI board, false if not.
+Emitted when there is a new sample available.
 
 ## <a name="constants"></a> Constants:
 
@@ -1155,10 +1167,12 @@ npm test
 
 1. Fork it!
 2. Create your feature branch: `git checkout -b my-new-feature`
-3. Make changes and ensure tests all pass. (`npm test`)
-4. Commit your changes: `git commit -m 'Add some feature'`
-5. Push to the branch: `git push origin my-new-feature`
-6. Submit a pull request :D
+3. Make changes
+4. If adding a feature, please add test coverage.
+5. Ensure tests all pass. (`npm test`)
+6. Commit your changes: `git commit -m 'Add some feature'`
+7. Push to the branch: `git push origin my-new-feature`
+8. Submit a pull request :D
 
 ## <a name="license"></a> License:
 

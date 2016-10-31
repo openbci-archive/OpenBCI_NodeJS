@@ -1,11 +1,11 @@
 {
   "name": "openbci",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
   "main": "openBCIBoard",
   "scripts": {
     "start": "node index",
-    "test": "mocha test",
+    "test": "semistandard | snazzy && mocha test",
     "test-cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec && codecov"
   },
   "keywords": [
@@ -27,14 +27,17 @@
     "test": "test"
   },
   "devDependencies": {
+    "bluebird": "3.4.6",
     "chai": "^3.4.1",
     "chai-as-promised": "^5.2.0",
     "codecov": "^1.0.1",
     "istanbul": "^0.4.4",
     "mocha": "^3.0.2",
     "sandboxed-module": "^2.0.3",
+    "semistandard": "^9.0.0",
     "sinon": "^1.17.2",
-    "sinon-chai": "^2.8.0"
+    "sinon-chai": "^2.8.0",
+    "snazzy": "^5.0.0"
   },
   "repository": {
     "type": "git",
@@ -46,5 +49,18 @@
   "homepage": "https://github.com/openbci/openbci_nodejs#readme",
   "engines": {
     "node": ">=4.0.0"
+  },
+  "semistandard": {
+    "globals": [
+      "describe",
+      "context",
+      "before",
+      "beforeEach",
+      "after",
+      "afterEach",
+      "it",
+      "expect",
+      "should"
+    ]
   }
 }

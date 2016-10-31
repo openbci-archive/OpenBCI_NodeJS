@@ -1,3 +1,38 @@
+# 1.4.0
+
+### New Features
+
+* Three new initialization options: `simulatorFragmentation`, `simulatorBufferSize`, and `simulatorLatencyTimer`.  Together, these enable a more _realistic_ serial port simulation, mimicking different potential user computer systems.
+* New option `debug` gives a live dump of serial traffic on the console if enabled
+* New API function `.isConnected()` to check if communications are active.
+* New API function `.isStreaming()` to check if samples are coming from the board.
+
+### Enhancements
+
+* Implement and adapt semi-standard code style. Closes #83
+* autoFindOpenBCIBoard now notices and uses the stock dongle on Linux
+* 'synced' object now has `error` property, null on good syncs, error description on bad syncs.
+
+### Breaking Changes
+
+* The setting for simulatorInjectLineNoise has changed from `None` to `none`
+* connect() will now fail if already connected
+* The constructor will throw an error now if an invalid option is passed
+* The `.connected` property has been removed, replaced by `.isConnected()`. Removed from docs.
+* The `.streaming` property has been removed, replaced by `.isStreaming()`. Removed from docs.
+* An error event will be emitted if sntp fails to initialize on construction
+* The simulator will no longer communicate when disconnected
+
+### Bug Fixes
+
+* Fixed bug where early packet fragments were dropped after board reset
+* Fixed bug where time sync replies that began a buffered chunk were ignored
+* Fixed bug where simulator would output wrong version in its reset message
+* Fixed bug where resources were not cleaned up if connect was called twice
+* Fixed bug where serial data was written after disconnection
+* Fixed bug where unexpected disconnection was not detected
+* Fixed bug where promises could lead to out of order packet processing.
+
 # 1.3.3
 
 ### New Features
