@@ -11,14 +11,15 @@
 
 * Implement and adapt semi-standard code style. Closes #83
 * autoFindOpenBCIBoard now notices and uses the stock dongle on Linux
+* 'synced' object now has `error` property, null on good syncs, error description on bad syncs.
 
 ### Breaking Changes
 
 * The setting for simulatorInjectLineNoise has changed from `None` to `none`
 * connect() will now fail if already connected
 * The constructor will throw an error now if an invalid option is passed
-* The undocumented `.connected` field has been removed, replaced by `.isConnected()`
-* The undocumented `.streaming` field has been removed, replaced by `.isStreaming()`
+* The `.connected` property has been removed, replaced by `.isConnected()`. Removed from docs.
+* The `.streaming` property has been removed, replaced by `.isStreaming()`. Removed from docs.
 * An error event will be emitted if sntp fails to initialize on construction
 * The simulator will no longer communicate when disconnected
 
@@ -30,6 +31,7 @@
 * Fixed bug where resources were not cleaned up if connect was called twice
 * Fixed bug where serial data was written after disconnection
 * Fixed bug where unexpected disconnection was not detected
+* Fixed bug where promises could lead to out of order packet processing.
 
 # 1.3.3
 

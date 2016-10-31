@@ -25,8 +25,7 @@ The purpose of this module is to **get connected** and **start streaming** as fa
   1. [Constructor](#constructor)
   2. [Methods](#method)
   3. [Events](#event)
-  4. [Properties](#property)
-  5. [Constants](#constants)
+  4. [Constants](#constants)
 6. [Interfacing With Other Tools](#interfacing-with-other-tools)
 7. [Developing](#developing)
 8. [Testing](#testing)
@@ -1088,15 +1087,9 @@ Emitted when the board is in a ready to start streaming state.
 
 Emitted when there is a new sample available.
 
-## <a name="property"></a> Properties:
+### <a name="event-sample"></a> .on('synced', callback)
 
-### <a name="property-connected"></a> connected
-
-A bool, true if connected to an OpenBCI board, false if not.
-
-### <a name="property-streaming"></a> streaming
-
-A bool, true if streaming data from an OpenBCI board, false if not.
+Emitted when there is a new sample available.
 
 ## <a name="constants"></a> Constants:
 

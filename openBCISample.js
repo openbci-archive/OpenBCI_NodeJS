@@ -24,37 +24,43 @@ const GOERTZEL_COEFF_250 = 2 * Math.cos(GOERTZEL_W_250);
 var sampleModule = {
 
   /**
-  * @description This takes a 33 byte packet and converts it based on the last four bits.
-  *                  0000 - Standard OpenBCI V3 Sample Packet
-  * @param dataBuf {Buffer} - A 33 byte buffer
-  * @param channelSettingsArray - An array of channel settings that is an Array that has shape similar to the one
-  *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
-  *                  Array of objects that have key-value pair {gain:NUMBER}
-  * @param convertAuxToAccel (optional) {Boolean} - Do you want to convert to g's? (Defaults to true)
-  * @returns {Promise} - A sample object
-  */
+   * @description This takes a 33 byte packet and converts it based on the last four bits.
+   *                  0000 - Standard OpenBCI V3 Sample Packet
+   * @param dataBuf {Buffer} - A 33 byte buffer
+   * @param channelSettingsArray (optional) - An array of channel settings that is an Array that has shape similar to the one
+   *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
+   *                  Array of objects that have key-value pair {gain:NUMBER}
+   * @param convertAuxToAccel (optional) {Boolean} - Do you want to convert to g's? (Defaults to true)*
+   * @returns {Object} - A standard sample object.
+   */
   parseRawPacketStandard: (dataBuf, channelSettingsArray, convertAuxToAccel) => {
     const defaultChannelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
 
-    return new Promise((resolve, reject) => {
-      if (dataBuf === undefined || dataBuf === null) reject('Error [parseRawPacket]: dataBuf must be defined.');
-      // Verify proper start byte
-      if (dataBuf[0] !== k.OBCIByteStart) reject(`Error [parseRawPacket]: Invalid start byte of ${dataBuf[0].toString(16)} expected ${k.OBCIByteStart.toString(16)}`);
-      // channelSettingsArray is optional, defaults to CHANNEL_SETTINGS_ARRAY_DEFAULT
-      channelSettingsArray = channelSettingsArray || defaultChannelSettingsArray;
-      // By default convert to g's
-      if (convertAuxToAccel === undefined || convertAuxToAccel === null) convertAuxToAccel = true;
+    // channelSettingsArray is optional, defaults to CHANNEL_SETTINGS_ARRAY_DEFAULT
+    channelSettingsArray = channelSettingsArray || defaultChannelSettingsArray;
+    // By default convert to g's
+    if (convertAuxToAccel === undefined || convertAuxToAccel === null) convertAuxToAccel = true;
 
-      if (convertAuxToAccel) {
-        parsePacketStandardAccel(dataBuf, channelSettingsArray).then(sampleObject => {
-          resolve(sampleObject);
-        }).catch(err => reject(err));
-      } else {
-        parsePacketStandardRawAux(dataBuf, channelSettingsArray).then(sampleObject => {
-          resolve(sampleObject);
-        }).catch(err => reject(err));
-      }
-    });
+    // Check to make sure data is not null.
+    if (k.isUndefined(dataBuf) || k.isNull(dataBuf)) {
+      throw new Error(k.OBCIErrorUndefinedOrNullInput);
+    }
+
+    // Check to make sure the buffer is the right size.
+    if (dataBuf.byteLength !== k.OBCIPacketSize) {
+      throw new Error(k.OBCIErrorInvalidByteLength);
+    }
+
+    // Verify the correct stop byte.
+    if (dataBuf[0] !== k.OBCIByteStart) {
+      throw new Error(k.OBCIErrorInvalidByteStart);
+    }
+
+    if (convertAuxToAccel) {
+      return parsePacketStandardAccel(dataBuf, channelSettingsArray);
+    } else {
+      return parsePacketStandardRawAux(dataBuf, channelSettingsArray);
+    }
   },
   getRawPacketType,
   getFromTimePacketAccel,
@@ -298,8 +304,8 @@ var sampleModule = {
   * @description Create a configurable function to return samples for a simulator. This implements 1/f filtering injection to create more brain like data.
   * @param numberOfChannels {Number} - The number of channels in the sample... either 8 or 16
   * @param sampleRateHz {Number} - The sample rate
-  * @param injectAlpha {Boolean} - True if you want to inject noise
-  * @param lineNoise {String} - A string that can be either:
+  * @param injectAlpha {Boolean} (optional) - True if you want to inject noise
+  * @param lineNoise {String} (optional) - A string that can be either:
   *              `60Hz` - 60Hz line noise (Default) (ex. __United States__)
   *              `50Hz` - 50Hz line noise (ex. __Europe__)
   *              `none` - Do not inject line noise.
@@ -573,6 +579,7 @@ function newSyncObject () {
   return {
     boardTime: 0,
     correctedTransmissionTime: false,
+    error: null,
     timeSyncSent: 0,
     timeSyncSentConfirmation: 0,
     timeSyncSetPacket: 0,
@@ -591,46 +598,35 @@ function newSyncObject () {
 * @param channelSettingsArray {Array} - An array of channel settings that is an Array that has shape similar to the one
 *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
 *                  Array of objects that have key-value pair {gain:NUMBER}
-* @returns {Promise} - Fulfilled with a sample object that has form:
-*                  {
-*                      channelData: Array of floats
-*                      accelData: Array of floats of accel data
-*                      sampleNumber: a Number that is the sample
-*                  }
+* @returns {object} Sample.
+ *                  `sample` Object with:
+*                   {
+*                     channelData: {Array}, // of floats
+*                     accelData: {Array}, // of floats of accel data
+*                     sampleNumber: {Number} // The sample number
+*                   }
 */
 function parsePacketStandardAccel (dataBuf, channelSettingsArray) {
-  return new Promise((resolve, reject) => {
-    if (dataBuf.byteLength !== k.OBCIPacketSize) reject(`Error [parsePacketStandardAccel]: input buffer must be ${k.OBCIPacketSize} bytes!`);
+  var sampleObject = {};
 
-    var sampleObject = {};
-    // Need build the standard sample object
-    getDataArrayAccel(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1))
-      .then(accelData => {
-        sampleObject.accelData = accelData;
-        return getChannelDataArray(dataBuf, channelSettingsArray);
-      })
-      .then(channelSettingArray => {
-        sampleObject.channelData = channelSettingArray;
-        // Get the raw aux values
-        if (k.getVersionNumber(process.version) >= 6) {
-          // From introduced in node version 6.x.x
-          sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
-        } else {
-          sampleObject.auxData = new Buffer(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
-        }
-        // Get the sample number
-        sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-        // Get the start byte
-        sampleObject.startByte = dataBuf[0];
-        // Get the stop byte
-        sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
-        resolve(sampleObject);
-      })
-      .catch(err => {
-        console.log(err);
-        reject(err);
-      });
-  });
+  sampleObject.accelData = getDataArrayAccel(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
+
+  sampleObject.channelData = getChannelDataArray(dataBuf, channelSettingsArray);
+
+  if (k.getVersionNumber(process.version) >= 6) {
+    // From introduced in node version 6.x.x
+    sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
+  } else {
+    sampleObject.auxData = new Buffer(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
+  }
+  // Get the sample number
+  sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+  // Get the start byte
+  sampleObject.startByte = dataBuf[0];
+  // Get the stop byte
+  sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
+
+  return sampleObject;
 }
 
 /**
@@ -648,35 +644,26 @@ function parsePacketStandardAccel (dataBuf, channelSettingsArray) {
 *                  }
 */
 function parsePacketStandardRawAux (dataBuf, channelSettingsArray) {
-  return new Promise((resolve, reject) => {
-    if (dataBuf.byteLength !== k.OBCIPacketSize) reject('Error [parsePacketStandardAccel]: input buffer must be ' + k.OBCIPacketSize + ' bytes!');
+  var sampleObject = {};
 
-    var sampleObject = {};
-    // Need build the standard sample object
-    getChannelDataArray(dataBuf, channelSettingsArray)
-      .then(channelSettingArray => {
-        // Slice the buffer for the aux data
-        if (k.getVersionNumber(process.version) >= 6) {
-          // From introduced in node version 6.x.x
-          sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
-        } else {
-          sampleObject.auxData = new Buffer(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
-        }
-        // Store the channel data
-        sampleObject.channelData = channelSettingArray;
-        // Get the sample number
-        sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-        // Get the start byte
-        sampleObject.startByte = dataBuf[0];
-        // Get the stop byte
-        sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
-        resolve(sampleObject);
-      })
-      .catch(err => {
-        // console.log(err)
-        reject(err);
-      });
-  });
+  // Store the channel data
+  sampleObject.channelData = getChannelDataArray(dataBuf, channelSettingsArray);
+
+  // Slice the buffer for the aux data
+  if (k.getVersionNumber(process.version) >= 6) {
+    // From introduced in node version 6.x.x
+    sampleObject.auxData = Buffer.from(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
+  } else {
+    sampleObject.auxData = new Buffer(dataBuf.slice(k.OBCIPacketPositionStartAux, k.OBCIPacketPositionStopAux + 1));
+  }
+  // Get the sample number
+  sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+  // Get the start byte
+  sampleObject.startByte = dataBuf[0];
+  // Get the stop byte
+  sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
+
+  return sampleObject;
 }
 
 /**
@@ -690,49 +677,37 @@ function parsePacketStandardRawAux (dataBuf, channelSettingsArray) {
 *                  Array of objects that have key-value pair {gain:NUMBER}
 * @param boardOffsetTime {Number} - The difference between board time and current time calculated with sync methods.
 * @param accelArray {Array} - A 3 element array that allows us to have inter packet memory of x and y axis data and emit only on the z axis packets.
-* @returns {Promise} - Fulfills with a sample object. NOTE: Only has accelData if this is a Z axis packet.
+* @returns {Object} - A sample object. NOTE: Only has accelData if this is a Z axis packet.
 */
 function parsePacketTimeSyncedAccel (dataBuf, channelSettingsArray, boardOffsetTime, accelArray) {
   // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
   //  where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
+  // The sample object we are going to build
+  var sampleObject = {};
 
-  return new Promise((resolve, reject) => {
-    // The sample object we are going to build
-    var sampleObject = {};
+  // Get the sample number
+  sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+  // Get the start byte
+  sampleObject.startByte = dataBuf[0];
+  // Get the stop byte
+  sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
 
-    if (dataBuf.byteLength !== k.OBCIPacketSize) reject('Error [parsePacketTimeSyncedAccel]: input buffer must be ' + k.OBCIPacketSize + ' bytes!');
+  // Get the board time
+  sampleObject.boardTime = getFromTimePacketTime(dataBuf);
+  sampleObject.timeStamp = sampleObject.boardTime + boardOffsetTime;
 
-    // Get the sample number
-    sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-    // Get the start byte
-    sampleObject.startByte = dataBuf[0];
-    // Get the stop byte
-    sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
+  // Extract the aux data
+  sampleObject.auxData = getFromTimePacketRawAux(dataBuf);
 
-    getFromTimePacketTime(dataBuf)
-      .then(boardTime => {
-        sampleObject.boardTime = boardTime;
-        sampleObject.timeStamp = boardTime + boardOffsetTime;
-        return getFromTimePacketRawAux(dataBuf);
-      })
-      .then(auxDataBuffer => {
-        sampleObject.auxData = auxDataBuffer;
-        return getFromTimePacketAccel(dataBuf, accelArray);
-      })
-      .then(accelArrayFilled => {
-        if (accelArrayFilled) {
-          sampleObject.accelData = accelArray;
-        }
-        return getChannelDataArray(dataBuf, channelSettingsArray);
-      })
-      .then(channelDataArray => {
-        sampleObject.channelData = channelDataArray;
-        resolve(sampleObject);
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
+  // Grab the accelData only if `getFromTimePacketAccel` returns true.
+  if (getFromTimePacketAccel(dataBuf, accelArray)) {
+    sampleObject.accelData = accelArray;
+  }
+
+  // Grab the channel data.
+  sampleObject.channelData = getChannelDataArray(dataBuf, channelSettingsArray);
+
+  return sampleObject;
 }
 
 /**
@@ -745,61 +720,53 @@ function parsePacketTimeSyncedAccel (dataBuf, channelSettingsArray, boardOffsetT
 *                  calling OpenBCIConstans.channelSettingsArrayInit(). The most important rule here is that it is
 *                  Array of objects that have key-value pair {gain:NUMBER}
 * @param boardOffsetTime {Number} - The difference between board time and current time calculated with sync methods.
-* @returns {Promise} - Fulfills with a sample object. NOTE: The aux data is placed in a 2 byte buffer
+* @returns {Object} - A sample object. NOTE: The aux data is placed in a 2 byte buffer
 */
 function parsePacketTimeSyncedRawAux (dataBuf, channelSettingsArray, boardOffsetTime) {
   // Ths packet has 'A0','00'....,'AA','AA','FF','FF','FF','FF','C4'
   //  where the 'AA's form an accel 16bit num and 'FF's form a 32 bit time in ms
-  return new Promise((resolve, reject) => {
-    // The sample object we are going to build
-    var sampleObject = {};
+  if (dataBuf.byteLength !== k.OBCIPacketSize) {
+    throw new Error(k.OBCIErrorInvalidByteLength);
+  }
 
-    if (dataBuf.byteLength !== k.OBCIPacketSize) reject('Error [parsePacketTimeSyncedRawAux]: input buffer must be ' + k.OBCIPacketSize + ' bytes!');
+  // The sample object we are going to build
+  var sampleObject = {};
 
-    // Get the sample number
-    sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-    // Get the start byte
-    sampleObject.startByte = dataBuf[0];
-    // Get the stop byte
-    sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
+  // Get the sample number
+  sampleObject.sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+  // Get the start byte
+  sampleObject.startByte = dataBuf[0];
+  // Get the stop byte
+  sampleObject.stopByte = dataBuf[k.OBCIPacketPositionStopByte];
 
-    getFromTimePacketTime(dataBuf)
-      .then(boardTime => {
-        sampleObject.boardTime = boardTime;
-        sampleObject.timeStamp = boardTime + boardOffsetTime;
-        return getFromTimePacketRawAux(dataBuf);
-      })
-      .then(auxDataBuffer => {
-        sampleObject.auxData = auxDataBuffer;
-        return getChannelDataArray(dataBuf, channelSettingsArray);
-      })
-      .then(channelDataArray => {
-        sampleObject.channelData = channelDataArray;
-        resolve(sampleObject);
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
+  // Get the board time
+  sampleObject.boardTime = getFromTimePacketTime(dataBuf);
+  sampleObject.timeStamp = sampleObject.boardTime + boardOffsetTime;
+
+  // Extract the aux data
+  sampleObject.auxData = getFromTimePacketRawAux(dataBuf);
+
+  // Grab the channel data.
+  sampleObject.channelData = getChannelDataArray(dataBuf, channelSettingsArray);
+
+  return sampleObject;
 }
 
 /**
 * @description Extract a time from a time packet in ms.
 * @param dataBuf - A raw packet with 33 bytes of data
-* @returns {Promise} - Fulfills with time in milli seconds
+* @returns {Number} - Board time in milli seconds
 * @author AJ Keller (@pushtheworldllc)
 */
 function getFromTimePacketTime (dataBuf) {
   // Ths packet has 'A0','00'....,'00','00','FF','FF','FF','FF','C3' where the 'FF's are times
   const lastBytePosition = k.OBCIPacketSize - 1; // This is 33, but 0 indexed would be 32 minus 1 for the stop byte and another two for the aux channel or the
-  return new Promise((resolve, reject) => {
-    if (dataBuf.byteLength !== k.OBCIPacketSize) {
-      reject(`Error [getFromTimePacketTime]: input buffer must be ${k.OBCIPacketSize} bytes!`);
-    } else {
-      // Grab the time from the packet
-      resolve(dataBuf.readUInt32BE(lastBytePosition - k.OBCIStreamPacketTimeByteSize));
-    }
-  });
+  if (dataBuf.byteLength !== k.OBCIPacketSize) {
+    throw new Error(k.OBCIErrorInvalidByteLength);
+  } else {
+    // Grab the time from the packet
+    return dataBuf.readUInt32BE(lastBytePosition - k.OBCIStreamPacketTimeByteSize);
+  }
 }
 
 /**
@@ -809,32 +776,30 @@ function getFromTimePacketTime (dataBuf) {
 *      Z axis data is sent with every sampleNumber % 10 === 9
 * @param dataBuf {Buffer} - The 33byte raw time synced accel packet
 * @param accelArray {Array} - A 3 element array that allows us to have inter packet memory of x and y axis data and emit only on the z axis packets.
-* @returns {Promise} - Fulfills with a boolean that is true only when the accel array is ready to be emitted... i.e. when this is a Z axis packet
+* @returns {boolean} - A boolean that is true only when the accel array is ready to be emitted... i.e. when this is a Z axis packet
 */
 function getFromTimePacketAccel (dataBuf, accelArray) {
   const accelNumBytes = 2;
   const lastBytePosition = k.OBCIPacketSize - 1 - k.OBCIStreamPacketTimeByteSize - accelNumBytes; // This is 33, but 0 indexed would be 32 minus
-  return new Promise((resolve, reject) => {
-    if (dataBuf.byteLength !== k.OBCIPacketSize) reject('Error [getFromTimePacketAccel]: input buffer must be ' + k.OBCIPacketSize + ' bytes!');
-    var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-    switch (sampleNumber % 10) { // The accelerometer is on a 25Hz sample rate, so every ten channel samples, we can get new data
-      case k.OBCIAccelAxisX:
-        accelArray[0] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
-        resolve(false);
-        break;
-      case k.OBCIAccelAxisY:
-        accelArray[1] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
-        resolve(false);
-        break;
-      case k.OBCIAccelAxisZ:
-        accelArray[2] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
-        resolve(true);
-        break;
-      default:
-        resolve(false);
-        break;
-    }
-  });
+
+  if (dataBuf.byteLength !== k.OBCIPacketSize) {
+    throw new Error(k.OBCIErrorInvalidByteLength);
+  }
+
+  var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+  switch (sampleNumber % 10) { // The accelerometer is on a 25Hz sample rate, so every ten channel samples, we can get new data
+    case k.OBCIAccelAxisX:
+      accelArray[0] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
+      return false;
+    case k.OBCIAccelAxisY:
+      accelArray[1] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
+      return false;
+    case k.OBCIAccelAxisZ:
+      accelArray[2] = sampleModule.interpret16bitAsInt32(dataBuf.slice(lastBytePosition, lastBytePosition + 2)) * SCALE_FACTOR_ACCEL; // slice is not inclusive on the right
+      return true;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -843,32 +808,30 @@ function getFromTimePacketAccel (dataBuf, accelArray) {
 * @returns {Promise} - Fulfills a 2 byte buffer
 */
 function getFromTimePacketRawAux (dataBuf) {
-  return new Promise((resolve, reject) => {
-    if (dataBuf.byteLength !== k.OBCIPacketSize) reject('Error [getFromTimePacketRawAux]: input buffer must be ' + k.OBCIPacketSize + ' bytes!');
-    if (k.getVersionNumber(process.version) >= 6) {
-      resolve(Buffer.from(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
-    } else {
-      resolve(new Buffer(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop)));
-    }
-  });
+  if (dataBuf.byteLength !== k.OBCIPacketSize) {
+    throw new Error(k.OBCIErrorInvalidByteLength);
+  }
+  if (k.getVersionNumber(process.version) >= 6) {
+    return Buffer.from(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop));
+  } else {
+    return new Buffer(dataBuf.slice(k.OBCIPacketPositionTimeSyncAuxStart, k.OBCIPacketPositionTimeSyncAuxStop));
+  }
 }
 
 /**
 * @description Takes a buffer filled with 3 16 bit integers from an OpenBCI device and converts based on settings
 *                  of the MPU, values are in ?
 * @param dataBuf - Buffer that is 6 bytes long
-* @returns {Promise} - Fulfilled with Array of floats 3 elements long
+* @returns {Array} - Array of floats 3 elements long
 * @author AJ Keller (@pushtheworldllc)
 */
 function getDataArrayAccel (dataBuf) {
-  return new Promise(resolve => {
-    var accelData = [];
-    for (var i = 0; i < ACCEL_NUMBER_AXIS; i++) {
-      var index = i * 2;
-      accelData.push(sampleModule.interpret16bitAsInt32(dataBuf.slice(index, index + 2)) * SCALE_FACTOR_ACCEL);
-    }
-    resolve(accelData);
-  });
+  var accelData = [];
+  for (var i = 0; i < ACCEL_NUMBER_AXIS; i++) {
+    var index = i * 2;
+    accelData.push(sampleModule.interpret16bitAsInt32(dataBuf.slice(index, index + 2)) * SCALE_FACTOR_ACCEL);
+  }
+  return accelData;
 }
 /**
 * @description Takes a buffer filled with 24 bit signed integers from an OpenBCI device with gain settings in
@@ -876,33 +839,37 @@ function getDataArrayAccel (dataBuf) {
 *                  array of floats in VOLTS
 * @param dataBuf {Buffer} - Buffer with 33 bit signed integers, number of elements is same as channelSettingsArray.length * 3
 * @param channelSettingsArray {Array} - The channel settings array, see OpenBCIConstants.channelSettingsArrayInit() for specs
-* @returns {Promise} - Fulfilled with Array filled with floats for each channel's voltage in VOLTS
+* @returns {Array} - Array filled with floats for each channel's voltage in VOLTS
 * @author AJ Keller (@pushtheworldllc)
 */
 function getChannelDataArray (dataBuf, channelSettingsArray) {
-  return new Promise((resolve, reject) => {
-    if (!Array.isArray(channelSettingsArray)) reject('Error [getChannelDataArray]: Channel Settings must be an array!');
-    var channelData = [];
-    // Grab the sample number from the buffer
-    var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
-    var daisy = channelSettingsArray.length > k.OBCINumberOfChannelsDefault;
+  if (!Array.isArray(channelSettingsArray)) {
+    throw new Error('Error [getChannelDataArray]: Channel Settings must be an array!');
+  }
+  var channelData = [];
+  // Grab the sample number from the buffer
+  var sampleNumber = dataBuf[k.OBCIPacketPositionSampleNumber];
+  var daisy = channelSettingsArray.length > k.OBCINumberOfChannelsDefault;
 
-    // Channel data arrays are always 8 long
-    for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-      if (!channelSettingsArray[i].hasOwnProperty('gain')) reject(`Error [getChannelDataArray]: Invalid channel settings object at index ${i}`);
-      if (!k.isNumber(channelSettingsArray[i].gain)) reject('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
-
-      var scaleFactor = 0;
-      if (isEven(sampleNumber) && daisy) {
-        scaleFactor = ADS1299_VREF / channelSettingsArray[i + k.OBCINumberOfChannelsDefault].gain / (Math.pow(2, 23) - 1);
-      } else {
-        scaleFactor = ADS1299_VREF / channelSettingsArray[i].gain / (Math.pow(2, 23) - 1);
-      }
-      // Convert the three byte signed integer and convert it
-      channelData.push(scaleFactor * sampleModule.interpret24bitAsInt32(dataBuf.slice((i * 3) + k.OBCIPacketPositionChannelDataStart, (i * 3) + k.OBCIPacketPositionChannelDataStart + 3)));
+  // Channel data arrays are always 8 long
+  for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+    if (!channelSettingsArray[i].hasOwnProperty('gain')) {
+      throw new Error(`Error [getChannelDataArray]: Invalid channel settings object at index ${i}`);
     }
-    resolve(channelData);
-  });
+    if (!k.isNumber(channelSettingsArray[i].gain)) {
+      throw new Error('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
+    }
+
+    var scaleFactor = 0;
+    if (isEven(sampleNumber) && daisy) {
+      scaleFactor = ADS1299_VREF / channelSettingsArray[i + k.OBCINumberOfChannelsDefault].gain / (Math.pow(2, 23) - 1);
+    } else {
+      scaleFactor = ADS1299_VREF / channelSettingsArray[i].gain / (Math.pow(2, 23) - 1);
+    }
+    // Convert the three byte signed integer and convert it
+    channelData.push(scaleFactor * sampleModule.interpret24bitAsInt32(dataBuf.slice((i * 3) + k.OBCIPacketPositionChannelDataStart, (i * 3) + k.OBCIPacketPositionChannelDataStart + 3)));
+  }
+  return channelData;
 }
 
 function getRawPacketType (stopByte) {
@@ -1194,7 +1161,7 @@ function isTimeSyncSetConfirmationInBuffer (dataBuffer) {
 
 /**
 * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
-* @param sample {Buffer} - A sample object
+* @param sample {Object} - A sample object
 * @param time {Number} - The time to inject into the sample.
 * @param rawAux {Buffer} - 2 byte buffer to inject into sample
 * @returns {Buffer} - A time sync raw aux packet
@@ -1230,7 +1197,7 @@ function convertSampleToPacketRawAuxTimeSynced (sample, time, rawAux) {
 
 /**
 * @description Mainly used by the simulator to convert a randomly generated sample into a std OpenBCI V3 Packet
-* @param sample {Buffer} - A sample object
+* @param sample {Object} - A sample object
 * @param time {Number} - The time to inject into the sample.
 * @returns {Buffer} - A time sync accel packet
 */

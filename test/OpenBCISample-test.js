@@ -1,6 +1,7 @@
 /**
 * Created by ajk on 12/15/15.
 */
+'use strict';
 var bluebirdChecks = require('./bluebirdChecks');
 var openBCISample = require('../openBCISample');
 var chai = require('chai');
@@ -31,67 +32,52 @@ describe('openBCISample', function () {
   afterEach(() => bluebirdChecks.noPendingPromises());
   describe('#parseRawPacketStandard', function () {
     this.timeout(4000);
-    it('should fulfill promise', function () {
-      return openBCISample.parseRawPacketStandard(sampleBuf).should.be.fulfilled;
+    it('should return the packet', function () {
+      expect(openBCISample.parseRawPacketStandard(sampleBuf)).to.not.be.null;
     });
     it('should have the correct sample number', function () {
-      return openBCISample.parseRawPacketStandard(sampleBuf).should.eventually.have.property('sampleNumber').equal(0x45);
+      let sample = openBCISample.parseRawPacketStandard(sampleBuf);
+
+      (sample.sampleNumber).should.equal(0x45);
     });
-    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function (done) {
-      openBCISample.parseRawPacketStandard(sampleBuf) // sampleBuf has its channel number for each 3 byte integer. See line 20...
-        .then(sampleObject => {
-          // So parse the sample we created and each value resulting from the channelData array should
-          //  be its index + 1 (i.e. channel number) multiplied by the channel scale factor set by the
-          //  ADS1299 for a gain of 24 (default)
-          sampleObject.channelData.forEach((channelValue, index) => {
-            channelValue.should.equal(channelScaleFactor * (index + 1));
-          });
-          done();
-        })
-        .catch(err => done(err));
+    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function () {
+      // sampleBuf has its channel number for each 3 byte integer. See line 20...
+      let sample = openBCISample.parseRawPacketStandard(sampleBuf);
+
+      // So parse the sample we created and each value resulting from the channelData array should
+      //  be its index + 1 (i.e. channel number) multiplied by the channel scale factor set by the
+      //  ADS1299 for a gain of 24 (default)
+      sample.channelData.forEach((channelValue, index) => {
+        channelValue.should.equal(channelScaleFactor * (index + 1));
+      });
     });
-    it('gets the 6-byte raw aux buffer', function (done) {
-      openBCISample.parseRawPacketStandard(sampleBuf, defaultChannelSettingsArray, true)
-        .then(sampleObject => {
-          Buffer.isBuffer(sampleObject.auxData).should.be.equal(true);
-          done();
-        })
-        .catch(err => done(err));
+    it('gets the 6-byte raw aux buffer', function () {
+      let sample = openBCISample.parseRawPacketStandard(sampleBuf, defaultChannelSettingsArray, true);
+      Buffer.isBuffer(sample.auxData).should.be.equal(true);
     });
-    it('all the auxs should have the same number value as their index * scaleFactor', function (done) {
-      openBCISample.parseRawPacketStandard(sampleBuf)
-        .then(sampleObject => {
-          sampleObject.accelData.forEach((accelValue, index) => {
-            accelValue.should.equal(openBCISample.scaleFactorAux * index);
-          });
-          done();
-        })
-        .catch(err => done(err));
+    it('all the auxs should have the same number value as their index * scaleFactor', function () {
+      let sample = openBCISample.parseRawPacketStandard(sampleBuf);
+
+      sample.accelData.forEach((accelValue, index) => {
+        accelValue.should.equal(openBCISample.scaleFactorAux * index);
+      });
     });
-    it('check to see if negative numbers work on channel data', function (done) {
+    it('check to see if negative numbers work on channel data', function () {
       var temp = openBCISample.samplePacket();
       // console.log(temp)
       var taco = new Buffer([0x81]);
       taco.copy(temp, 2);
-      openBCISample.parseRawPacketStandard(temp)
-        .then(sampleObject => {
-          assert.equal(sampleObject.channelData[0], channelScaleFactor * -8323071, 'Negative numbers not working correctly');
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(temp);
+      assert.equal(sample.channelData[0], channelScaleFactor * -8323071, 'Negative numbers not working correctly');
     });
-    it('check to see if negative numbers work on aux data', function (done) {
+    it('check to see if negative numbers work on aux data', function () {
       var temp = openBCISample.samplePacket();
       var taco = new Buffer([0x81]);
       taco.copy(temp, 26);
-      openBCISample.parseRawPacketStandard(temp)
-        .then(sampleObject => {
-          sampleObject.accelData[0].should.be.approximately(-32512 * openBCISample.scaleFactorAux, 1);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(temp);
+      sample.accelData[0].should.be.approximately(-32512 * openBCISample.scaleFactorAux, 1);
     });
-    it('should work on 200 samples', done => {
+    it('should work on 200 samples', function () {
       var numberOfSamplesToTest = 200;
       var samplesReceived = 0;
 
@@ -100,216 +86,140 @@ describe('openBCISample', function () {
         // console.log(temp)
         var taco = new Buffer([i]);
         taco.copy(temp, 2);
-        openBCISample.parseRawPacketStandard(temp)
-          .then(sampleObject => {
-            if (sampleObject.sampleNumber === numberOfSamplesToTest - 1) {
-              done();
-            }
-            expect(sampleObject.sampleNumber).to.equal(samplesReceived);
-            samplesReceived++;
-          })
-          .catch(err => done(err));
+        let sample = openBCISample.parseRawPacketStandard(temp);
+        expect(sample.sampleNumber).to.equal(samplesReceived);
+        samplesReceived++;
       }
     });
-    it('has the right sample number', function (done) {
+    it('has the right sample number', function () {
       var expectedSampleNumber = 0x45;
-      openBCISample.parseRawPacketStandard(sampleBuf)
-        .then(sampleObject => {
-          sampleObject.sampleNumber.should.equal(expectedSampleNumber);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(sampleBuf);
+      sample.sampleNumber.should.equal(expectedSampleNumber);
     });
-    it('has the right stop byte', function (done) {
-      openBCISample.parseRawPacketStandard(sampleBuf)
-        .then(sampleObject => {
-          sampleObject.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketStandardAccel));
-          done();
-        })
-        .catch(err => done(err));
+    it('has the right stop byte', function () {
+      let sample = openBCISample.parseRawPacketStandard(sampleBuf);
+      sample.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketStandardAccel));
     });
-    it('has the right start byte', function (done) {
-      openBCISample.parseRawPacketStandard(sampleBuf)
-        .then(sampleObject => {
-          sampleObject.startByte.should.equal(0xA0);
-          done();
-        })
-        .catch(err => done(err));
+    it('has the right start byte', function () {
+      let sample = openBCISample.parseRawPacketStandard(sampleBuf);
+      sample.startByte.should.equal(0xA0);
     });
     describe('#errorConditions', function () {
-      it('send non data buffer', function (done) {
-        openBCISample.parseRawPacketStandard(1).should.be.rejected.and.notify(done);
+      it('send non data buffer', function () {
+        expect(openBCISample.parseRawPacketStandard.bind(openBCISample, 1)).to.throw(k.OBCIErrorInvalidByteLength);
       });
-      it('bad start byte', function (done) {
+      it('bad start byte', function () {
         var temp = openBCISample.samplePacket();
         temp[0] = 69;
-        openBCISample.parseRawPacketStandard(temp).should.be.rejected.and.notify(done);
+        expect(openBCISample.parseRawPacketStandard.bind(openBCISample, temp)).to.throw(k.OBCIErrorInvalidByteStart);
       });
-      it('wrong number of bytes', function (done) {
-        openBCISample.parseRawPacketStandard(new Buffer(5)).should.be.rejected.and.notify(done);
+      it('wrong number of bytes', function () {
+        expect(openBCISample.parseRawPacketStandard.bind(openBCISample, new Buffer(5))).to.throw(k.OBCIErrorInvalidByteLength);
       });
-      it('undefined', function (done) {
-        openBCISample.parseRawPacketStandard().should.be.rejected.and.notify(done);
+      it('undefined', function () {
+        expect(openBCISample.parseRawPacketStandard.bind(openBCISample)).to.throw(k.OBCIErrorUndefinedOrNullInput);
       });
     });
   });
   describe('#parsePacketStandardRawAux', function () {
     var packet;
-    it('gets 6-byte buffer', function (done) {
+    it('gets 6-byte buffer', function () {
       // Get a packet
       // This packet has aux bytes with the same value as their index
       packet = openBCISample.samplePacketStandardRawAux(0);
 
-      openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false)
-        .then(sampleObject => {
-          Buffer.isBuffer(sampleObject.auxData).should.equal(true);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false);
+      Buffer.isBuffer(sample.auxData).should.equal(true);
     });
-    it('gets the correct 6-byte buffer', function (done) {
+    it('gets the correct 6-byte buffer', function () {
       // Get a packet
       // This packet has aux bytes with the same value as their index
       packet = openBCISample.samplePacketStandardRawAux(0);
 
-      openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false)
-        .then(sampleObject => {
-          for (var i = 0; i < 6; i++) {
-            sampleObject.auxData[i].should.equal(i);
-          }
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false);
+      for (var i = 0; i < 6; i++) {
+        sample.auxData[i].should.equal(i);
+      }
     });
-    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function (done) {
+    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function () {
       packet = openBCISample.samplePacketStandardRawAux(0);
-      openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false)
-        .then(sampleObject => {
-          sampleObject.channelData.forEach((channelValue, index) => {
-            channelValue.should.equal(channelScaleFactor * (index + 1));
-          });
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false);
+      sample.channelData.forEach((channelValue, index) => {
+        channelValue.should.equal(channelScaleFactor * (index + 1));
+      });
     });
-    it('has the right sample number', function (done) {
+    it('has the right sample number', function () {
       var expectedSampleNumber = 69;
       packet = openBCISample.samplePacketStandardRawAux(expectedSampleNumber);
-      openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false)
-        .then(sampleObject => {
-          sampleObject.sampleNumber.should.equal(expectedSampleNumber);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false);
+      sample.sampleNumber.should.equal(expectedSampleNumber);
     });
-    it('has the right stop byte', function (done) {
+    it('has the right stop byte', function () {
       packet = openBCISample.samplePacketStandardRawAux(0);
-      openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false)
-        .then(sampleObject => {
-          sampleObject.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketStandardRawAux));
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false);
+      sample.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketStandardRawAux));
     });
-    it('has the right start byte', function (done) {
+    it('has the right start byte', function () {
       packet = openBCISample.samplePacketStandardRawAux(0);
-      openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false)
-        .then(sampleObject => {
-          sampleObject.startByte.should.equal(0xA0);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parseRawPacketStandard(packet, defaultChannelSettingsArray, false);
+      sample.startByte.should.equal(0xA0);
     });
     describe('#errorConditions', function () {
-      it('send non data buffer', function (done) {
-        openBCISample.parseRawPacketStandard(1, defaultChannelSettingsArray, false).should.be.rejected.and.notify(done);
+      it('send non data buffer', function () {
+        expect(openBCISample.parseRawPacketStandard.bind(openBCISample, 1)).to.throw(k.OBCIErrorInvalidByteLength);
       });
-      it('bad start byte', function (done) {
+      it('bad start byte', function () {
         var temp = openBCISample.samplePacket();
         temp[0] = 69;
-        openBCISample.parseRawPacketStandard(temp, defaultChannelSettingsArray, false).should.be.rejected.and.notify(done);
+        expect(openBCISample.parseRawPacketStandard.bind(openBCISample, temp, defaultChannelSettingsArray, false)).to.throw(k.OBCIErrorInvalidByteStart);
       });
-      it('wrong number of bytes', function (done) {
-        openBCISample.parseRawPacketStandard(new Buffer(5), defaultChannelSettingsArray, false).should.be.rejected.and.notify(done);
-      });
-      it('undefined', function (done) {
-        openBCISample.parseRawPacketStandard(undefined, defaultChannelSettingsArray, false).should.be.rejected.and.notify(done);
+      it('wrong number of bytes', function () {
+        expect(openBCISample.parseRawPacketStandard.bind(openBCISample, new Buffer(5), defaultChannelSettingsArray, false)).to.throw(k.OBCIErrorInvalidByteLength);
       });
     });
   });
   describe('#getFromTimePacketTime', function () {
-    var sampleWithTime = openBCISample.samplePacketAccelTimeSynced(0);
-    it('should fulfill promise', function () {
-      return openBCISample.getFromTimePacketTime(sampleWithTime).should.be.fulfilled;
-    });
-    it('should extract the proper time value from packet', function (done) {
-      openBCISample.getFromTimePacketTime(sampleWithTime)
-        .then(packetTime => {
-          // console.log(packetTime)
-          packetTime.should.equal(1);
-          done();
-        })
-        .catch(err => done(err));
+    it('should extract the proper time value from packet', function () {
+      let sampleWithTime = openBCISample.samplePacketAccelTimeSynced(0);
+      let time = openBCISample.getFromTimePacketTime(sampleWithTime);
+      time.should.equal(1);
     });
     describe('#errorConditions', function () {
-      it('wrong number of bytes', function (done) {
-        openBCISample.getFromTimePacketTime(new Buffer(5), 0).should.be.rejected.and.notify(done);
+      it('wrong number of bytes', function () {
+        expect(openBCISample.getFromTimePacketTime.bind(openBCISample, new Buffer(5))).to.throw(k.OBCIErrorInvalidByteLength);
       });
     });
   });
   describe('#getFromTimePacketAccel', function () {
     var packet;
 
-    it('should emit and array if z axis i.e. sampleNumber % 10 === 9', function (done) {
+    it('should emit and array if z axis i.e. sampleNumber % 10 === 9', function () {
       // Make a packet with a sample number that represents z axis
       packet = openBCISample.samplePacketAccelTimeSynced(9);
-      openBCISample.getFromTimePacketAccel(packet, accelArray)
-        .then(isZAxis => {
-          // accel array ready
-          isZAxis.should.equal(true);
-          done();
-        })
-        .catch(err => {
-          done(err);
-        });
+      let isZAxis = openBCISample.getFromTimePacketAccel(packet, accelArray);
+      isZAxis.should.equal(true);
     });
-    it(`false if sample number is not sampleNumber % 10 === ${k.OBCIAccelAxisZ}`, function (done) {
+    it(`false if sample number is not sampleNumber % 10 === ${k.OBCIAccelAxisZ}`, function () {
       // Make a packet that is anything but the z axis
       packet = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisX);
-      openBCISample.getFromTimePacketAccel(packet, accelArray)
-        .then(isZAxis => {
-          // Accel array not ready for sampleNumber % 10 === 7
-          isZAxis.should.equal(false);
+      let isZAxis = openBCISample.getFromTimePacketAccel(packet, accelArray);
+      isZAxis.should.equal(false);
 
-          packet = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisY);
-          return openBCISample.getFromTimePacketAccel(packet, accelArray);
-        })
-        .then(isZAxis => {
-          // Accel array not ready for sampleNumber % 10 === 8
-          isZAxis.should.equal(false);
+      packet = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisY);
+      isZAxis = openBCISample.getFromTimePacketAccel(packet, accelArray);
+      isZAxis.should.equal(false);
 
-          packet = openBCISample.samplePacketAccelTimeSynced(34);
-          return openBCISample.getFromTimePacketAccel(packet, accelArray);
-        })
-        .then(isZAxis => {
-          // Accel array not ready for sampleNumber % 10 === 4
-          isZAxis.should.equal(false);
+      packet = openBCISample.samplePacketAccelTimeSynced(34);
+      isZAxis = openBCISample.getFromTimePacketAccel(packet, accelArray);
+      isZAxis.should.equal(false);
 
-          packet = openBCISample.samplePacketAccelTimeSynced(100);
-          return openBCISample.getFromTimePacketAccel(packet, accelArray);
-        })
-        .then(isZAxis => {
-          // Accel array not ready for sampleNumber % 10 === 0
-          isZAxis.should.equal(false);
-          done();
-        })
-        .catch(err => {
-          done(err);
-        });
+      packet = openBCISample.samplePacketAccelTimeSynced(100);
+      isZAxis = openBCISample.getFromTimePacketAccel(packet, accelArray);
+      isZAxis.should.equal(false);
     });
     describe('#errorConditions', function () {
-      it('wrong number of bytes', function (done) {
-        openBCISample.getFromTimePacketAccel(new Buffer(5), accelArray).should.be.rejected.and.notify(done);
+      it('wrong number of bytes', function () {
+        expect(openBCISample.getFromTimePacketAccel.bind(openBCISample, new Buffer(5))).to.throw(k.OBCIErrorInvalidByteLength);
       });
     });
   });
@@ -317,7 +227,7 @@ describe('openBCISample', function () {
     // Global array (at least it's global in practice) to store accel data between packets
     var packet1, packet2, packet3;
 
-    it(`should only include accel data array on sampleNumber%10 === ${k.OBCIAccelAxisZ}`, function (done) {
+    it(`should only include accel data array on sampleNumber%10 === ${k.OBCIAccelAxisZ}`, function () {
       // Generate three packets, packets only get one axis value per packet
       //  X axis data is sent with every sampleNumber % 10 === 7
       packet1 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisX);
@@ -326,22 +236,16 @@ describe('openBCISample', function () {
       //  Z axis data is sent with every sampleNumber % 10 === 9
       packet3 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisZ);
 
-      openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray)
-        .then(sampleObject => {
-          sampleObject.should.not.have.property('accelData');
-          return openBCISample.parsePacketTimeSyncedAccel(packet2, defaultChannelSettingsArray, 0, accelArray);
-        })
-        .then(sampleObject => {
-          sampleObject.should.not.have.property('accelData');
-          return openBCISample.parsePacketTimeSyncedAccel(packet3, defaultChannelSettingsArray, 0, accelArray);
-        })
-        .then(sampleObject => {
-          sampleObject.should.have.property('accelData');
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray);
+      sample.should.not.have.property('accelData');
+
+      sample = openBCISample.parsePacketTimeSyncedAccel(packet2, defaultChannelSettingsArray, 0, accelArray);
+      sample.should.not.have.property('accelData');
+
+      sample = openBCISample.parsePacketTimeSyncedAccel(packet3, defaultChannelSettingsArray, 0, accelArray);
+      sample.should.have.property('accelData');
     });
-    it("should convert raw numbers into g's with scale factor", function (done) {
+    it("should convert raw numbers into g's with scale factor", function () {
       // Generate three packets, packets only get one axis value per packet
       //  X axis data is sent with every sampleNumber % 10 === 7
       packet1 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisX);
@@ -350,143 +254,95 @@ describe('openBCISample', function () {
       //  Z axis data is sent with every sampleNumber % 10 === 9
       packet3 = openBCISample.samplePacketAccelTimeSynced(k.OBCIAccelAxisZ);
 
-      openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray)
-        .then(() => {
-          return openBCISample.parsePacketTimeSyncedAccel(packet2, defaultChannelSettingsArray, 0, accelArray);
-        })
-        .then(() => {
-          return openBCISample.parsePacketTimeSyncedAccel(packet3, defaultChannelSettingsArray, 0, accelArray);
-        })
-        .then(sampleObject => {
-          sampleObject.accelData.forEach((accelValue, index) => {
-            accelValue.should.equal(openBCISample.scaleFactorAux);
-          });
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray);
+      sample = openBCISample.parsePacketTimeSyncedAccel(packet2, defaultChannelSettingsArray, 0, accelArray);
+      sample = openBCISample.parsePacketTimeSyncedAccel(packet3, defaultChannelSettingsArray, 0, accelArray);
+      sample.accelData.forEach((accelValue, index) => {
+        accelValue.should.equal(openBCISample.scaleFactorAux);
+      });
     });
-    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function (done) {
+    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function () {
       packet1 = openBCISample.samplePacketAccelTimeSynced(0);
-      openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray) // sampleBuf has its channel number for each 3 byte integer. See line 20...
-        .then(sampleObject => {
-          sampleObject.channelData.forEach((channelValue, index) => {
-            channelValue.should.equal(channelScaleFactor * (index + 1));
-          });
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray); // sampleBuf has its channel number for each 3 byte integer. See line 20...
+      sample.channelData.forEach((channelValue, index) => {
+        channelValue.should.equal(channelScaleFactor * (index + 1));
+      });
     });
-    it('has the right sample number', function (done) {
+    it('has the right sample number', function () {
       var expectedSampleNumber = 69;
       packet1 = openBCISample.samplePacketAccelTimeSynced(expectedSampleNumber);
-      openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray) // sampleBuf has its channel number for each 3 byte integer. See line 20...
-        .then(sampleObject => {
-          sampleObject.sampleNumber.should.equal(expectedSampleNumber);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray); // sampleBuf has its channel number for each 3 byte integer. See line 20...
+      sample.sampleNumber.should.equal(expectedSampleNumber);
     });
-    it('has the right stop byte', function (done) {
+    it('has the right stop byte', function () {
       packet1 = openBCISample.samplePacketAccelTimeSynced(0);
-      openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray) // sampleBuf has its channel number for each 3 byte integer. See line 20...
-        .then(sampleObject => {
-          sampleObject.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSynced));
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray); // sampleBuf has its channel number for each 3 byte integer. See line 20...
+      sample.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketAccelTimeSynced));
     });
-    it('has the right start byte', function (done) {
+    it('has the right start byte', function () {
       packet1 = openBCISample.samplePacketAccelTimeSynced(0);
-      openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray) // sampleBuf has its channel number for each 3 byte integer. See line 20...
-        .then(sampleObject => {
-          sampleObject.startByte.should.equal(0xA0);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packet1, defaultChannelSettingsArray, 0, accelArray); // sampleBuf has its channel number for each 3 byte integer. See line 20...
+      sample.startByte.should.equal(0xA0);
     });
     describe('#errorConditions', function () {
-      it('wrong number of bytes', function (done) {
-        openBCISample.parsePacketTimeSyncedAccel(new Buffer(5), defaultChannelSettingsArray, 0, accelArray).should.be.rejected.and.notify(done);
+      it('wrong number of bytes', function () {
+        expect(openBCISample.parsePacketTimeSyncedAccel.bind(openBCISample, new Buffer(5), defaultChannelSettingsArray, 0, accelArray)).to.throw(k.OBCIErrorInvalidByteLength);
       });
     });
   });
   describe('#getFromTimePacketRawAux', function () {
     var packet;
-    it('should put the two aux bytes into a buffer', function (done) {
+    it('should put the two aux bytes into a buffer', function () {
       // Get a packet
       packet = openBCISample.samplePacketRawAuxTimeSynced(0);
 
-      openBCISample.getFromTimePacketRawAux(packet)
-        .then(rawAuxBuffer => {
-          Buffer.isBuffer(rawAuxBuffer).should.equal(true);
-          done();
-        })
-        .catch(err => done(err));
+      let rawAuxBuffer = openBCISample.getFromTimePacketRawAux(packet);
+      Buffer.isBuffer(rawAuxBuffer).should.equal(true);
     });
     describe('#errorConditions', function () {
-      it('wrong number of bytes', function (done) {
-        openBCISample.getFromTimePacketRawAux(new Buffer(5)).should.be.rejected.and.notify(done);
+      it('wrong number of bytes', function () {
+        expect(openBCISample.getFromTimePacketRawAux.bind(openBCISample, new Buffer(5))).to.throw(k.OBCIErrorInvalidByteLength);
       });
     });
   });
   describe('#parsePacketTimeSyncedRawAux', function () {
     var packet;
-    it('should put the two aux bytes into a buffer', function (done) {
+    it('should put the two aux bytes into a buffer', function () {
       // Generate three packets, packets only get one axis value per packet
       packet = openBCISample.samplePacketRawAuxTimeSynced(0);
 
-      openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0)
-        .then(sampleObject => {
-          sampleObject.should.have.property('auxData');
-          sampleObject.auxData[0].should.equal(0);
-          sampleObject.auxData[1].should.equal(1);
-          sampleObject.auxData.byteLength.should.equal(2);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0);
+      sample.should.have.property('auxData');
+      sample.auxData[0].should.equal(0);
+      sample.auxData[1].should.equal(1);
+      sample.auxData.byteLength.should.equal(2);
     });
-    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function (done) {
+    it('all the channels should have the same number value as their (index + 1) * scaleFactor', function () {
       packet = openBCISample.samplePacketRawAuxTimeSynced(0);
-      openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0)
-        .then(sampleObject => {
-          sampleObject.channelData.forEach((channelValue, index) => {
-            channelValue.should.equal(channelScaleFactor * (index + 1));
-          });
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0);
+      sample.channelData.forEach((channelValue, index) => {
+        channelValue.should.equal(channelScaleFactor * (index + 1));
+      });
     });
-    it('has the right sample number', function (done) {
+    it('has the right sample number', function () {
       var expectedSampleNumber = 69;
       packet = openBCISample.samplePacketRawAuxTimeSynced(expectedSampleNumber);
-      openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0)
-        .then(sampleObject => {
-          sampleObject.sampleNumber.should.equal(expectedSampleNumber);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0);
+      sample.sampleNumber.should.equal(expectedSampleNumber);
     });
-    it('has the right stop byte', function (done) {
+    it('has the right stop byte', function () {
       packet = openBCISample.samplePacketRawAuxTimeSynced(0);
-      openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0)
-        .then(sampleObject => {
-          sampleObject.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSynced));
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0);
+      sample.stopByte.should.equal(openBCISample.makeTailByteFromPacketType(k.OBCIStreamPacketRawAuxTimeSynced));
     });
-    it('has the right start byte', function (done) {
+    it('has the right start byte', function () {
       packet = openBCISample.samplePacketRawAuxTimeSynced(0);
-      openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0)
-        .then(sampleObject => {
-          sampleObject.startByte.should.equal(0xA0);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packet, defaultChannelSettingsArray, 0);
+      sample.startByte.should.equal(0xA0);
     });
     describe('#errorConditions', function () {
-      it('wrong number of bytes', function (done) {
-        openBCISample.parsePacketTimeSyncedRawAux(new Buffer(5), defaultChannelSettingsArray, 0, accelArray).should.be.rejected.and.notify(done);
+      it('wrong number of bytes', function () {
+        expect(openBCISample.parsePacketTimeSyncedRawAux.bind(openBCISample, new Buffer(5), defaultChannelSettingsArray, 0, accelArray)).to.throw(k.OBCIErrorInvalidByteLength);
       });
     });
   });
@@ -508,25 +364,17 @@ describe('openBCISample', function () {
     it('should have correct sample number', function () {
       packetBuffer[1].should.equal(1, 'confirming sample number is 1 more than 0');
     });
-    it('should convert channel data to binary', function (done) {
-      openBCISample.parseRawPacketStandard(packetBuffer)
-        .then(sample => {
-          for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
-          }
-          done();
-        })
-        .catch(err => done(err));
+    it('should convert channel data to binary', function () {
+      let sample = openBCISample.parseRawPacketStandard(packetBuffer);
+      for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
+      }
     });
-    it('should convert aux data to binary', function (done) {
-      openBCISample.parseRawPacketStandard(packetBuffer)
-        .then(sample => {
-          for (var i = 0; i < 3; i++) {
-            sample.accelData[i].should.be.approximately(newSample.auxData[i], 0.001);
-          }
-          done();
-        })
-        .catch(err => done(err));
+    it('should convert aux data to binary', function () {
+      let sample = openBCISample.parseRawPacketStandard(packetBuffer);
+      for (var i = 0; i < 3; i++) {
+        sample.accelData[i].should.be.approximately(newSample.auxData[i], 0.001);
+      }
     });
   });
   describe('#convertSampleToPacketRawAux', function () {
@@ -550,24 +398,16 @@ describe('openBCISample', function () {
     it('should have correct sample number', function () {
       packetBuffer[1].should.equal(1, 'confirming sample number is 1 more than 0');
     });
-    it('should convert channel data to binary', function (done) {
-      openBCISample.parseRawPacketStandard(packetBuffer, defaultChannelSettingsArray, false)
-        .then(sample => {
-          for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
-          }
-          done();
-        })
-        .catch(err => done(err));
+    it('should convert channel data to binary', function () {
+      let sample = openBCISample.parseRawPacketStandard(packetBuffer, defaultChannelSettingsArray, false);
+      for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
+      }
     });
-    it('should get raw aux buffer', done => {
-      openBCISample.parseRawPacketStandard(packetBuffer, defaultChannelSettingsArray, false)
-        .then(sample => {
-          expect(sample.auxData).to.exist;
-          expect(bufferEqual(rawBuffer, sample.auxData)).to.be.true;
-          done();
-        })
-        .catch(err => done(err));
+    it('should get raw aux buffer', function () {
+      let sample = openBCISample.parseRawPacketStandard(packetBuffer, defaultChannelSettingsArray, false);
+      expect(sample.auxData).to.exist;
+      expect(bufferEqual(rawBuffer, sample.auxData)).to.be.true;
     });
   });
   describe('#convertSampleToPacketAccelTimeSyncSet', function () {
@@ -597,34 +437,22 @@ describe('openBCISample', function () {
     it('should have correct sample number', () => {
       packetBuffer[1].should.equal(1, 'confirming sample number is 1 more than 0');
     });
-    it('should convert channel data to binary', done => {
-      openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray)
-        .then(sample => {
-          for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
-          }
-          done();
-        })
-        .catch(err => done(err));
+    it('should convert channel data to binary', function () {
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray);
+      for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
+      }
     });
-    it('should get board time', done => {
-      openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray)
-        .then(sample => {
-          expect(sample.boardTime).to.exist;
-          expect(sample.boardTime).to.equal(time);
-          done();
-        })
-        .catch(err => done(err));
+    it('should get board time', function () {
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray);
+      expect(sample.boardTime).to.exist;
+      expect(sample.boardTime).to.equal(time);
     });
-    it('should get time stamp with offset', done => {
+    it('should get time stamp with offset', function () {
       var timeOffset = 80;
-      openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, timeOffset, accelArray)
-        .then(sample => {
-          expect(sample.timeStamp).to.exist;
-          expect(sample.timeStamp).to.equal(time + timeOffset);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, timeOffset, accelArray);
+      expect(sample.timeStamp).to.exist;
+      expect(sample.timeStamp).to.equal(time + timeOffset);
     });
   });
   describe('#convertSampleToPacketAccelTimeSynced', function () {
@@ -654,34 +482,22 @@ describe('openBCISample', function () {
     it('should have correct sample number', () => {
       packetBuffer[1].should.equal(1, 'confirming sample number is 1 more than 0');
     });
-    it('should convert channel data to binary', done => {
-      openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray)
-        .then(sample => {
-          for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
-          }
-          done();
-        })
-        .catch(err => done(err));
+    it('should convert channel data to binary', function () {
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray);
+      for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
+      }
     });
-    it('should get board time', done => {
-      openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray)
-        .then(sample => {
-          expect(sample.boardTime).to.exist;
-          expect(sample.boardTime).to.equal(time);
-          done();
-        })
-        .catch(err => done(err));
+    it('should get board time', function () {
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, 0, accelArray);
+      expect(sample.boardTime).to.exist;
+      expect(sample.boardTime).to.equal(time);
     });
-    it('should get time stamp with offset', done => {
+    it('should get time stamp with offset', function () {
       var timeOffset = 80;
-      openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, timeOffset, accelArray)
-        .then(sample => {
-          expect(sample.timeStamp).to.exist;
-          expect(sample.timeStamp).to.equal(time + timeOffset);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedAccel(packetBuffer, channelSettingsArray, timeOffset, accelArray);
+      expect(sample.timeStamp).to.exist;
+      expect(sample.timeStamp).to.equal(time + timeOffset);
     });
   });
   describe('#convertSampleToPacketRawAuxTimeSyncSet', function () {
@@ -711,43 +527,27 @@ describe('openBCISample', function () {
     it('should have correct sample number', () => {
       packetBuffer[1].should.equal(1, 'confirming sample number is 1 more than 0');
     });
-    it('should convert channel data to binary', done => {
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0)
-        .then(sample => {
-          for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
-          }
-          done();
-        })
-        .catch(err => done(err));
+    it('should convert channel data to binary', function () {
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0);
+      for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
+      }
     });
-    it('should get raw aux buffer', done => {
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0)
-        .then(sample => {
-          expect(sample.auxData).to.exist;
-          expect(bufferEqual(rawAux, sample.auxData)).to.be.true;
-          done();
-        })
-        .catch(err => done(err));
+    it('should get raw aux buffer', function () {
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0);
+      expect(sample.auxData).to.exist;
+      expect(bufferEqual(rawAux, sample.auxData)).to.be.true;
     });
-    it('should get board time', done => {
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0)
-        .then(sample => {
-          expect(sample.boardTime).to.exist;
-          expect(sample.boardTime).to.equal(time);
-          done();
-        })
-        .catch(err => done(err));
+    it('should get board time', function () {
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0);
+      expect(sample.boardTime).to.exist;
+      expect(sample.boardTime).to.equal(time);
     });
-    it('should get time stamp with offset', done => {
+    it('should get time stamp with offset', function () {
       var timeOffset = 80;
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, timeOffset)
-        .then(sample => {
-          expect(sample.timeStamp).to.exist;
-          expect(sample.timeStamp).to.equal(time + timeOffset);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, timeOffset);
+      expect(sample.timeStamp).to.exist;
+      expect(sample.timeStamp).to.equal(time + timeOffset);
     });
   });
   describe('#convertSampleToPacketRawAuxTimeSynced', function () {
@@ -777,43 +577,27 @@ describe('openBCISample', function () {
     it('should have correct sample number', () => {
       packetBuffer[1].should.equal(1, 'confirming sample number is 1 more than 0');
     });
-    it('should convert channel data to binary', done => {
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0)
-        .then(sample => {
-          for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
-            sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
-          }
-          done();
-        })
-        .catch(err => done(err));
+    it('should convert channel data to binary', function () {
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0);
+      for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
+        sample.channelData[i].should.be.approximately(newSample.channelData[i], 0.001);
+      }
     });
-    it('should get raw aux buffer', done => {
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0)
-        .then(sample => {
-          expect(sample.auxData).to.exist;
-          expect(bufferEqual(rawAux, sample.auxData)).to.be.true;
-          done();
-        })
-        .catch(err => done(err));
+    it('should get raw aux buffer', function () {
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0);
+      expect(sample.auxData).to.exist;
+      expect(bufferEqual(rawAux, sample.auxData)).to.be.true;
     });
-    it('should get board time', done => {
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0)
-        .then(sample => {
-          expect(sample.boardTime).to.exist;
-          expect(sample.boardTime).to.equal(time);
-          done();
-        })
-        .catch(err => done(err));
+    it('should get board time', function () {
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, 0);
+      expect(sample.boardTime).to.exist;
+      expect(sample.boardTime).to.equal(time);
     });
-    it('should get time stamp with offset', done => {
+    it('should get time stamp with offset', function () {
       var timeOffset = 80;
-      openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, timeOffset)
-        .then(sample => {
-          expect(sample.timeStamp).to.exist;
-          expect(sample.timeStamp).to.equal(time + timeOffset);
-          done();
-        })
-        .catch(err => done(err));
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(packetBuffer, channelSettingsArray, timeOffset);
+      expect(sample.timeStamp).to.exist;
+      expect(sample.timeStamp).to.equal(time + timeOffset);
     });
   });
   describe('#interpret24bitAsInt32', function () {
@@ -1044,22 +828,17 @@ describe('openBCISample', function () {
     beforeEach(() => {
       sampleBuf = openBCISample.samplePacket(0);
     });
-    it('should multiply each channel by the proper scale value', done => {
+    it('should multiply each channel by the proper scale value', function () {
       var chanArr = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault); // Not in daisy mode
       var scaleFactor = 4.5 / 24 / (Math.pow(2, 23) - 1);
       // Call the function under test
-      openBCISample.getChannelDataArray(sampleBuf, chanArr).then(valueArray => {
-        console.log('hey');
-        for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
-          console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`);
-          expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1), 0.0001);
-        }
-        done();
-      }).catch(err => {
-        done(err);
-      });
+      let valueArray = openBCISample.getChannelDataArray(sampleBuf, chanArr);
+      for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
+        console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`);
+        expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1), 0.0001);
+      }
     });
-    it('in daisy mode, on odd samples should use gains from index 0-7 of channel settings array', done => {
+    it('in daisy mode, on odd samples should use gains from index 0-7 of channel settings array', function () {
       // Overwrite the default
       sampleBuf = openBCISample.samplePacket(1); // even's are the daisy channels
       // Make a 16 element long channel settings array
@@ -1071,17 +850,13 @@ describe('openBCISample', function () {
       }
       var scaleFactor = 4.5 / 24 / (Math.pow(2, 23) - 1);
       // Call the function under test
-      openBCISample.getChannelDataArray(sampleBuf, chanArr).then(valueArray => {
-        for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
-          // console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`)
-          expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1), 0.0001);
-        }
-        done();
-      }).catch(err => {
-        done(err);
-      });
+      let valueArray = openBCISample.getChannelDataArray(sampleBuf, chanArr);
+      for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
+        // console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`)
+        expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1), 0.0001);
+      }
     });
-    it('in daisy mode, on even samples should use gains from index 8-15 of channel settings array', done => {
+    it('in daisy mode, on even samples should use gains from index 8-15 of channel settings array', function () {
       // Overwrite the default
       sampleBuf = openBCISample.samplePacket(2); // even's are the daisy channels
       // Make a 16 element long channel settings array
@@ -1094,44 +869,40 @@ describe('openBCISample', function () {
       // gain here is 24, the same as in the channel settings array
       var scaleFactor = 4.5 / 24 / (Math.pow(2, 23) - 1);
       // Call the function under test
-      openBCISample.getChannelDataArray(sampleBuf, chanArr).then(valueArray => {
-        for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
-          // console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`)
-          expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1), 0.0001);
-        }
-        done();
-      }).catch(err => {
-        done(err);
-      });
+      let valueArray = openBCISample.getChannelDataArray(sampleBuf, chanArr);
+      for (var j = 0; j < k.OBCINumberOfChannelsDefault; j++) {
+        // console.log(`channel data ${j + 1}: ${valueArray[j]} : actual ${scaleFactor * (j + 1)}`)
+        expect(valueArray[j]).to.be.closeTo(scaleFactor * (j + 1), 0.0001);
+      }
     });
-    it('in default mode, should reject when empty channel setting array', done => {
+    it('in default mode, should reject when empty channel setting array', function () {
       badChanArray = new Array(k.OBCINumberOfChannelsDefault).fill(0);
-      openBCISample.getChannelDataArray(sampleBuf, badChanArray).should.be.rejected.and.notify(done);
+      expect(openBCISample.getChannelDataArray.bind(openBCISample, sampleBuf, badChanArray)).to.throw('Error [getChannelDataArray]: Invalid channel settings object at index 0');
     });
-    it('in daisy mode, should reject when empty channel setting array', done => {
+    it('in daisy mode, should reject when empty channel setting array', function () {
       badChanArray = new Array(k.OBCINumberOfChannelsDaisy).fill(0);
-      openBCISample.getChannelDataArray(sampleBuf, badChanArray).should.be.rejected.and.notify(done);
+      expect(openBCISample.getChannelDataArray.bind(openBCISample, sampleBuf, badChanArray)).to.throw('Error [getChannelDataArray]: Invalid channel settings object at index 0');
     });
-    it('in default mode, should reject if not numbers in gain position', done => {
+    it('in default mode, should reject if not numbers in gain position', function () {
       badChanArray = [];
       for (var i = 0; i < k.OBCINumberOfChannelsDefault; i++) {
         badChanArray.push({
           gain: 'taco'
         });
       }
-      openBCISample.getChannelDataArray(sampleBuf, badChanArray).should.be.rejected.and.notify(done);
+      expect(openBCISample.getChannelDataArray.bind(openBCISample, sampleBuf, badChanArray)).to.throw('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
     });
-    it('in daisy mode, should reject if not numbers in gain position', done => {
+    it('in daisy mode, should reject if not numbers in gain position', function () {
       badChanArray = [];
       for (var i = 0; i < k.OBCINumberOfChannelsDaisy; i++) {
         badChanArray.push({
           gain: 'taco'
         });
       }
-      openBCISample.getChannelDataArray(sampleBuf, badChanArray).should.be.rejected.and.notify(done);
+      expect(openBCISample.getChannelDataArray.bind(openBCISample, sampleBuf, badChanArray)).to.throw('Error [getChannelDataArray]: Property gain of channelSettingsObject not or type Number');
     });
-    it('should reject when channelSettingsArray is not in fact an array', done => {
-      openBCISample.getChannelDataArray(sampleBuf, {}).should.be.rejected.and.notify(done);
+    it('should reject when channelSettingsArray is not in fact an array', function () {
+      expect(openBCISample.getChannelDataArray.bind(openBCISample, sampleBuf, {})).to.throw('Error [getChannelDataArray]: Channel Settings must be an array!');
     });
   });
   describe('#countADSPresent', function () {
@@ -1401,6 +1172,9 @@ $$$`);
     });
     it('should have property boardTime', function () {
       expect(syncObj).to.have.property('boardTime', 0);
+    });
+    it('should have property error', function () {
+      expect(syncObj).to.have.property('error', null);
     });
   });
   describe('#droppedPacketCheck', function () {

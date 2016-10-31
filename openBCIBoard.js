@@ -1,5 +1,4 @@
 'use strict';
-
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var stream = require('stream');
@@ -1832,7 +1831,7 @@ function OpenBCIFactory () {
     if (rawDataPacketBuffer.byteLength !== k.OBCIPacketSize) return;
     var missedPacketArray = openBCISample.droppedPacketCheck(this.previousSampleNumber, rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber]);
     if (missedPacketArray) {
-      this.emit('droppedPacket', missedPacketArray);
+      this.emit(k.OBCIEmitterDroppedPacket, missedPacketArray);
     }
     this.previousSampleNumber = rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber];
     var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
@@ -1898,13 +1897,15 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype._processPacketStandardAccel = function (rawPacket) {
-    openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray)
-      .then(sampleObject => {
-        // openBCISample.debugPrettyPrint(sampleObject)
-        sampleObject.rawPacket = rawPacket;
-        this._finalizeNewSample(sampleObject);
-      })
-      .catch(err => console.log('Error in _processPacketStandardAccel', err));
+    try {
+      let sample = openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray, true);
+      sample.rawPacket = rawPacket;
+      this._finalizeNewSample(sample);
+    } catch (err) {
+      this.badPackets++;
+      this.emit(k.OBCIEmitterDroppedPacket, [this.previousSampleNumber + 1]);
+      if (this.options.verbose) console.log(err);
+    }
   };
 
   /**
@@ -1914,11 +1915,15 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype._processPacketStandardRawAux = function (rawPacket) {
-    openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray, false)
-      .then(sampleObject => {
-        this._finalizeNewSample(sampleObject);
-      })
-      .catch(err => console.log('Error in _processPacketStandardRawAux', err));
+    try {
+      let sample = openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray, false);
+      sample.rawPacket = rawPacket;
+      this._finalizeNewSample(sample);
+    } catch (err) {
+      this.badPackets++;
+      this.emit(k.OBCIEmitterDroppedPacket, [this.previousSampleNumber + 1]);
+      if (this.options.verbose) console.log(err);
+    }
   };
 
   /**
@@ -1926,129 +1931,133 @@ function OpenBCIFactory () {
   * @param rawPacket {Buffer} - A 33byte data buffer from _processQualifiedPacket
   * @param timeOfPacketArrival {Number} - The time the packet arrived.
   * @private
-  * @returns {Promise}
+  * @returns {Object} - A time sync object.
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPacketArrival) {
-    return new Promise((resolve, reject) => {
-      if (this.sync.curSyncObj === null) return reject('no sync in progress');
-      // console.log('hey')
-      this.sync.curSyncObj.timeSyncSetPacket = timeOfPacketArrival;
+    /**
+     * Helper function for creating a bad sync object
+     * @param err {object} - Can be any object
+     * @returns {{boardTime, correctedTransmissionTime, error, timeSyncSent, timeSyncSentConfirmation, timeSyncSetPacket, timeRoundTrip, timeTransmission, timeOffset, timeOffsetMaster, valid}|*}
+     */
+    var getBadObject = (err) => {
+      var badObject = openBCISample.newSyncObject();
+      badObject.timeOffsetMaster = this.sync.timeOffsetMaster;
+      // Create an error
+      badObject.error = err;
+      return badObject;
+    };
 
-      if (this.options.verbose) console.log('Got time set packet from the board');
+    var syncObj = {};
 
-      // this.curParsingMode will equal k.OBCIParsingNormal if comma found
-      if (this.curParsingMode === k.OBCIParsingTimeSyncSent) {
-        if (this.options.verbose) console.log(`Missed the time sync sent confirmation, sycned object will not be valid, please resync again`);
-        // Fix the curParsingMode back to normal
-        this.curParsingMode = k.OBCIParsingNormal;
-        // Emit the bad sync object for fun
-        var badObject = openBCISample.newSyncObject();
-        badObject.timeOffsetMaster = this.sync.timeOffsetMaster;
-        this.emit('synced', badObject);
-        // Set back to null
-        this.sync.curSyncObj = null;
-        // Return will exit this method with the err
-        return reject(`Missed the time sync sent confirmation`);
+    if (this.sync.curSyncObj === null) {
+      if (this.options.verbose) console.log(k.OBCIErrorTimeSyncIsNull);
+      // Set the output to bad object
+      syncObj = getBadObject(k.OBCIErrorTimeSyncIsNull);
+    // Missed comma
+    } else if (this.curParsingMode === k.OBCIParsingTimeSyncSent) {
+      if (this.options.verbose) console.log(k.OBCIErrorTimeSyncNoComma);
+      // Set the output to bad object
+      syncObj = getBadObject(k.OBCIErrorTimeSyncNoComma);
+    } else {
+      try {
+        this.sync.curSyncObj.timeSyncSetPacket = timeOfPacketArrival;
+        if (this.options.verbose) console.log('Got time set packet from the board');
+        let boardTime = openBCISample.getFromTimePacketTime(rawPacket);
+        this.sync.curSyncObj.boardTime = boardTime;
+        // if (this.options.verbose) {
+        //     console.log(`Sent sync command at ${this.sync.curSyncObj.timeSyncSent} ms`)
+        //     console.log(`Sent confirmation at ${this.sync.curSyncObj.timeSyncSentConfirmation} ms`)
+        //     console.log(`Set packet arrived at ${this.sync.curSyncObj.timeSyncSetPacket} ms`)
+        // }
+
+        // Calculate the time between sending the `<` to getting the set packet, call this the round trip length
+        this.sync.curSyncObj.timeRoundTrip = this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSent;
+        if (this.options.verbose) console.log(`Round trip time: ${this.sync.curSyncObj.timeRoundTrip} ms`);
+
+        // If the sync sent conf and set packet arrive in different serial flushes
+        //  ------------------------------------------
+        // |       |        timeTransmission          |  < GOOD :)
+        //  ------------------------------------------
+        // ^       ^                                  ^
+        //  s      s                                   s
+        //   e      e                                   e
+        //    n      n                                   t packet
+        //     t      t confirmation
+        //
+        // Assume it's good...
+        this.sync.curSyncObj.timeTransmission = this.sync.curSyncObj.timeRoundTrip - (this.sync.curSyncObj.timeSyncSentConfirmation - this.sync.curSyncObj.timeSyncSent);
+
+        // If the conf and the set packet arrive in the same serial flush we have big problem!
+        //  ------------------------------------------
+        // |                                   |      |  < BAD :(
+        //  ------------------------------------------
+        // ^                                   ^      ^
+        //  s                                   s      s
+        //   e                                   e      e
+        //    n                                   n      t packet
+        //     t                                   t confirmation
+        if ((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSentConfirmation) < k.OBCITimeSyncThresholdTransFailureMS) {
+          // Estimate that 75% of the time between sent and set packet was spent on the packet making its way from board to this point
+          this.sync.curSyncObj.timeTransmission = math.floor((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSent) * k.OBCITimeSyncMultiplierWithSyncConf);
+          if (this.options.verbose) console.log(`Had to correct transmission time`);
+          this.sync.curSyncObj.correctedTransmissionTime = true;
+        }
+
+        // Calculate the offset #finally
+        this.sync.curSyncObj.timeOffset = this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeTransmission - boardTime;
+        if (this.options.verbose) {
+          console.log(`Board offset time: ${this.sync.curSyncObj.timeOffset} ms`);
+          console.log(`Board time: ${boardTime}`);
+        }
+
+        // Add to array
+        if (this.sync.timeOffsetArray.length >= k.OBCITimeSyncArraySize) {
+          // Shift the oldest one out of the array
+          this.sync.timeOffsetArray.shift();
+          // Push the new value into the array
+          this.sync.timeOffsetArray.push(this.sync.curSyncObj.timeOffset);
+        } else {
+          // Push the new value into the array
+          this.sync.timeOffsetArray.push(this.sync.curSyncObj.timeOffset);
+        }
+
+        // Calculate the master time offset that we use averaging to compute
+        if (this.sync.timeOffsetArray.length > 1) {
+          var sum = this.sync.timeOffsetArray.reduce(function (a, b) { return a + b; });
+          this.sync.timeOffsetMaster = Math.floor(sum / this.sync.timeOffsetArray.length);
+        } else {
+          this.sync.timeOffsetMaster = this.sync.curSyncObj.timeOffset;
+        }
+
+        this.sync.curSyncObj.timeOffsetMaster = this.sync.timeOffsetMaster;
+
+        if (this.options.verbose) {
+          console.log(`Master offset ${this.sync.timeOffsetMaster} ms`);
+        }
+
+        // Set the valid object to true
+        this.sync.curSyncObj.valid = true;
+
+        // Make a byte by byte copy of event
+        syncObj = JSON.parse(JSON.stringify(this.sync.curSyncObj));
+
+        // Save obj to the global array
+        this.sync.objArray.push(syncObj);
+      } catch (err) {
+        // Log if verbose.
+        if (this.options.verbose) console.log(err.message);
+        syncObj = getBadObject(err);
       }
-
-      // We got the timeSyncSentConfirmation... continue on
-      openBCISample.getFromTimePacketTime(rawPacket)
-        .then(boardTime => {
-          this.sync.curSyncObj.boardTime = boardTime;
-          // if (this.options.verbose) {
-          //     console.log(`Sent sync command at ${this.sync.curSyncObj.timeSyncSent} ms`)
-          //     console.log(`Sent confirmation at ${this.sync.curSyncObj.timeSyncSentConfirmation} ms`)
-          //     console.log(`Set packet arrived at ${this.sync.curSyncObj.timeSyncSetPacket} ms`)
-          // }
-
-          // Calculate the time between sending the `<` to getting the set packet, call this the round trip length
-          this.sync.curSyncObj.timeRoundTrip = this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSent;
-          if (this.options.verbose) console.log(`Round trip time: ${this.sync.curSyncObj.timeRoundTrip} ms`);
-
-          // If the sync sent conf and set packet arrive in different serial flushes
-          //  ------------------------------------------
-          // |       |        timeTransmission          |  < GOOD :)
-          //  ------------------------------------------
-          // ^       ^                                  ^
-          //  s      s                                   s
-          //   e      e                                   e
-          //    n      n                                   t packet
-          //     t      t confirmation
-          //
-          // Assume it's good...
-          this.sync.curSyncObj.timeTransmission = this.sync.curSyncObj.timeRoundTrip - (this.sync.curSyncObj.timeSyncSentConfirmation - this.sync.curSyncObj.timeSyncSent);
-
-          // If the conf and the set packet arrive in the same serial flush we have big problem!
-          //  ------------------------------------------
-          // |                                   |      |  < BAD :(
-          //  ------------------------------------------
-          // ^                                   ^      ^
-          //  s                                   s      s
-          //   e                                   e      e
-          //    n                                   n      t packet
-          //     t                                   t confirmation
-          if ((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSentConfirmation) < k.OBCITimeSyncThresholdTransFailureMS) {
-            // Estimate that 75% of the time between sent and set packet was spent on the packet making its way from board to this point
-            this.sync.curSyncObj.timeTransmission = math.floor((this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeSyncSent) * k.OBCITimeSyncMultiplierWithSyncConf);
-            if (this.options.verbose) console.log(`Had to correct transmission time`);
-            this.sync.curSyncObj.correctedTransmissionTime = true;
-          }
-
-          // Calculate the offset #finally
-          this.sync.curSyncObj.timeOffset = this.sync.curSyncObj.timeSyncSetPacket - this.sync.curSyncObj.timeTransmission - boardTime;
-          if (this.options.verbose) {
-            console.log(`Board offset time: ${this.sync.curSyncObj.timeOffset} ms`);
-            console.log(`Board time: ${boardTime}`);
-          }
-
-          // Add to array
-          if (this.sync.timeOffsetArray.length >= k.OBCITimeSyncArraySize) {
-            // Shift the oldest one out of the array
-            this.sync.timeOffsetArray.shift();
-            // Push the new value into the array
-            this.sync.timeOffsetArray.push(this.sync.curSyncObj.timeOffset);
-          } else {
-            // Push the new value into the array
-            this.sync.timeOffsetArray.push(this.sync.curSyncObj.timeOffset);
-          }
-
-          // Calculate the master time offset that we use averaging to compute
-          if (this.sync.timeOffsetArray.length > 1) {
-            var sum = this.sync.timeOffsetArray.reduce(function (a, b) { return a + b; });
-            this.sync.timeOffsetMaster = math.floor(sum / this.sync.timeOffsetArray.length);
-          } else {
-            this.sync.timeOffsetMaster = this.sync.curSyncObj.timeOffset;
-          }
-
-          this.sync.curSyncObj.timeOffsetMaster = this.sync.timeOffsetMaster;
-
-          if (this.options.verbose) {
-            console.log(`Master offset ${this.sync.timeOffsetMaster} ms`);
-          }
-
-          // Set the valid object to true
-          this.sync.curSyncObj.valid = true;
-
-          // Emit it!
-          this.emit('synced', this.sync.curSyncObj);
-          // Save obj to the global array
-          this.sync.objArray.push(this.sync.curSyncObj);
-          // Set to null
-          this.sync.curSyncObj = null;
-          return resolve(rawPacket);
-        })
-        .catch(err => {
-          // Emit the bad sync object for fun
-          var badObject = openBCISample.newSyncObject();
-          badObject.timeOffsetMaster = this.sync.timeOffsetMaster;
-          this.emit('synced', badObject);
-          // Set back to null
-          this.sync.curSyncObj = null;
-          console.log('Error in _processPacketTimeSyncSet', err);
-          return reject(err);
-        });
-    });
+    }
+    // Fix the curParsingMode back to normal
+    this.curParsingMode = k.OBCIParsingNormal;
+    // Emit synced object
+    this.emit(k.OBCIEmitterSynced, syncObj);
+    // Set global to null
+    this.sync.curSyncObj = null;
+    // Return the object
+    return syncObj;
   };
 
   /**
@@ -2060,12 +2069,15 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype._processPacketTimeSyncedAccel = function (rawPacket) {
     // if (this.sync.active === false) console.log('Need to sync with board...')
-    openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster, this.accelArray)
-      .then((sampleObject) => {
-        sampleObject.rawPacket = rawPacket;
-        this._finalizeNewSample(sampleObject);
-      })
-      .catch(err => console.log('Error in _processPacketTimeSyncedAccel', err));
+    try {
+      let sample = openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster, this.accelArray);
+      sample.rawPacket = rawPacket;
+      this._finalizeNewSample(sample);
+    } catch (err) {
+      this.badPackets++;
+      this.emit(k.OBCIEmitterDroppedPacket, [this.previousSampleNumber + 1]);
+      if (this.options.verbose) console.log(err);
+    }
   };
 
   /**
@@ -2077,11 +2089,15 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype._processPacketTimeSyncedRawAux = function (rawPacket) {
     // if (this.sync.active === false) console.log('Need to sync with board...')
-    openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster)
-      .then(sampleObject => {
-        this._finalizeNewSample(sampleObject);
-      })
-      .catch(err => console.log('Error in _processPacketTimeSyncedRawAux', err));
+    try {
+      let sample = openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster);
+      sample.rawPacket = rawPacket;
+      this._finalizeNewSample(sample);
+    } catch (err) {
+      this.badPackets++;
+      this.emit(k.OBCIEmitterDroppedPacket, [this.previousSampleNumber + 1]);
+      if (this.options.verbose) console.log(err);
+    }
   };
 
   /**
@@ -2102,7 +2118,7 @@ function OpenBCIFactory () {
         // Send the sample for downstream sample compaction
         this._finalizeNewSampleForDaisy(sampleObject);
       } else {
-        this.emit('sample', sampleObject);
+        this.emit(k.OBCIEmitterSample, sampleObject);
       }
     }
   };

@@ -1,3 +1,4 @@
+'use strict';
 var bluebirdChecks = require('./bluebirdChecks');
 var bufferEqual = require('buffer-equal');
 var chai = require('chai');
@@ -163,12 +164,10 @@ describe('openBCISimulator', function () {
         if (sampleCounter > sampleTestSize) {
           simulator.write(k.OBCIStreamStop);
           simulator.removeListener('data', newDataFunc);
-          openBCISample.parseRawPacketStandard(data, k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault), true)
-            .then(sampleObject => {
-              expect(sampleObject.channelData).to.not.all.equal(0);
-              simulator = null;
-              done();
-            }).catch(err => done(err));
+          let sample = openBCISample.parseRawPacketStandard(data, k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault), true);
+          expect(sample.channelData).to.not.all.equal(0);
+          done();
+          simulator = null;
         } else {
           sampleCounter++;
         }
@@ -709,11 +708,10 @@ describe('openBCISimulator', function () {
       simulator.on('data', function (data) {
         buffer = Buffer.concat([buffer, data], buffer.length + data.length);
         if (buffer.length >= 33) {
-          openBCISample.parseRawPacketStandard(buffer.slice(0, 33)).then((sample) => {
-            buffer = buffer.slice(33);
-            ++counter;
-            if (counter === 5) done();
-          }, done);
+          openBCISample.parseRawPacketStandard(buffer.slice(0, 33));
+          buffer = buffer.slice(33);
+          ++counter;
+          if (counter === 5) done();
         }
       });
       simulator.once('open', () => simulator.write(k.OBCIStreamStart));
