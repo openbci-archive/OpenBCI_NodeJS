@@ -27,6 +27,7 @@
     "test": "test"
   },
   "devDependencies": {
+    "bluebird": "3.4.6",
     "chai": "^3.4.1",
     "chai-as-promised": "^5.2.0",
     "codecov": "^1.0.1",

@@ -40,3 +40,6 @@ hardwareVoltageOutputAll.txt
 
 # For git
 *.orig
+
+# Text editor temporary files
+.*.sw* # vi/vim

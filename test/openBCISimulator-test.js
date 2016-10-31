@@ -1,3 +1,4 @@
+var bluebirdChecks = require('./bluebirdChecks');
 var bufferEqual = require('buffer-equal');
 var chai = require('chai');
 var chaiAsPromised = require(`chai-as-promised`);
@@ -12,6 +13,7 @@ chai.use(chaiAsPromised);
 describe('openBCISimulator', function () {
   this.timeout(4000);
   var portName = k.OBCISimulatorPortName;
+  afterEach(() => bluebirdChecks.noPendingPromises(200));
   describe('#constructor', function () {
     var simulator;
     afterEach(() => {
@@ -122,6 +124,35 @@ describe('openBCISimulator', function () {
       } catch (e) { done(); }
     });
   });
+  describe('#write', function () {
+    it('should refuse to write when not connected', function (done) {
+      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+      try {
+        simulator.write('q');
+        done('did not throw on disconnected write');
+      } catch (e) {
+        simulator.write('q', err => {
+          if (err) {
+            done();
+          } else {
+            done('did not provide error on disconnected write');
+          }
+        });
+      }
+    });
+  });
+  describe('#close', function () {
+    it('should provide an error closing when already closed', function (done) {
+      var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
+      simulator.close(err => {
+        if (err) {
+          done();
+        } else {
+          done('closed successfully but had no time to open');
+        }
+      });
+    });
+  });
   describe(`_startStream`, function () {
     it('should return a packet with sample data in it', function (done) {
       var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
@@ -134,18 +165,16 @@ describe('openBCISimulator', function () {
           simulator.removeListener('data', newDataFunc);
           openBCISample.parseRawPacketStandard(data, k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault), true)
             .then(sampleObject => {
-              sampleObject.channelData.forEach((channelValue, index) => {
-                expect(channelValue).to.not.equal(0);
-              });
+              expect(sampleObject.channelData).to.not.all.equal(0);
               simulator = null;
               done();
-            });
+            }).catch(err => done(err));
         } else {
           sampleCounter++;
         }
       };
       simulator.on('data', newDataFunc);
-      simulator._startStream();
+      simulator.once('open', () => simulator._startStream());
     });
     it('should return a sync set packet with accel', function (done) {
       var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName);
@@ -177,7 +206,7 @@ describe('openBCISimulator', function () {
       };
 
       simulator.on('data', newDataFunc);
-      simulator._startStream();
+      simulator.once('open', () => simulator.write(k.OBCIStreamStart));
     });
     it('should return a sync set packet with raw aux', function (done) {
       var simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
@@ -210,15 +239,16 @@ describe('openBCISimulator', function () {
       };
 
       simulator.on('data', newDataFunc);
-      simulator._startStream();
+      simulator.once('open', () => simulator.write(k.OBCIStreamStart));
     });
   });
   describe(`firmwareVersion1`, function () {
     var simulator;
-    beforeEach(() => {
+    beforeEach((done) => {
       simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
         firmwareVersion: 'v1'
       });
+      simulator.once('open', done);
     });
     afterEach(() => {
       simulator = null;
@@ -236,10 +266,11 @@ describe('openBCISimulator', function () {
   });
   describe(`firmwareVersion2`, function () {
     var simulator;
-    beforeEach(() => {
+    beforeEach((done) => {
       simulator = new openBCISimulator.OpenBCISimulator(k.OBCISimulatorPortName, {
         firmwareVersion: 'v2'
       });
+      simulator.once('open', done);
     });
     afterEach(() => {
       simulator = null;
@@ -641,7 +672,7 @@ describe('openBCISimulator', function () {
         expect(buffer.length).to.equal(bufferSize);
         done();
       });
-      simulator.write(k.OBCIStreamStart);
+      simulator.once('open', () => simulator.write(k.OBCIStreamStart));
     });
     it('Should emit partial packets after latencyTime', function (done) {
       var bufferSize = 4096;
@@ -650,11 +681,11 @@ describe('openBCISimulator', function () {
         bufferSize: 4096,
         latencyTime: 0
       });
-      simulator.on('data', function (buffer) {
+      simulator.once('data', function (buffer) {
         expect(buffer.length).to.be.lessThan(bufferSize);
         done();
       });
-      simulator.write(k.OBCIStreamStart);
+      simulator.once('open', () => simulator.write(k.OBCIStreamStart));
     });
     it('Should emit single bytes if set to OneByOne', function (done) {
       simulator = new openBCISimulator.OpenBCISimulator(portName, {
@@ -667,7 +698,7 @@ describe('openBCISimulator', function () {
 
         if (counter === 5) done();
       });
-      simulator.write(k.OBCIStreamStart);
+      simulator.once('open', () => simulator.write(k.OBCIStreamStart));
     });
     it('should properly split packets, retaining valid packets', function (done) {
       simulator = new openBCISimulator.OpenBCISimulator(portName, {
@@ -685,7 +716,7 @@ describe('openBCISimulator', function () {
           }, done);
         }
       });
-      simulator.write(k.OBCIStreamStart);
+      simulator.once('open', () => simulator.write(k.OBCIStreamStart));
     });
   });
   describe(`boardFailure`, function () {});

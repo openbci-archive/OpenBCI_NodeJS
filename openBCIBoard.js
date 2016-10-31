@@ -160,8 +160,7 @@ function OpenBCIFactory () {
     this.channelSettingsArray = k.channelSettingsArrayInit(k.numberOfChannelsForBoardType(this.options.boardType));
     this.writeOutArray = new Array(100);
     // Booleans
-    this.connected = false;
-    this.streaming = false;
+    this._streaming = false;
     // Buffers
     this.buffer = null;
     this.masterBuffer = masterBufferMaker();
@@ -188,6 +187,7 @@ function OpenBCIFactory () {
     }
 
     this._lowerChannelsSampleObject = null;
+    this.serial = null;
     this.sync = {
       curSyncObj: null,
       eventEmitter: null,
@@ -213,11 +213,18 @@ function OpenBCIFactory () {
     if (this.options.sntpTimeSync) {
       // establishing ntp connection
       this.sntpStart()
+        .catch(ignored => {
+          // try again once after a delay
+          return new Promise((resolve, reject) => {
+            setTimeout(resolve, 500);
+          }).then(() => this.sntpStart());
+        })
         .then(() => {
           if (this.options.verbose) console.log('SNTP: connected');
         })
         .catch(err => {
           if (this.options.verbose) console.log(`Error [sntpStart] ${err}`);
+          this.emit('error', err);
         });
     }
 
@@ -236,15 +243,15 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.connect = function (portName) {
     return new Promise((resolve, reject) => {
-      if (this.connected) return reject('already connected!');
+      if (this.isConnected()) return reject('already connected!');
 
-      // If we are simulating, set boardSerial to fake name
-      var boardSerial;
       /* istanbul ignore else */
       if (this.options.simulate || portName === k.OBCISimulatorPortName) {
         this.options.simulate = true;
+        // If we are simulating, set portName to fake name
+        this.portName = k.OBCISimulatorPortName;
         if (this.options.verbose) console.log('using faux board ' + portName);
-        boardSerial = new openBCISimulator.OpenBCISimulator(portName, {
+        this.serial = new openBCISimulator.OpenBCISimulator(this.portName, {
           accel: this.options.simulatorHasAccelerometer,
           alpha: this.options.simulatorInjectAlpha,
           boardFailure: this.options.simulatorBoardFailure,
@@ -260,25 +267,21 @@ function OpenBCIFactory () {
           verbose: this.options.verbose
         });
       } else {
-        /* istanbul ignore if */
+        this.portName = portName;
         if (this.options.verbose) console.log('using real board ' + portName);
-        boardSerial = new SerialPort(portName, {
+        this.serial = new SerialPort(portName, {
           baudRate: this.options.baudRate
         }, (err) => {
           if (err) reject(err);
         });
       }
 
-      this.serial = boardSerial;
-      this.portName = portName;
-
       if (this.options.verbose) console.log('Serial port connected');
 
-      boardSerial.on('data', data => {
+      this.serial.on('data', data => {
         this._processBytes(data);
       });
-      this.connected = true;
-      boardSerial.once('open', () => {
+      this.serial.once('open', () => {
         var timeoutLength = this.options.simulate ? 50 : 300;
         if (this.options.verbose) console.log('Serial port open');
         setTimeout(() => {
@@ -293,16 +296,34 @@ function OpenBCIFactory () {
           if (this.options.verbose) console.log("Waiting for '$$$'");
         }, timeoutLength + 250);
       });
-      boardSerial.once('close', () => {
+      this.serial.once('close', () => {
         if (this.options.verbose) console.log('Serial Port Closed');
-        this.emit('close');
+        // 'close' is emitted in _disconnected()
+        this._disconnected();
       });
-      /* istanbul ignore next */
-      boardSerial.once('error', (err) => {
+      this.serial.once('error', (err) => {
         if (this.options.verbose) console.log('Serial Port Error');
         this.emit('error', err);
+        this._disconnected();
       });
     });
+  };
+
+  /**
+  * @description Called once when for any reason the serial port is no longer open.
+  * @private
+  */
+  OpenBCIBoard.prototype._disconnected = function () {
+    this._streaming = false;
+
+    this.commandsToWrite = 0;
+    clearTimeout(this.writer);
+    this.writer = null;
+
+    this.serial.removeAllListeners();
+    this.serial = null;
+
+    this.emit('close');
   };
 
   /**
@@ -312,28 +333,41 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.disconnect = function () {
-    // if we are streaming then we need to give extra time for that stop streaming command to propagate through the
-    //  system before closing the serial port.
-    var timeout = 0;
-    if (this.streaming) {
-      this.streamStop();
-      if (this.options.verbose) console.log('stop streaming');
-      timeout = 15; // Avg time is takes for message to propagate
-    }
+    if (!this.isConnected()) return Promise.reject('no board connected');
 
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!this.connected) reject('no board connected');
-        this.connected = false;
-        if (this.serial) {
+    // no need for timeout here; streamStop already performs a delay
+    return Promise.resolve()
+      .then(() => {
+        if (this.isStreaming()) {
+          if (this.options.verbose) console.log('stop streaming');
+          return this.streamStop();
+        }
+      })
+      .then(() => {
+        return new Promise((resolve, reject) => {
+          // serial emitting 'close' will call _disconnected
           this.serial.close(() => {
             resolve();
           });
-        } else {
-          resolve();
-        }
-      }, timeout);
-    });
+        });
+      });
+  };
+
+  /**
+  * @description Checks if the driver is connected to a board.
+  * @returns {boolean} - True if connected.
+  */
+  OpenBCIBoard.prototype.isConnected = function () {
+    if (!this.serial) return false;
+    return this.serial.isOpen();
+  };
+
+  /**
+  * @description Checks if the board is currently sending samples.
+  * @returns {boolean} - True if streaming.
+  */
+  OpenBCIBoard.prototype.isStreaming = function () {
+    return this._streaming;
   };
 
   /**
@@ -346,9 +380,9 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.streamStart = function () {
     return new Promise((resolve, reject) => {
-      if (this.streaming) reject('Error [.streamStart()]: Already streaming');
-      this.streaming = true;
-      this._reset();
+      if (this.isStreaming()) return reject('Error [.streamStart()]: Already streaming');
+      this._streaming = true;
+      this._reset_ABANDONED(); // framework is incomplete but looks useful
       this.write(k.OBCIStreamStart)
         .then(() => {
           setTimeout(() => {
@@ -369,8 +403,8 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.streamStop = function () {
     return new Promise((resolve, reject) => {
-      if (!this.streaming) reject('Error [.streamStop()]: No stream to stop');
-      this.streaming = false;
+      if (!this.isStreaming()) return reject('Error [.streamStop()]: No stream to stop');
+      this._streaming = false;
       this.write(k.OBCIStreamStop)
         .then(() => {
           setTimeout(() => {
@@ -389,8 +423,8 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.simulatorEnable = function () {
     return new Promise((resolve, reject) => {
-      if (this.options.simulate) reject('Already simulating'); // Are we already in simulate mode?
-      if (this.connected) {
+      if (this.options.simulate) return reject('Already simulating'); // Are we already in simulate mode?
+      if (this.isConnected()) {
         this.disconnect() // disconnect first
           .then(() => {
             this.options.simulate = true;
@@ -412,8 +446,8 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.simulatorDisable = function () {
     return new Promise((resolve, reject) => {
-      if (!this.options.simulate) reject('Not simulating'); // Are we already not in simulate mode?
-      if (this.connected) {
+      if (!this.options.simulate) return reject('Not simulating'); // Are we already not in simulate mode?
+      if (this.isConnected()) {
         this.disconnect()
           .then(() => {
             this.options.simulate = false;
@@ -428,7 +462,7 @@ function OpenBCIFactory () {
   };
 
   /**
-  * @description To be able to easily write to the board but ensure that we never send a commands
+  * @description To be able to easily write to the board but ensure that we never send commands
   *              with less than a 10ms spacing between sends. This uses an array and pops off
   *              the entries until there are none left.
   * @param dataToWrite - Either a single character or an Array of characters
@@ -458,25 +492,21 @@ function OpenBCIFactory () {
 
     return new Promise((resolve, reject) => {
       // console.log('write method called')
-      if (!this.connected) reject('not connected');
-      if (this.serial === null || this.serial === undefined) {
-        reject('Serial port not configured');
-      } else {
-        if (Array.isArray(dataToWrite)) { // Got an input array
-          var len = dataToWrite.length;
-          for (var i = 0; i < len; i++) {
-            this.writeOutArray[this.commandsToWrite] = dataToWrite[i];
-            this.commandsToWrite++;
-          }
-        } else {
-          this.writeOutArray[this.commandsToWrite] = dataToWrite;
+      if (!this.isConnected()) return reject('not connected');
+      if (Array.isArray(dataToWrite)) { // Got an input array
+        var len = dataToWrite.length;
+        for (var i = 0; i < len; i++) {
+          this.writeOutArray[this.commandsToWrite] = dataToWrite[i];
           this.commandsToWrite++;
         }
-        if (this.writer === null || this.writer === undefined) { // there is no writer started
-          this.writer = setTimeout(writerFunction, this.writeOutDelay);
-        }
-        resolve();
+      } else {
+        this.writeOutArray[this.commandsToWrite] = dataToWrite;
+        this.commandsToWrite++;
       }
+      if (this.writer === null || this.writer === undefined) { // there is no writer started
+        this.writer = setTimeout(writerFunction, this.writeOutDelay);
+      }
+      resolve();
     });
   };
 
@@ -490,7 +520,7 @@ function OpenBCIFactory () {
     this._debugBytes('>>>', data);
 
     return new Promise((resolve, reject) => {
-      if (!this.serial) reject('Serial port not open');
+      if (!this.isConnected()) return reject('Serial port not open');
       this.serial.write(data, (error) => {
         if (error) {
           console.log('Error [writeAndDrain]: ' + error);
@@ -591,8 +621,8 @@ function OpenBCIFactory () {
   OpenBCIBoard.prototype.radioChannelSet = function (channelNumber) {
     var badCommsTimeout;
     return new Promise((resolve, reject) => {
-      if (!this.connected) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-      if (this.streaming) return reject("Don't query for the radio while streaming");
+      if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
+      if (this.isStreaming()) return reject("Don't query for the radio while streaming");
       if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware version 2');
       if (channelNumber === undefined || channelNumber === null) return reject('Must input a new channel number to switch too!');
       if (!k.isNumber(channelNumber)) return reject('Must input type Number');
@@ -642,8 +672,8 @@ function OpenBCIFactory () {
   OpenBCIBoard.prototype.radioChannelSetHostOverride = function (channelNumber) {
     var badCommsTimeout;
     return new Promise((resolve, reject) => {
-      if (!this.connected) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-      if (this.streaming) return reject("Don't query for the radio while streaming");
+      if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
+      if (this.isStreaming()) return reject("Don't query for the radio while streaming");
       if (channelNumber === undefined || channelNumber === null) return reject('Must input a new channel number to switch too!');
       if (!k.isNumber(channelNumber)) return reject('Must input type Number');
       if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
@@ -693,8 +723,8 @@ function OpenBCIFactory () {
     var badCommsTimeout;
 
     return new Promise((resolve, reject) => {
-      if (!this.connected) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-      if (this.streaming) return reject("Don't query for the radio while streaming");
+      if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
+      if (this.isStreaming()) return reject("Don't query for the radio while streaming");
       if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
 
       // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
@@ -741,8 +771,8 @@ function OpenBCIFactory () {
   OpenBCIBoard.prototype.radioPollTimeGet = function () {
     var badCommsTimeout;
     return new Promise((resolve, reject) => {
-      if (!this.connected) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-      if (this.streaming) return reject("Don't query for the poll time while streaming");
+      if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
+      if (this.isStreaming()) return reject("Don't query for the poll time while streaming");
       if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
       // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
       //  important if the module was connected, not streaming and using the old firmware
@@ -788,8 +818,8 @@ function OpenBCIFactory () {
   OpenBCIBoard.prototype.radioPollTimeSet = function (pollTime) {
     var badCommsTimeout;
     return new Promise((resolve, reject) => {
-      if (!this.connected) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-      if (this.streaming) return reject("Don't change the poll time while streaming");
+      if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
+      if (this.isStreaming()) return reject("Don't change the poll time while streaming");
       if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
       if (pollTime === undefined || pollTime === null) return reject('Must input a new poll time to switch too!');
       if (!k.isNumber(pollTime)) return reject('Must input type Number');
@@ -842,8 +872,8 @@ function OpenBCIFactory () {
   OpenBCIBoard.prototype.radioBaudRateSet = function (speed) {
     var badCommsTimeout;
     return new Promise((resolve, reject) => {
-      if (!this.connected) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-      if (this.streaming) return reject("Don't change the baud rate while streaming");
+      if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
+      if (this.isStreaming()) return reject("Don't change the baud rate while streaming");
       if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
       if (!k.isString(speed)) return reject('Must input type String');
       // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
@@ -870,11 +900,13 @@ function OpenBCIFactory () {
         if (newBaudRateNum !== k.OBCIRadioBaudRateDefault && newBaudRateNum !== k.OBCIRadioBaudRateFast) {
           return reject('Error parse mismatch, restart your system!');
         }
-        if (openBCISample.isSuccessInBuffer(data)) {
+        if (!this.isConnected()) {
+          reject('Lost connection to device during baud set');
+        } else if (openBCISample.isSuccessInBuffer(data)) {
           // Change the sample rate here
           if (this.options.simulate === false) {
             this.serial.update({baudRate: newBaudRateNum}, err => {
-              if (err) reject(err);
+              if (err) return reject(err);
               else resolve(newBaudRateNum);
             });
           } else {
@@ -911,8 +943,8 @@ function OpenBCIFactory () {
   OpenBCIBoard.prototype.radioSystemStatusGet = function () {
     var badCommsTimeout;
     return new Promise((resolve, reject) => {
-      if (!this.connected) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-      if (this.streaming) return reject("Don't change the poll time while streaming");
+      if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
+      if (this.isStreaming()) return reject("Don't change the poll time while streaming");
       if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware version 2');
 
       // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
@@ -1109,8 +1141,8 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.impedanceTestContinuousStart = function () {
     return new Promise((resolve, reject) => {
-      if (this.impedanceTest.active) reject('Error: test already active');
-      if (this.impedanceTest.continuousMode) reject('Error: Already in continuous impedance test mode!');
+      if (this.impedanceTest.active) return reject('Error: test already active');
+      if (this.impedanceTest.continuousMode) return reject('Error: Already in continuous impedance test mode!');
 
       this.impedanceTest.active = true;
       this.impedanceTest.continuousMode = true;
@@ -1131,8 +1163,8 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.impedanceTestContinuousStop = function () {
     return new Promise((resolve, reject) => {
-      if (!this.impedanceTest.active) reject('Error: no test active');
-      if (!this.impedanceTest.continuousMode) reject('Error: Not in continuous impedance test mode!');
+      if (!this.impedanceTest.active) return reject('Error: no test active');
+      if (!this.impedanceTest.continuousMode) return reject('Error: Not in continuous impedance test mode!');
 
       this.impedanceTest.active = false;
       this.impedanceTest.continuousMode = false;
@@ -1160,7 +1192,7 @@ function OpenBCIFactory () {
       upperLimit = k.OBCINumberOfChannelsDaisy;
     }
 
-    if (!this.streaming) return Promise.reject('Must be streaming!');
+    if (!this.isStreaming()) return Promise.reject('Must be streaming!');
 
     // Recursive function call
     var completeChannelImpedanceTest = (channelNumber) => {
@@ -1173,7 +1205,7 @@ function OpenBCIFactory () {
           if (this.options.verbose) console.log('\n\nImpedance Test for channel ' + channelNumber);
           this.impedanceTestChannel(channelNumber)
             .then(() => {
-              return completeChannelImpedanceTest(channelNumber + 1);
+              resolve(completeChannelImpedanceTest(channelNumber + 1));
             /* istanbul ignore next */
             }).catch(err => reject(err));
         }
@@ -1198,7 +1230,7 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.impedanceTestChannels = function (arrayOfChannels) {
     if (!Array.isArray(arrayOfChannels)) return Promise.reject('Input must be array of channels... See Docs!');
-    if (!this.streaming) return Promise.reject('Must be streaming!');
+    if (!this.isStreaming()) return Promise.reject('Must be streaming!');
     // Check proper length of array
     if (arrayOfChannels.length !== this.numberOfChannels()) return Promise.reject('Array length mismatch, should have ' + this.numberOfChannels() + ' but array has length ' + arrayOfChannels.length);
 
@@ -1216,18 +1248,18 @@ function OpenBCIFactory () {
 
           if (testCommand === 'p' || testCommand === 'P') {
             this.impedanceTestChannelInputP(channelNumber).then(() => {
-              return completeChannelImpedanceTest(channelNumber + 1);
+              completeChannelImpedanceTest(channelNumber + 1).then(resolve, reject);
             }).catch(err => reject(err));
           } else if (testCommand === 'n' || testCommand === 'N') {
             this.impedanceTestChannelInputN(channelNumber).then(() => {
-              return completeChannelImpedanceTest(channelNumber + 1);
+              completeChannelImpedanceTest(channelNumber + 1).then(resolve, reject);
             }).catch(err => reject(err));
           } else if (testCommand === 'b' || testCommand === 'B') {
             this.impedanceTestChannel(channelNumber).then(() => {
-              return completeChannelImpedanceTest(channelNumber + 1);
+              completeChannelImpedanceTest(channelNumber + 1).then(resolve, reject);
             }).catch(err => reject(err));
           } else { // skip ('-') condition
-            return completeChannelImpedanceTest(channelNumber + 1);
+            completeChannelImpedanceTest(channelNumber + 1).then(resolve, reject);
           }
         }
       });
@@ -1325,7 +1357,7 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype._impedanceTestSetChannel = function (channelNumber, pInput, nInput) {
     return new Promise((resolve, reject) => {
-      if (!this.connected) reject('Must be connected');
+      if (!this.isConnected()) return reject('Must be connected');
 
       var delayInMS = 0;
 
@@ -1392,9 +1424,9 @@ function OpenBCIFactory () {
       }
     }
     return new Promise((resolve, reject) => {
-      if (channelNumber < 1 || channelNumber > this.numberOfChannels()) reject('Invalid channel number');
-      if (typeof pInput !== 'boolean') reject("Invalid Input: 'pInput' must be of type Bool");
-      if (typeof nInput !== 'boolean') reject("Invalid Input: 'nInput' must be of type Bool");
+      if (channelNumber < 1 || channelNumber > this.numberOfChannels()) return reject('Invalid channel number');
+      if (typeof pInput !== 'boolean') return reject("Invalid Input: 'pInput' must be of type Bool");
+      if (typeof nInput !== 'boolean') return reject("Invalid Input: 'nInput' must be of type Bool");
       this.impedanceTest.onChannel = channelNumber;
       this.impedanceTest.sampleNumber = 0; // Reset the sample number
       this.impedanceTest.isTestingPInput = pInput;
@@ -1445,9 +1477,9 @@ function OpenBCIFactory () {
       }
     }
     return new Promise((resolve, reject) => {
-      if (channelNumber < 1 || channelNumber > this.numberOfChannels()) reject('Invalid channel number');
-      if (typeof pInput !== 'boolean') reject("Invalid Input: 'pInput' must be of type Bool");
-      if (typeof nInput !== 'boolean') reject("Invalid Input: 'nInput' must be of type Bool");
+      if (channelNumber < 1 || channelNumber > this.numberOfChannels()) return reject('Invalid channel number');
+      if (typeof pInput !== 'boolean') return reject("Invalid Input: 'pInput' must be of type Bool");
+      if (typeof nInput !== 'boolean') return reject("Invalid Input: 'nInput' must be of type Bool");
 
       if (pInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].P);
       if (nInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].N);
@@ -1469,15 +1501,15 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.sdStart = function (recordingDuration) {
     return new Promise((resolve, reject) => {
-      if (!this.connected) reject('Must be connected to the device');
+      if (!this.isConnected()) return reject('Must be connected to the device');
       k.sdSettingForString(recordingDuration)
         .then(command => {
           // If we are not streaming, then expect a confirmation message back from the board
-          if (!this.streaming) {
+          if (!this.isStreaming()) {
             this.curParsingMode = k.OBCIParsingEOT;
           }
           this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
-          return this.write(command);
+          this.write(command).then(resolve, reject);
         })
         .catch(err => reject(err));
     });
@@ -1491,13 +1523,13 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.sdStop = function () {
     return new Promise((resolve, reject) => {
-      if (!this.connected) reject('Must be connected to the device');
+      if (!this.isConnected()) return reject('Must be connected to the device');
       // If we are not streaming, then expect a confirmation message back from the board
-      if (!this.streaming) {
+      if (!this.isStreaming()) {
         this.curParsingMode = k.OBCIParsingEOT;
       }
       this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
-      return this.write(k.OBCISDLogStop);
+      this.write(k.OBCISDLogStop).then(resolve, reject);
     });
   };
 
@@ -1556,9 +1588,9 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.syncClocks = function () {
     return new Promise((resolve, reject) => {
-      if (!this.connected) reject('Must be connected to the device');
-      if (!this.streaming) reject('Must be streaming to sync clocks');
-      if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on v1 firmware, please update to v2');
+      if (!this.isConnected()) return reject('Must be connected to the device');
+      if (!this.isStreaming()) return reject('Must be streaming to sync clocks');
+      if (!this.usingVersionTwoFirmware()) return reject('Time sync not implemented on v1 firmware, please update to v2');
       this.sync.curSyncObj = openBCISample.newSyncObject();
       this.sync.curSyncObj.timeSyncSent = this.time();
       this.curParsingMode = k.OBCIParsingTimeSyncSent;
@@ -1578,13 +1610,14 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype.syncClocksFull = function () {
     return new Promise((resolve, reject) => {
-      if (!this.connected) reject('Must be connected to the device');
-      if (!this.streaming) reject('Must be streaming to sync clocks');
-      if (!this.usingVersionTwoFirmware()) reject('Time sync not implemented on v1 firmware, please update to v2');
-      setTimeout(() => {
+      if (!this.isConnected()) return reject('Must be connected to the device');
+      if (!this.isStreaming()) return reject('Must be streaming to sync clocks');
+      if (!this.usingVersionTwoFirmware()) return reject('Time sync not implemented on v1 firmware, please update to v2');
+      var timeout = setTimeout(() => {
         return reject('syncClocksFull timeout after 500ms with no sync');
       }, 500); // Should not take more than 1s to sync up
       this.sync.eventEmitter = syncObj => {
+        clearTimeout(timeout);
         return resolve(syncObj);
       };
       this.once('synced', this.sync.eventEmitter);
@@ -1593,6 +1626,7 @@ function OpenBCIFactory () {
       this.curParsingMode = k.OBCIParsingTimeSyncSent;
       this._writeAndDrain(k.OBCISyncTimeSet)
         .catch(err => {
+          clearTimeout(timeout);
           return reject(err);
         });
     });
@@ -1897,7 +1931,7 @@ function OpenBCIFactory () {
   */
   OpenBCIBoard.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPacketArrival) {
     return new Promise((resolve, reject) => {
-      if (this.sync.curSyncObj === null) reject('no sync in progress');
+      if (this.sync.curSyncObj === null) return reject('no sync in progress');
       // console.log('hey')
       this.sync.curSyncObj.timeSyncSetPacket = timeOfPacketArrival;
 
@@ -2111,7 +2145,8 @@ function OpenBCIFactory () {
   * @description Reset the master buffer and reset the number of bad packets.
   * @author AJ Keller (@pushtheworldllc)
   */
-  OpenBCIBoard.prototype._reset = function () {
+  // TODO: nothing is using these constructs, but they look like good constructs.  See contents of masterBufferMaker()
+  OpenBCIBoard.prototype._reset_ABANDONED = function () {
     this.masterBuffer = masterBufferMaker();
     this.badPackets = 0;
   };
@@ -2123,10 +2158,19 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.sntpGetOffset = function () {
+    this.options.sntpTimeSync = true;
+
+    if (!this.options.sntpTimeSync) return Promise.reject('sntp not enabled');
+
     return new Promise((resolve, reject) => {
-      Sntp.offset(function (err, offset) {
+      Sntp.offset({
+        host: this.options.sntpTimeSyncHost, // Defaults to pool.ntp.org
+        port: this.options.sntpTimeSyncPort, // Defaults to 123 (NTP)
+        clockSyncRefresh: 30 * 60 * 1000, // Resync every 30 minutes
+        timeout: 500 // Assume packet has been lost after 500 milliseconds
+      }, function (err, offset) {
         if (err) reject(err);
-        resolve(offset);
+        else resolve(offset);
       });
     });
   };
@@ -2148,21 +2192,22 @@ function OpenBCIFactory () {
   * @author AJ Keller (@pushtheworldllc)
   */
   OpenBCIBoard.prototype.sntpStart = function (options) {
-    return new Promise((resolve, reject) => {
-      this.options.sntpTimeSync = true;
-      Sntp.start({
-        host: this.options.sntpTimeSyncHost, // Defaults to pool.ntp.org
-        port: this.options.sntpTimeSyncPort, // Defaults to 123 (NTP)
-        clockSyncRefresh: 30 * 60 * 1000 // Resync every 30 minutes
-      }, err => {
-        if (err) {
-          this.sync.sntpActive = false;
-          reject(err);
-        } else {
+    this.options.sntpTimeSync = true;
+
+    // Sntp.start doesn't actually report errors (2016-10-29)
+    // so functionality is first detected via sntpGetOffset
+    return this.sntpGetOffset().then(() => {
+      return new Promise((resolve, reject) => {
+        Sntp.start({
+          host: this.options.sntpTimeSyncHost, // Defaults to pool.ntp.org
+          port: this.options.sntpTimeSyncPort, // Defaults to 123 (NTP)
+          clockSyncRefresh: 30 * 60 * 1000, // Resync every 30 minutes
+          timeout: 500 // Assume packet has been lost after 500 milliseconds
+        }, () => {
           this.sync.sntpActive = true;
-          resolve();
           this.emit('sntpTimeLock');
-        }
+          resolve();
+        });
       });
     });
   };

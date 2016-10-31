@@ -4,6 +4,8 @@
 
 * Three new initialization options: `simulatorFragmentation`, `simulatorBufferSize`, and `simulatorLatencyTimer`.  Together, these enable a more _realistic_ serial port simulation, mimicking different potential user computer systems.
 * New option `debug` gives a live dump of serial traffic on the console if enabled
+* New API function `.isConnected()` to check if communications are active.
+* New API function `.isStreaming()` to check if samples are coming from the board.
 
 ### Enhancements
 
@@ -15,6 +17,10 @@
 * The setting for simulatorInjectLineNoise has changed from `None` to `none`
 * connect() will now fail if already connected
 * The constructor will throw an error now if an invalid option is passed
+* The undocumented `.connected` field has been removed, replaced by `.isConnected()`
+* The undocumented `.streaming` field has been removed, replaced by `.isStreaming()`
+* An error event will be emitted if sntp fails to initialize on construction
+* The simulator will no longer communicate when disconnected
 
 ### Bug Fixes
 
@@ -22,6 +28,8 @@
 * Fixed bug where time sync replies that began a buffered chunk were ignored
 * Fixed bug where simulator would output wrong version in its reset message
 * Fixed bug where resources were not cleaned up if connect was called twice
+* Fixed bug where serial data was written after disconnection
+* Fixed bug where unexpected disconnection was not detected
 
 # 1.3.3
 

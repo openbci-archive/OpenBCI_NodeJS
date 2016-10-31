@@ -93,8 +93,8 @@ function OpenBCISimulatorFactory () {
     // Call 'open'
     if (this.options.verbose) console.log(`Port name: ${portName}`);
     setTimeout(() => {
-      this.emit('open');
       this.connected = true;
+      this.emit('open');
     }, 200);
   }
 
@@ -109,15 +109,23 @@ function OpenBCISimulatorFactory () {
     this.outputLoopHandle = null;
   };
 
+  OpenBCISimulator.prototype.isOpen = function () {
+    return this.connected;
+  };
+
   // output only size bytes of the output buffer
   OpenBCISimulator.prototype._partialDrain = function (size) {
+    if (!this.connected) throw new Error('not connected');
+
     if (size > this.outputBuffered) size = this.outputBuffered;
 
     // buffer is copied because presently openBCIBoard.js reuses it
-    this.emit('data', new Buffer(this.outputBuffer.slice(0, size)));
+    var outBuffer = new Buffer(this.outputBuffer.slice(0, size));
 
     this.outputBuffer.copy(this.outputBuffer, 0, size, this.outputBuffered);
     this.outputBuffered -= size;
+
+    this.emit('data', outBuffer);
   };
 
   // queue some data for output and send it out depending on options.fragmentation
@@ -169,11 +177,21 @@ function OpenBCISimulatorFactory () {
           this.outputLoopHandle = null;
         }
       };
-      this.outputLoopHandle = setTimeout(outputLoop, latencyTime);
+      if (latencyTime === 0) {
+        outputLoop();
+      } else {
+        this.outputLoopHandle = setTimeout(outputLoop, latencyTime);
+      }
     }
   };
 
   OpenBCISimulator.prototype.write = function (data, callback) {
+    if (!this.connected) {
+      if (callback) callback('Not connected');
+      else throw new Error('Not connected!');
+      return;
+    }
+
     // TODO: this function assumes a type of Buffer for radio, and a type of String otherwise
     //       FIX THIS it makes it unusable outside the api code
     switch (data[0]) {
@@ -238,21 +256,27 @@ function OpenBCISimulatorFactory () {
     }
 
     /** Handle Callback */
-    if (this.connected) {
+    if (callback) {
       callback(null, 'Success!');
     }
   };
 
   OpenBCISimulator.prototype.drain = function (callback) {
-    callback();
+    if (callback) callback();
   };
 
   OpenBCISimulator.prototype.close = function (callback) {
     if (this.connected) {
+      this.flush();
+
+      if (this.stream) clearInterval(this.stream);
+
+      this.connected = false;
       this.emit('close');
+      if (callback) callback();
+    } else {
+      if (callback) callback('not connected');
     }
-    this.connected = false;
-    callback();
   };
 
   OpenBCISimulator.prototype._startStream = function () {
