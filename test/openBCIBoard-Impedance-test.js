@@ -1,3 +1,4 @@
+'use strict';
 var bluebirdChecks = require('./bluebirdChecks');
 var chai = require('chai');
 var should = chai.should(); // eslint-disable-line no-unused-vars

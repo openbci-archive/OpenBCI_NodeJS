@@ -1199,4 +1199,78 @@ describe('OpenBCIConstants', function () {
       });
     });
   });
+  describe('fun funcs', function () {
+    describe('#isNumber', function () {
+      it('should return true for object of named type', function () {
+        expect(k.isNumber(1)).to.equal(true);
+      });
+      it('should return false for not of named type', function () {
+        expect(k.isNumber('taco')).to.equal(false);
+      });
+    });
+    describe('#isBoolean', function () {
+      it('should return true for object of named type', function () {
+        expect(k.isBoolean(true)).to.equal(true);
+      });
+      it('should return false for not of named type', function () {
+        expect(k.isBoolean('taco')).to.equal(false);
+      });
+    });
+    describe('#isString', function () {
+      it('should return true for object of named type', function () {
+        expect(k.isString('taco')).to.equal(true);
+      });
+      it('should return false for not of named type', function () {
+        expect(k.isString(1)).to.equal(false);
+      });
+    });
+    describe('#isUndefined', function () {
+      it('should return true for object of named type', function () {
+        expect(k.isUndefined()).to.equal(true);
+      });
+      it('should return false for not of named type', function () {
+        expect(k.isUndefined('im here')).to.equal(false);
+      });
+    });
+    describe('#isNull', function () {
+      it('should return true for object of named type', function () {
+        expect(k.isNull(null)).to.equal(true);
+      });
+      it('should return false for not of named type', function () {
+        expect(k.isNull()).to.equal(false);
+      });
+      it('should return false for not of named type', function () {
+        expect(k.isNull('taco')).to.equal(false);
+      });
+    });
+  });
+  describe('Emitters', function () {
+    it('Event Emitter Close', function () {
+      assert.equal('close', k.OBCIEmitterClose);
+    });
+    it('Event Emitter Dropped Packet', function () {
+      assert.equal('droppedPacket', k.OBCIEmitterDroppedPacket);
+    });
+    it('Event Emitter Error', function () {
+      assert.equal('error', k.OBCIEmitterError);
+    });
+    it('Event Emitter Impedance Array', function () {
+      assert.equal('impedanceArray', k.OBCIEmitterImpedanceArray);
+    });
+    it('Event Emitter Query', function () {
+      assert.equal('query', k.OBCIEmitterQuery);
+    });
+    it('Event Emitter Raw Data Packet', function () {
+      assert.equal('rawDataPacket', k.OBCIEmitterRawDataPacket);
+    });
+    it('Event Emitter Ready', function () {
+      assert.equal('ready', k.OBCIEmitterReady);
+    });
+    it('Event Emitter Sample', function () {
+      assert.equal('sample', k.OBCIEmitterSample);
+    });
+  });
+  describe('Errors', function () {
+
+  });
 });

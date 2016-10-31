@@ -1,3 +1,4 @@
+'use strict';
 var bluebirdChecks = require('./bluebirdChecks');
 var sinon = require('sinon');
 var chai = require('chai');
@@ -1262,55 +1263,42 @@ describe('openbci-sdk', function () {
       ourBoard.sync.curSyncObj = null;
     });
     after(() => bluebirdChecks.noPendingPromises());
-    it('should reject if no sync in progress', function (done) {
-      var timeSetPacketArrived = ourBoard.time();
-      ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-      ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived).should.be.rejected.and.notify(done);
-    });
-    it('should reject if no sent confirmation found', function (done) {
-      var timeSetPacketArrived = ourBoard.time();
-      ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
-      ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived).should.be.rejected.and.notify(done);
-    });
-    it('should reset global sync variables if no sent confirmation found', function (done) {
-      var timeSetPacketArrived = ourBoard.time();
-      ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
-      ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived)
-        .then(() => {
-          done('failed to get rejected');
-        })
-        .catch(function () {
-          expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
-          expect(ourBoard.sync.curSyncObj).to.be.null;
-          expect(ourBoard.sync.eventEmitter).to.be.null;
-          done();
-        });
-    });
-    it('should emit sycned event with valid false', function (done) {
+    it('should emit and return bad object if no sync in progress', function () {
       var timeSetPacketArrived = ourBoard.time();
       var expectedTimeSyncOffsetMaster = 72;
-      var emitted = false;
+      ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
+      ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
+      ourBoard.once('synced', (syncObj) => {
+        expect(syncObj).to.have.property('valid', false);
+        expect(syncObj).to.have.property('error', k.OBCIErrorTimeSyncIsNull);
+        expect(syncObj).to.have.property('timeOffsetMaster', expectedTimeSyncOffsetMaster);
+      });
+      let syncObject = ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived);
+      expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
+      expect(syncObject).to.have.property('valid', false);
+      expect(syncObject).to.have.property('error', k.OBCIErrorTimeSyncIsNull);
+      expect(syncObject).to.have.property('timeOffsetMaster', expectedTimeSyncOffsetMaster);
+    });
+    it('should emit and return bad synced object if no sent confirmation found', function () {
+      var timeSetPacketArrived = ourBoard.time();
+      var expectedTimeSyncOffsetMaster = 72;
+      ourBoard.once('synced', (syncObj) => {
+        expect(syncObj).to.have.property('valid', false);
+        expect(syncObj).to.have.property('error', k.OBCIErrorTimeSyncNoComma);
+        expect(syncObj).to.have.property('timeOffsetMaster', expectedTimeSyncOffsetMaster);
+      });
+      ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
       ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
       ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
-      ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
-      ourBoard.once('synced', obj => {
-        expect(obj.valid).to.be.false;
-        expect(obj.timeOffsetMaster).to.equal(expectedTimeSyncOffsetMaster);
-        emitted = true;
-      });
-      ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived)
-        .then(() => {
-          done('failed to get rejected');
-        })
-        .catch(() => {
-          expect(emitted).to.be.true;
-          done();
-        });
+      let syncObject = ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived);
+      expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
+      expect(syncObject).to.have.property('valid', false);
+      expect(syncObject).to.have.property('error', k.OBCIErrorTimeSyncNoComma);
+      expect(syncObject).to.have.property('timeOffsetMaster', expectedTimeSyncOffsetMaster);
     });
-    it('should reset when bad raw packet', function (done) {
+    it('should emit and return bad synced object with invalid raw packet', function () {
       var timeSetPacketArrived = ourBoard.time();
+      var expectedTimeSyncOffsetMaster = 72;
       var badPacket;
       if (k.getVersionNumber(process.version) >= 6) {
         // from introduced in node version 6.x.x
@@ -1319,44 +1307,17 @@ describe('openbci-sdk', function () {
         badPacket = new Buffer(timeSyncSetPacket.slice(0, 30));
       }
       ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
-      ourBoard._processPacketTimeSyncSet(badPacket, timeSetPacketArrived)
-        .then(() => {
-          done('failed to get rejected');
-        })
-        .catch(function () {
-          expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
-          expect(ourBoard.sync.curSyncObj).to.be.null;
-          expect(ourBoard.sync.eventEmitter).to.be.null;
-          done();
-        });
-    });
-    it('should emit bad synced object bad raw packet', function (done) {
-      var timeSetPacketArrived = ourBoard.time();
-      var expectedTimeSyncOffsetMaster = 72;
-      var emitted = false;
-      var badPacket;
-      if (k.getVersionNumber(process.version) >= 6) {
-        // from introduced in node version 6.x.x
-        badPacket = Buffer.from(timeSyncSetPacket.slice(0, 30));
-      } else {
-        badPacket = new Buffer(timeSyncSetPacket.slice(0, 30));
-      }
-      ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
       ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
-      ourBoard.once('synced', obj => {
-        expect(obj.valid).to.be.false;
-        expect(obj.timeOffsetMaster).to.equal(expectedTimeSyncOffsetMaster);
-        emitted = true;
+      ourBoard.once('synced', (syncObj) => {
+        expect(syncObj).to.have.property('valid', false);
+        expect(syncObj.error).to.have.property('message', k.OBCIErrorInvalidByteLength);
+        expect(syncObj).to.have.property('timeOffsetMaster', expectedTimeSyncOffsetMaster);
       });
-      ourBoard._processPacketTimeSyncSet(badPacket, timeSetPacketArrived)
-        .then(() => {
-          done('failed to get rejected');
-        })
-        .catch(() => {
-          expect(emitted).to.be.true;
-          done();
-        });
+      let syncObject = ourBoard._processPacketTimeSyncSet(badPacket, timeSetPacketArrived);
+      expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
+      expect(syncObject).to.have.property('valid', false);
+      expect(syncObject.error).to.have.property('message', k.OBCIErrorInvalidByteLength);
+      expect(syncObject).to.have.property('timeOffsetMaster', expectedTimeSyncOffsetMaster);
     });
     it('should calculate round trip time as the difference between time sent and time set packet arrived', function (done) {
       var timeSetPacketArrived = ourBoard.time();
@@ -1472,6 +1433,50 @@ describe('openbci-sdk', function () {
     });
   });
 
+  describe('#_processPacket Errors', function () {
+    var ourBoard;
+    before(() => {
+      ourBoard = new openBCIBoard.OpenBCIBoard({
+        verbose: false
+      });
+    });
+    beforeEach(() => {
+      ourBoard.badPackets = 0;
+      ourBoard.previousSampleNumber = 0;
+    });
+    afterEach(() => {
+      ourBoard.sync.curSyncObj = null;
+    });
+    after(() => bluebirdChecks.noPendingPromises());
+    it('_processPacketStandardAccel', function () {
+      ourBoard.once('droppedPacket', (droppedPacketArray) => {
+        expect(droppedPacketArray[0]).to.equal(1);
+      });
+      ourBoard._processPacketStandardAccel(new Buffer(5));
+      expect(ourBoard.badPackets).to.equal(1);
+    });
+    it('_processPacketStandardRawAux', function () {
+      ourBoard.once('droppedPacket', (droppedPacketArray) => {
+        expect(droppedPacketArray[0]).to.equal(1);
+      });
+      ourBoard._processPacketStandardRawAux(new Buffer(5));
+      expect(ourBoard.badPackets).to.equal(1);
+    });
+    it('_processPacketTimeSyncedAccel', function () {
+      ourBoard.once('droppedPacket', (droppedPacketArray) => {
+        expect(droppedPacketArray[0]).to.equal(1);
+      });
+      ourBoard._processPacketTimeSyncedAccel(new Buffer(5));
+      expect(ourBoard.badPackets).to.equal(1);
+    });
+    it('_processPacketTimeSyncedRawAux', function () {
+      ourBoard.once('droppedPacket', (droppedPacketArray) => {
+        expect(droppedPacketArray[0]).to.equal(1);
+      });
+      ourBoard._processPacketTimeSyncedRawAux(new Buffer(5));
+      expect(ourBoard.badPackets).to.equal(1);
+    });
+  });
   describe('#time', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should use sntp time when sntpTimeSync specified in options', function (done) {
@@ -1719,7 +1724,7 @@ $$$`);
         ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
       // spy.reset()
       });
-      it('should call to find the time sync set character in the buffer', function (done) {
+      it('should call to find the time sync set character in the buffer', function () {
         // Verify the log event is called
         var buf = new Buffer(',');
         // Call the processBytes function
@@ -1727,18 +1732,20 @@ $$$`);
         // Verify the function was called
         expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
 
+        let emitted = false;
         // Listen for the sample event
         ourBoard.once('sample', () => {
-          // Verify the buffer is cleared
-          expect(ourBoard.buffer).to.be.null;
-          done();
+          emitted = true;
         });
         // Make a new buffer
         var buf1 = openBCISample.samplePacketReal(1);
         // Send the buffer in
         ourBoard._processBytes(buf1);
+        expect(ourBoard.buffer).to.be.null;
+        expect(emitted).to.be.true;
       });
-      it('should clear the buffer after a time sync set packet', function (done) {
+      it('should clear the buffer after a time sync set packet', function () {
+        let emitted = false;
         // Verify the log event is called
         var buf = new Buffer(',');
         // Call the processBytes function
@@ -1749,13 +1756,14 @@ $$$`);
         // Listen for the sample event
         ourBoard.once('synced', () => {
           // Verify the buffer is cleared
-          expect(ourBoard.buffer).to.be.null;
-          done();
+          emitted = true;
         });
         // Make a new buffer
         var buf1 = openBCISample.samplePacketAccelTimeSyncSet(1);
         // Send the buffer in
         ourBoard._processBytes(buf1);
+        expect(ourBoard.buffer).to.be.null;
+        expect(emitted).to.be.true;
       });
       it('should call to find the time sync set character in the buffer after packet', function () {
         var buf1 = openBCISample.samplePacket();
@@ -1821,15 +1829,14 @@ $$$`);
         // Declare the event emitter prior to calling function
         ourBoard.once('sample', sample => {
           sample.sampleNumber.should.equal(expectedSampleNumber);
-
-          expect(ourBoard.buffer).to.be.null;
-          done();
         });
 
         // Now call the function which should call the "sample" event
         ourBoard._processBytes(buf1);
+        expect(ourBoard.buffer).to.be.null;
+        done();
       });
-      it('should get three packets even if one was sent in the last data emit', function (done) {
+      it('should get three packets even if one was sent in the last data emit', function () {
         var expectedSampleNumber = 0;
         var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
         var buf2 = openBCISample.samplePacketReal(expectedSampleNumber + 1);
@@ -1853,19 +1860,16 @@ $$$`);
             expect(sample.sampleNumber).to.equal(expectedSampleNumber + 1);
           } else if (sampleCounter === expectedSampleNumber + 2) {
             expect(sample.sampleNumber).to.equal(expectedSampleNumber + 2);
-            expect(ourBoard.buffer).to.be.null;
             ourBoard.removeListener('sample', newSample);
-            done();
-          } else {
-            done(`invalid sample number: expected ${sampleCounter} got ${sample.sampleNumber}`);
           }
           sampleCounter++;
         };
         ourBoard.on('sample', newSample);
         // Now call the function which should call the "sample" event
         ourBoard._processBytes(dataBuf);
+        expect(ourBoard.buffer).to.be.null;
       });
-      it('should keep extra data in the buffer', function (done) {
+      it('should keep extra data in the buffer', function () {
         var expectedSampleNumber = 0;
         var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
         var buf2 = openBCISample.samplePacketReal(expectedSampleNumber + 1);
@@ -1893,11 +1897,7 @@ $$$`);
             expect(sample.sampleNumber).to.equal(expectedSampleNumber + 1);
           } else if (sampleCounter === expectedSampleNumber + 2) {
             expect(sample.sampleNumber).to.equal(expectedSampleNumber + 2);
-            expect(ourBoard.buffer).to.be.null;
             ourBoard.removeListener('sample', newSample);
-            done();
-          } else {
-            done(`invalid sample number: expected ${sampleCounter} got ${sample.sampleNumber}`);
           }
           sampleCounter++;
         };
@@ -1906,8 +1906,9 @@ $$$`);
         ourBoard._processBytes(Buffer.concat([buf1, buf2, bufFirstHalf]));
         // Now verify there is data still in the global buffer by calling _processBytes on the last half
         ourBoard._processBytes(bufLastHalf);
+        expect(ourBoard.buffer).to.be.null;
       });
-      it('should throw out old data if it is incomplete and add to badPackets count', function (done) {
+      it('should throw out old data if it is incomplete and add to badPackets count', function () {
         // Some how this packet go messed up and lodged in... This is the worst case, that the buffer has
         //  an incomplete packet.
         ourBoard.buffer = new Buffer([0xA0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xC0]);
@@ -1929,18 +1930,15 @@ $$$`);
             expect(sample.sampleNumber).to.equal(expectedSampleNumber + 1);
           } else if (sampleCounter === expectedSampleNumber + 2) {
             expect(sample.sampleNumber).to.equal(expectedSampleNumber + 2);
-            // Verify that the old data was rejected
-            expect(ourBoard.buffer).to.be.null;
             ourBoard.removeListener('sample', newSample);
-            done();
-          } else {
-            done(`invalid sample number: expected ${sampleCounter} got ${sample.sampleNumber}`);
           }
           sampleCounter++;
         };
         ourBoard.on('sample', newSample);
         // Now call the function which should call the "sample" event
         ourBoard._processBytes(dataBuf);
+        // Verify that the old data was rejected
+        expect(ourBoard.buffer).to.be.null;
       });
     });
 
@@ -3231,6 +3229,7 @@ describe('#syncWhileStreaming', function () {
     this.buffer = null;
   });
   describe('#syncClocks', function () {
+    this.timeout(4000);
     it('can sync while streaming', done => {
       var syncAfterSamples = 50;
       var notSynced = true;
@@ -3255,6 +3254,7 @@ describe('#syncWhileStreaming', function () {
     });
   });
   describe('#syncClocksFull', function () {
+    this.timeout(4000);
     it('can run a full clock sync', done => {
       var notSynced = true;
       var sampleFun = sample => {

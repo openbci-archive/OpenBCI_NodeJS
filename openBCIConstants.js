@@ -232,10 +232,12 @@ const obciByteStart = 0xA0;
 const obciByteStop = 0xC0;
 
 /** Errors */
-const ErrorInvalidByteLength = 'Invalid Packet Byte Length';
-const ErrorInvalidByteStart = 'Invalid Start Byte';
-const ErrorInvalidByteStop = 'Invalid Stop Byte';
-const ErrorUndefinedOrNullInput = 'Undefined or Null Input';
+const errorInvalidByteLength = 'Invalid Packet Byte Length';
+const errorInvalidByteStart = 'Invalid Start Byte';
+const errorInvalidByteStop = 'Invalid Stop Byte';
+const errorTimeSyncIsNull = "'this.sync.curSyncObj' must not be null";
+const errorTimeSyncNoComma = 'Missed the time sync sent confirmation. Try sync again';
+const errorUndefinedOrNullInput = 'Undefined or Null Input';
 
 /** Max Master Buffer Size */
 const obciMasterBufferSize = 4096;
@@ -329,6 +331,17 @@ const obciRadioBaudRateDefault = 115200;
 const obciRadioBaudRateDefaultStr = 'default';
 const obciRadioBaudRateFast = 230400;
 const obciRadioBaudRateFastStr = 'fast';
+
+/** Emitters */
+const obciEmitterClose = 'close';
+const obciEmitterDroppedPacket = 'droppedPacket';
+const obciEmitterError = 'error';
+const obciEmitterImpedanceArray = 'impedanceArray';
+const obciEmitterQuery = 'query';
+const obciEmitterRawDataPacket = 'rawDataPacket';
+const obciEmitterReady = 'ready';
+const obciEmitterSample = 'sample';
+const obciEmitterSynced = 'synced';
 
 module.exports = {
   /** Turning channels off */
@@ -745,10 +758,12 @@ module.exports = {
   OBCIByteStart: obciByteStart,
   OBCIByteStop: obciByteStop,
   /** Errors */
-  ErrorInvalidByteLength,
-  ErrorInvalidByteStart,
-  ErrorInvalidByteStop,
-  ErrorUndefinedOrNullInput,
+  OBCIErrorInvalidByteLength: errorInvalidByteLength,
+  OBCIErrorInvalidByteStart: errorInvalidByteStart,
+  OBCIErrorInvalidByteStop: errorInvalidByteStop,
+  OBCIErrorTimeSyncIsNull: errorTimeSyncIsNull,
+  OBCIErrorTimeSyncNoComma: errorTimeSyncNoComma,
+  OBCIErrorUndefinedOrNullInput: errorUndefinedOrNullInput,
   /** Max Master Buffer Size */
   OBCIMasterBufferSize: obciMasterBufferSize,
   /** Impedance Calculation Variables */
@@ -811,6 +826,8 @@ module.exports = {
   isNumber,
   isBoolean,
   isString,
+  isUndefined,
+  isNull,
   /** OpenBCI V3 Standard Packet Positions */
   OBCIPacketPositionStartByte: obciPacketPositionStartByte,
   OBCIPacketPositionStopByte: obciPacketPositionStopByte,
@@ -873,7 +890,17 @@ module.exports = {
   OBCIRadioBaudRateDefaultStr: obciRadioBaudRateDefaultStr,
   OBCIRadioBaudRateFast: obciRadioBaudRateFast,
   OBCIRadioBaudRateFastStr: obciRadioBaudRateFastStr,
-  getVersionNumber
+  getVersionNumber,
+  /** Emitters */
+  OBCIEmitterClose: obciEmitterClose,
+  OBCIEmitterDroppedPacket: obciEmitterDroppedPacket,
+  OBCIEmitterError: obciEmitterError,
+  OBCIEmitterImpedanceArray: obciEmitterImpedanceArray,
+  OBCIEmitterQuery: obciEmitterQuery,
+  OBCIEmitterRawDataPacket: obciEmitterRawDataPacket,
+  OBCIEmitterReady: obciEmitterReady,
+  OBCIEmitterSample: obciEmitterSample,
+  OBCIEmitterSynced: obciEmitterSynced
 };
 
 /**
@@ -1017,6 +1044,12 @@ function isBoolean (input) {
 }
 function isString (input) {
   return (typeof input === 'string');
+}
+function isUndefined (input) {
+  return (typeof input === 'undefined');
+}
+function isNull (input) {
+  return input === null;
 }
 
 function commandForADCString (adcString) {
