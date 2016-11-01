@@ -1210,6 +1210,52 @@ $$$`);
       expect(openBCISample.droppedPacketCheck(previous, current)).to.be.null;
     });
   });
+  describe('#stripToEOTBuffer', function() {
+    it('should return the buffer if no EOT', function () {
+      let buf = null;
+      if (k.getVersionNumber(process.version) >= 6) {
+        // From introduced in node version 6.x.x
+        buf = Buffer.from('tacos are delicious');
+      } else {
+        buf = new Buffer('tacos are delicious');
+      }
+      expect(openBCISample.stripToEOTBuffer(buf).toString()).to.equal(buf.toString());
+    });
+    it('should slice the buffer after eot $$$', function() {
+      let bufPre = null;
+      let eotBuf = null;
+      let bufPost = null;
+      if (k.getVersionNumber(process.version) >= 6) {
+        // From introduced in node version 6.x.x
+        bufPre = Buffer.from('tacos are delicious');
+        eotBuf = Buffer.from(k.OBCIParseEOT);
+        bufPost = Buffer.from('tacos');
+      } else {
+        bufPre = new Buffer('tacos are delicious');
+        eotBuf = new Buffer(k.OBCIParseEOT);
+        bufPost = new Buffer('tacos');
+      }
+
+      let totalBuf = Buffer.concat([bufPre, eotBuf, bufPost]);
+      expect(openBCISample.stripToEOTBuffer(totalBuf).toString()).to.equal(bufPost.toString());
+    });
+    it('should return null if nothing left', function () {
+      let bufPre = null;
+      let eotBuf = null;
+      let bufPost = null;
+      if (k.getVersionNumber(process.version) >= 6) {
+        // From introduced in node version 6.x.x
+        bufPre = Buffer.from('tacos are delicious');
+        eotBuf = Buffer.from(k.OBCIParseEOT);
+      } else {
+        bufPre = new Buffer('tacos are delicious');
+        eotBuf = new Buffer(k.OBCIParseEOT);
+      }
+
+      let totalBuf = Buffer.concat([bufPre, eotBuf]);
+      expect(openBCISample.stripToEOTBuffer(totalBuf)).to.equal(null);
+    });
+  })
 });
 
 describe('#goertzelProcessSample', function () {
