@@ -765,6 +765,9 @@ describe('OpenBCIConstants', function () {
       assert.equal(125, k.OBCISampleRate125);
     });
     it('should be 250', function () {
+      assert.equal(200, k.OBCISampleRate200);
+    });
+    it('should be 250', function () {
       assert.equal(250, k.OBCISampleRate250);
     });
   });
@@ -1446,6 +1449,9 @@ describe('OpenBCIConstants', function () {
     it('Event Emitter Impedance Array', function () {
       assert.equal('impedanceArray', k.OBCIEmitterImpedanceArray);
     });
+    it('Event Emitter Message', function () {
+      assert.equal('message', k.OBCIEmitterMessage);
+    });
     it('Event Emitter Query', function () {
       assert.equal('query', k.OBCIEmitterQuery);
     });
@@ -1458,8 +1464,5 @@ describe('OpenBCIConstants', function () {
     it('Event Emitter Sample', function () {
       assert.equal('sample', k.OBCIEmitterSample);
     });
-  });
-  describe('Errors', function () {
-
   });
 });

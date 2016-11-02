@@ -1,7 +1,7 @@
 'use strict';
-var gaussian = require('gaussian');
-var k = require('./openBCIConstants');
-var StreamSearch = require('streamsearch');
+const gaussian = require('gaussian');
+const k = require('./openBCIConstants');
+const StreamSearch = require('streamsearch');
 
 /** Constants for interpreting the EEG data */
 // Reference voltage for ADC in ADS1299.
@@ -274,7 +274,7 @@ var sampleModule = {
 
     return (prefix << 16) | (twoByteBuffer[0] << 8) | twoByteBuffer[1];
   },
-  interpret24bitAsInt32: threeByteBuffer => {
+  interpret24bitAsInt32: (threeByteBuffer) => {
     var prefix = 0;
 
     if (threeByteBuffer[0] > 127) {

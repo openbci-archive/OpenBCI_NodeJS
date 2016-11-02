@@ -1,3 +1,22 @@
+# 2.0.0
+
+### New Features
+* `index.js` file allows for ES6 destructing
+
+### Breaking Changes
+* Change name of `OpenBCIBoard` to `Cyton` to follow new naming convention.
+    Simply change:
+    ```ecmascript 6
+    const OpenBCIBoard = require('openbci').OpenBCIBoard;
+    const ourBoard = new OpenBCIBoard();
+    ```
+    ```ecmascript 6
+    const Cyton = require('openbci').Cyton;
+    const ourBoard = new Cyton();
+    ```
+* Major change to how board is initialized with removal of `factory` paradigm.
+* Drop support for Node 4 and 5 due to lack of EMACS 6
+
 # 1.4.3
 
 ### New examples
@@ -237,7 +256,7 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 ### Bug Fixes
 
 * updates to README.me and comments to change ntp to sntp, because the two are similar, but not the same and we do not want to be misleading
-* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCIBoard.js
+* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCICyton.js
 * Add `.sntpNow()` function to get ntp time.
 
 # 0.3.1

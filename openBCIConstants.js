@@ -203,6 +203,7 @@ const obciSimulatorFragmentationNone = 'none';
 
 /** Possible Sample Rates */
 const obciSampleRate125 = 125;
+const obciSampleRate200 = 200;
 const obciSampleRate250 = 250;
 
 /** Max sample number */
@@ -232,9 +233,13 @@ const obciByteStart = 0xA0;
 const obciByteStop = 0xC0;
 
 /** Errors */
+const errorNobleAlreadyScanning = 'Scan already under way';
+const errorNobleNotAlreadyScanning = 'No scan started';
+const errorNobleNotInPoweredOnState = 'Please turn blue tooth on.';
 const errorInvalidByteLength = 'Invalid Packet Byte Length';
 const errorInvalidByteStart = 'Invalid Start Byte';
 const errorInvalidByteStop = 'Invalid Stop Byte';
+const errorInvalidType = 'Invalid Type';
 const errorTimeSyncIsNull = "'this.sync.curSyncObj' must not be null";
 const errorTimeSyncNoComma = 'Missed the time sync sent confirmation. Try sync again';
 const errorUndefinedOrNullInput = 'Undefined or Null Input';
@@ -337,6 +342,7 @@ const obciEmitterClose = 'close';
 const obciEmitterDroppedPacket = 'droppedPacket';
 const obciEmitterError = 'error';
 const obciEmitterImpedanceArray = 'impedanceArray';
+const obciEmitterMessage = 'message';
 const obciEmitterQuery = 'query';
 const obciEmitterRawDataPacket = 'rawDataPacket';
 const obciEmitterReady = 'ready';
@@ -749,6 +755,7 @@ module.exports = {
   },
   /** Possible Sample Rates */
   OBCISampleRate125: obciSampleRate125,
+  OBCISampleRate200: obciSampleRate200,
   OBCISampleRate250: obciSampleRate250,
   /** Max sample number */
   OBCISampleNumberMax: obciSampleNumberMax,
@@ -758,9 +765,13 @@ module.exports = {
   OBCIByteStart: obciByteStart,
   OBCIByteStop: obciByteStop,
   /** Errors */
+  OBCIErrorNobleAlreadyScanning: errorNobleAlreadyScanning,
+  OBCIErrorNobleNotAlreadyScanning: errorNobleNotAlreadyScanning,
+  OBCIErrorNobleNotInPoweredOnState: errorNobleNotInPoweredOnState,
   OBCIErrorInvalidByteLength: errorInvalidByteLength,
   OBCIErrorInvalidByteStart: errorInvalidByteStart,
   OBCIErrorInvalidByteStop: errorInvalidByteStop,
+  OBCIErrorInvalidType: errorInvalidType,
   OBCIErrorTimeSyncIsNull: errorTimeSyncIsNull,
   OBCIErrorTimeSyncNoComma: errorTimeSyncNoComma,
   OBCIErrorUndefinedOrNullInput: errorUndefinedOrNullInput,
@@ -896,6 +907,7 @@ module.exports = {
   OBCIEmitterDroppedPacket: obciEmitterDroppedPacket,
   OBCIEmitterError: obciEmitterError,
   OBCIEmitterImpedanceArray: obciEmitterImpedanceArray,
+  OBCIEmitterMessage: obciEmitterMessage,
   OBCIEmitterQuery: obciEmitterQuery,
   OBCIEmitterRawDataPacket: obciEmitterRawDataPacket,
   OBCIEmitterReady: obciEmitterReady,

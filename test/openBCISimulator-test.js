@@ -1,13 +1,13 @@
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var bufferEqual = require('buffer-equal');
-var chai = require('chai');
-var chaiAsPromised = require(`chai-as-promised`);
-var expect = chai.expect;
-var should = chai.should(); // eslint-disable-line no-unused-vars
-var openBCISimulator = require('../openBCISimulator');
-var openBCISample = require('../openBCISample');
-var k = openBCISample.k;
+const bluebirdChecks = require('./bluebirdChecks');
+const bufferEqual = require('buffer-equal');
+const chai = require('chai');
+const chaiAsPromised = require(`chai-as-promised`);
+const expect = chai.expect;
+const should = chai.should(); // eslint-disable-line no-unused-vars
+const openBCISimulator = require('../openBCISimulator');
+const openBCISample = require('../openBCISample');
+const k = require('../openBCIConstants');
 
 chai.use(chaiAsPromised);
 
