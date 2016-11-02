@@ -1,17 +1,17 @@
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var sinon = require('sinon');
-var chai = require('chai');
-var expect = chai.expect;
-var should = chai.should(); // eslint-disable-line no-unused-vars
-var openBCIBoard = require('../openBCIBoard');
-var openBCISample = openBCIBoard.OpenBCISample;
-var k = openBCISample.k;
-var chaiAsPromised = require('chai-as-promised');
-var sinonChai = require('sinon-chai');
-var bufferEqual = require('buffer-equal');
-var fs = require('fs');
-var math = require('mathjs');
+const bluebirdChecks = require('./bluebirdChecks');
+const sinon = require('sinon');
+const chai = require('chai');
+const expect = chai.expect;
+const should = chai.should(); // eslint-disable-line no-unused-vars
+const Cyton = require('../openBCICyton');
+const openBCISample = require('../openBCISample');
+const k = require('../openBCIConstants');
+const chaiAsPromised = require('chai-as-promised');
+const sinonChai = require('sinon-chai');
+const bufferEqual = require('buffer-equal');
+const fs = require('fs');
+const math = require('mathjs');
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
@@ -21,7 +21,7 @@ describe('openbci-sdk', function () {
   var ourBoard, masterPortName, realBoard, spy;
 
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard();
+    ourBoard = new Cyton();
     ourBoard.autoFindOpenBCIBoard()
       .then(portName => {
         ourBoard = null;
@@ -59,14 +59,14 @@ describe('openbci-sdk', function () {
       return bluebirdChecks.noPendingPromises();
     });
     it('constructs with require', function () {
-      var OpenBCIBoard = require('../openBCIBoard').OpenBCIBoard;
-      ourBoard = new OpenBCIBoard({
+      var OpenBCICyton = require('../index').Cyton;
+      ourBoard = new OpenBCICyton({
         verbose: true
       });
       expect(ourBoard.numberOfChannels()).to.equal(8);
     });
     it('constructs with the correct default options', () => {
-      var board = new openBCIBoard.OpenBCIBoard();
+      var board = new Cyton();
       expect(board.options.boardType).to.equal(k.OBCIBoardDefault);
       expect(board.options.baudRate).to.equal(115200);
       expect(board.options.simulate).to.be.false;
@@ -88,16 +88,16 @@ describe('openbci-sdk', function () {
       expect(board.isStreaming()).to.be.false;
     });
     it('should be able to set ganglion mode', () => {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         boardType: 'ganglion'
       });
       (board.options.boardType).should.equal('ganglion');
     });
     it('should be able to set set daisy mode', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         boardType: 'daisy'
       });
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         boardtype: 'daisy'
       });
       (ourBoard1.options.boardType).should.equal('daisy');
@@ -110,122 +110,122 @@ describe('openbci-sdk', function () {
       });
     });
     it('should be able to change baud rate', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         baudRate: 9600
       });
       (ourBoard1.options.baudRate).should.equal(9600);
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         baudrate: 9600
       });
       (ourBoard2.options.baudRate).should.equal(9600);
     });
     it('should be able to enter simulate mode from the constructor', () => {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         simulate: true
       });
       expect(board.options.simulate).to.be.true;
     });
     it('should be able to set the simulator to board failure mode', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorBoardFailure: true
       });
       expect(ourBoard1.options.simulatorBoardFailure).to.be.true;
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorboardfailure: true
       });
       expect(ourBoard2.options.simulatorBoardFailure).to.be.true;
     });
     it('should be able to attach the daisy board in the simulator', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorDaisyModuleAttached: true
       });
       expect(ourBoard1.options.simulatorDaisyModuleAttached).to.be.true;
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatordaisymoduleattached: true
       });
       expect(ourBoard2.options.simulatorDaisyModuleAttached).to.be.true;
     });
     it('should be able to start the simulator with firmware version 2', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorFirmwareVersion: 'v2'
       });
       (ourBoard1.options.simulatorFirmwareVersion).should.equal(k.OBCIFirmwareV2);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorfirmwareversion: 'v2'
       });
       (ourBoard2.options.simulatorFirmwareVersion).should.equal(k.OBCIFirmwareV2);
     });
     it('should be able to put the simulator in raw aux mode', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorHasAccelerometer: false
       });
       expect(ourBoard1.options.simulatorHasAccelerometer).to.be.false;
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorhasaccelerometer: false
       });
       expect(ourBoard2.options.simulatorHasAccelerometer).to.be.false;
     });
     it('should be able to make the internal clock of the simulator run slow', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInternalClockDrift: -1
       });
       expect(ourBoard1.options.simulatorInternalClockDrift).to.be.lessThan(0);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinternalclockdrift: -1
       });
       expect(ourBoard2.options.simulatorInternalClockDrift).to.be.lessThan(0);
     });
     it('should be able to make the internal clock of the simulator run fast', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInternalClockDrift: 1
       });
       expect(ourBoard1.options.simulatorInternalClockDrift).to.be.greaterThan(0);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinternalclockdrift: 1
       });
       expect(ourBoard2.options.simulatorInternalClockDrift).to.be.greaterThan(0);
     });
     it('should be able to not inject alpha waves into the simulator', function () {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInjectAlpha: false
       });
       expect(ourBoard1.options.simulatorInjectAlpha).to.be.false;
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinjectalpha: false
       });
       expect(ourBoard2.options.simulatorInjectAlpha).to.be.false;
     });
     it('can turn 50Hz line noise on', function () {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInjectLineNoise: '50Hz'
       });
       expect(ourBoard1.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz50);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinjectlinenoise: '50Hz'
       });
       expect(ourBoard2.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz50);
     });
     it('can turn no line noise on', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulatorInjectLineNoise: 'none'
       });
       (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseNone);
     });
     it('defaults to 60Hz line noise when bad input', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulatorInjectLineNoise: '20Hz'
       });
       (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseHz60);
     });
     it('can enter simulate mode with different sample rate', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulate: true,
         simulatorSampleRate: 69
       });
@@ -234,18 +234,18 @@ describe('openbci-sdk', function () {
       (ourBoard.sampleRate()).should.equal(69);
     });
     it('should be able to attach the daisy board in the simulator', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorSerialPortFailure: true
       });
       expect(ourBoard1.options.simulatorSerialPortFailure).to.be.true;
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorserialportfailure: true
       });
       expect(ourBoard2.options.simulatorSerialPortFailure).to.be.true;
     });
     it('should be able to enter sync mode', function () {
-      var ourBoard = new openBCIBoard.OpenBCIBoard({
+      var ourBoard = new Cyton({
         sntpTimeSync: true
       });
       expect(ourBoard.options.sntpTimeSync).to.be.true;
@@ -262,30 +262,30 @@ describe('openbci-sdk', function () {
     });
     it('should be able to change the ntp pool host', function () {
       var expectedPoolName = 'time.apple.com';
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         sntpTimeSyncHost: expectedPoolName
       });
       expect(ourBoard1.options.sntpTimeSyncHost).to.equal(expectedPoolName);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         sntptimesynchost: expectedPoolName
       });
       expect(ourBoard2.options.sntpTimeSyncHost).to.equal(expectedPoolName);
     });
     it('should be able to change the ntp pool port', function () {
       var expectedPortNumber = 73;
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         sntpTimeSyncPort: expectedPortNumber
       });
       expect(ourBoard1.options.sntpTimeSyncPort).to.equal(expectedPortNumber);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         sntptimesyncport: expectedPortNumber
       });
       expect(ourBoard2.options.sntpTimeSyncPort).to.equal(expectedPortNumber);
     });
     it('should report when sntp fails', function (done) {
-      var ourBoard = new openBCIBoard.OpenBCIBoard({
+      var ourBoard = new Cyton({
         sntpTimeSync: true,
         sntpTimeSyncHost: 'no\'where'
       });
@@ -298,18 +298,18 @@ describe('openbci-sdk', function () {
       });
     });
     it('can enter verbose mode', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       (ourBoard.options.verbose).should.equal(true);
     });
     it('should start in current stream state in the init mode', () => {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
 
       ourBoard.curParsingMode.should.equal(k.OBCIParsingReset);
     });
     it('configures impedance testing variables correctly', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
       (ourBoard.impedanceTest.active).should.equal(false);
       (ourBoard.impedanceTest.isTestingNInput).should.equal(false);
       (ourBoard.impedanceTest.isTestingPInput).should.equal(false);
@@ -317,7 +317,7 @@ describe('openbci-sdk', function () {
       (ourBoard.impedanceTest.sampleNumber).should.equal(0);
     });
     it('configures sync object correctly', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
       expect(ourBoard.sync.curSyncObj).to.be.null;
       expect(ourBoard.sync.eventEmitter).to.be.null;
       expect(ourBoard.sync.objArray.length).to.equal(0);
@@ -327,24 +327,24 @@ describe('openbci-sdk', function () {
       expect(ourBoard.sync.timeOffsetArray.length).to.equal(0);
     });
     it('configures impedance array with the correct amount of channels for default', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
       (ourBoard.impedanceArray.length).should.equal(8);
     });
     it('configures impedance array with the correct amount of channels for daisy', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         boardType: 'daisy'
       });
       (ourBoard.impedanceArray.length).should.equal(16);
     });
     it('configures impedance array with the correct amount of channels for ganglion', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         boardType: 'ganglion'
       });
       (ourBoard.impedanceArray.length).should.equal(4);
     });
     it('should throw if passed an invalid option', function (done) {
       try {
-        ourBoard = new openBCIBoard.OpenBCIBoard({
+        ourBoard = new Cyton({
           foo: 'bar'
         });
         done('did not throw');
@@ -354,13 +354,13 @@ describe('openbci-sdk', function () {
   describe('#simulator', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('can enable simulator after constructor', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       ourBoard.simulatorEnable().should.be.fulfilled.and.notify(done);
     });
     it('should start sim and call disconnected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       var disconnectStub = sinon.stub(ourBoard, 'disconnect').returns(Promise.resolve());
@@ -375,27 +375,27 @@ describe('openbci-sdk', function () {
       }, done);
     });
     it('should not enable the simulator if already simulating', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.simulatorEnable().should.be.rejected.and.notify(done);
     });
     it('can disable simulator', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.simulatorDisable().should.be.fulfilled.and.notify(done);
     });
     it('should not disable simulator if not in simulate mode', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       ourBoard.simulatorDisable().should.be.rejected.and.notify(done);
     });
     it('should disable sim and call disconnected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -412,7 +412,7 @@ describe('openbci-sdk', function () {
       });
     });
     it('should be able to propagate constructor options to simulator', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -454,7 +454,7 @@ describe('openbci-sdk', function () {
   });
   describe('#debug', function () {
     before(function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         debug: true
       });
       ourBoard.connect(k.OBCISimulatorPortName).catch(done);
@@ -488,7 +488,7 @@ describe('openbci-sdk', function () {
   describe('#boardTests', function () {
     this.timeout(3000);
     before(function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulate: !realBoard,
         verbose: true,
         simulatorFragmentation: k.OBCISimulatorFragmentationRandom
@@ -664,7 +664,7 @@ describe('openbci-sdk', function () {
           ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
           ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
           ourBoard.disconnect()
-        ]).then(() => {+
+        ]).then(() => {
           writeSpy.should.have.not.been.called;
           writeSpy.restore();
         });
@@ -924,7 +924,7 @@ describe('openbci-sdk', function () {
   describe('#_processDataBuffer', function () {
     var _processQualifiedPacketSpy;
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       _processQualifiedPacketSpy = sinon.spy(ourBoard, '_processQualifiedPacket');
@@ -1088,7 +1088,7 @@ describe('openbci-sdk', function () {
     var funcSpyTimeSyncSet, funcSpyTimeSyncedAccel, funcSpyTimeSyncedRawAux, funcSpyStandardRawAux, funcSpyStandardAccel;
 
     before(function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       // Put watchers on all functions
@@ -1242,7 +1242,7 @@ describe('openbci-sdk', function () {
     var timeSyncSetPacket;
     var ourBoard;
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: false
       });
     });
@@ -1427,7 +1427,7 @@ describe('openbci-sdk', function () {
   describe('#_processPacket Errors', function () {
     var ourBoard;
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: false
       });
     });
@@ -1471,7 +1471,7 @@ describe('openbci-sdk', function () {
   describe('#time', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should use sntp time when sntpTimeSync specified in options', function (done) {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         verbose: true,
         sntpTimeSync: true
       });
@@ -1485,7 +1485,7 @@ describe('openbci-sdk', function () {
       });
     });
     it('should use Date.now() for time when sntpTimeSync is not specified in options', function () {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         verbose: true
       });
       var funcSpySntpNow = sinon.spy(board, '_sntpNow');
@@ -1499,7 +1499,7 @@ describe('openbci-sdk', function () {
       funcSpySntpNow = null;
     });
     it('should emit sntpTimeLock event after sycned with ntp server', function (done) {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         verbose: true,
         sntpTimeSync: true
       });
@@ -1513,7 +1513,7 @@ describe('openbci-sdk', function () {
   describe('#sntpStart', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should be able to start ntp server', () => {
-      var board = new openBCIBoard.OpenBCIBoard();
+      var board = new Cyton();
       expect(board.sntp.isLive()).to.be.false;
       return Promise.all([
         board.sntpStart()
@@ -1532,7 +1532,7 @@ describe('openbci-sdk', function () {
     this.timeout(5000);
     var board;
     before(done => {
-      board = new openBCIBoard.OpenBCIBoard({
+      board = new Cyton({
         sntpTimeSync: true
       });
       board.once('sntpTimeLock', () => {
@@ -1561,7 +1561,7 @@ describe('openbci-sdk', function () {
   describe('#sntpGetOffset', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should get the sntp offset', function (done) {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         sntpTimeSync: true
       });
       board.once('sntpTimeLock', () => {
@@ -1576,7 +1576,7 @@ describe('openbci-sdk', function () {
     var ourBoard;
 
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
     });
@@ -1653,7 +1653,7 @@ $$$`);
 
   describe('#_processBytes', function () {
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
     });
@@ -1971,7 +1971,7 @@ $$$`);
   describe('#_finalizeNewSampleForDaisy', function () {
     var ourBoard, randomSampleGenerator, sampleEvent, failTimeout;
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       randomSampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'none');
@@ -2081,13 +2081,13 @@ $$$`);
   describe('#usingVersionTwoFirmware', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should return true if firmware is version 2', () => {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
       ourBoard.info.firmware = 'v2';
 
       expect(ourBoard.usingVersionTwoFirmware()).to.be.true;
     });
     it('should return false if not firmware version 2', () => {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
 
       expect(ourBoard.usingVersionTwoFirmware()).to.be.false;
     });
@@ -2106,7 +2106,7 @@ $$$`);
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not change the channel number if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2115,7 +2115,7 @@ $$$`);
     });
 
     it('should reject if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2135,7 +2135,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should reject if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2147,7 +2147,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should reject if a number is not sent as input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2161,7 +2161,7 @@ $$$`);
     });
 
     it('should reject if no channel number is presented as arg', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2175,7 +2175,7 @@ $$$`);
     });
 
     it('should reject if the requested new channel number is lower than 0', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2189,7 +2189,7 @@ $$$`);
     });
 
     it('should reject if the requested new channel number is higher than 25', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2203,7 +2203,7 @@ $$$`);
     });
 
     it('should not change the channel if the board is not communicating with the host', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -2219,7 +2219,7 @@ $$$`);
 
     it('should change the channel if connected, not steaming, and using firmware version 2+', function (done) {
       var newChannelNumber = 2;
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2247,7 +2247,7 @@ $$$`);
     });
     afterEach(() => bluebirdChecks.noPendingPromises());
     it('should not change the channel number if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2255,7 +2255,7 @@ $$$`);
       ourBoard.radioChannelSetHostOverride().should.be.rejected.and.notify(done);
     });
     it('should reject if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2275,7 +2275,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should reject if a number is not sent as input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2288,7 +2288,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should reject if no channel number is presented as arg', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2301,7 +2301,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should reject if the requested new channel number is lower than 0', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2314,7 +2314,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should reject if the requested new channel number is higher than 25', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2328,7 +2328,7 @@ $$$`);
     });
     it('should change the channel if connected, not steaming, and using firmware version 2+', function (done) {
       var newChannelNumber = 2;
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2357,14 +2357,14 @@ $$$`);
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not query if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
     });
     it('should not query if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2383,7 +2383,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should not query if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2395,7 +2395,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should query if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2411,7 +2411,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should get message even if the board is not communicating with dongle', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -2438,7 +2438,7 @@ $$$`);
     });
     afterEach(() => bluebirdChecks.noPendingPromises());
     it('should not change the channel number if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2447,7 +2447,7 @@ $$$`);
     });
 
     it('should reject if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2468,7 +2468,7 @@ $$$`);
     });
 
     it('should reject if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2481,7 +2481,7 @@ $$$`);
     });
 
     it('should reject if a number is not sent as input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2495,7 +2495,7 @@ $$$`);
     });
 
     it('should reject if no poll time is presented as arg', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2509,7 +2509,7 @@ $$$`);
     });
 
     it('should reject if the requested new poll time is lower than 0', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2523,7 +2523,7 @@ $$$`);
     });
 
     it('should reject if the requested new poll time is higher than 255', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2537,7 +2537,7 @@ $$$`);
     });
 
     it('should not change the poll time if the board is not communicating with the host', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -2553,7 +2553,7 @@ $$$`);
 
     it('should change the poll time if connected, not steaming, and using firmware version 2+', function (done) {
       var newPollTime = 69;
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2584,14 +2584,14 @@ $$$`);
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not query if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioPollTimeGet().should.be.rejected.and.notify(done);
     });
     it('should not query if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2610,7 +2610,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should not query if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2622,7 +2622,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should query if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2638,7 +2638,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should get failure message if the board is not communicating with dongle', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -2666,28 +2666,28 @@ $$$`);
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not try to set baud rate if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioBaudRateSet('default').should.be.rejected.and.notify(done);
     });
     it('should reject if no input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioBaudRateSet().should.be.rejected.and.notify(done);
     });
     it('should be rejected if input type incorrect', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioBaudRateSet(1).should.be.rejected.and.notify(done);
     });
     it('should not try to change the baud rate if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2706,7 +2706,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should not try to change the baud rate if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2718,7 +2718,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should set the baud rate to default if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2734,7 +2734,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should set the baud rate to fast if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2764,14 +2764,14 @@ $$$`);
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not get system status if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioSystemStatusGet().should.be.rejected.and.notify(done);
     });
     it('should not get system status if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2790,7 +2790,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should not get system status if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -2802,7 +2802,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should get up system status if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -2818,7 +2818,7 @@ $$$`);
         }).catch(err => done(err));
     });
     it('should get down system status if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2',
@@ -2839,7 +2839,7 @@ $$$`);
   describe('#radioTests', function () {
     this.timeout(0);
     before(function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulatorFirmwareVersion: 'v2',
         simulatorFragmentation: k.OBCISimulatorFragmentationRandom
@@ -2999,7 +2999,7 @@ $$$`);
         runHardwareValidation = false;
       }
       if (runHardwareValidation) {
-        board = new openBCIBoard.OpenBCIBoard({
+        board = new Cyton({
           verbose: true,
           simulatorFragmentation: k.OBCISimulatorFragmentationRandom
         });
@@ -3082,7 +3082,7 @@ describe('#daisy', function () {
   var ourBoard;
   this.timeout(4000);
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new Cyton({
       verbose: true,
       simulatorFirmwareVersion: 'v2',
       simulatorDaisyModuleAttached: true,
@@ -3163,7 +3163,7 @@ describe('#syncWhileStreaming', function () {
   var ourBoard;
   this.timeout(4000);
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new Cyton({
       verbose: true,
       simulatorFirmwareVersion: 'v2',
       simulatorFragmentation: k.OBCISimulatorFragmentationRandom
@@ -3276,7 +3276,7 @@ describe('#syncErrors', function () {
   var ourBoard;
   this.timeout(4000);
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new Cyton({
       verbose: true,
       simulatorFirmwareVersion: 'v2'
     });

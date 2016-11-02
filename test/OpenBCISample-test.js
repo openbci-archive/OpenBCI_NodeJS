@@ -2,28 +2,28 @@
 * Created by ajk on 12/15/15.
 */
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var openBCISample = require('../openBCISample');
-var chai = require('chai');
-var expect = chai.expect;
-var assert = chai.assert;
-var should = chai.should(); // eslint-disable-line no-unused-vars
+const bluebirdChecks = require('./bluebirdChecks');
+const openBCISample = require('../openBCISample');
+const chai = require('chai');
+const expect = chai.expect;
+const assert = chai.assert;
+const should = chai.should(); // eslint-disable-line no-unused-vars
 
-var chaiAsPromised = require('chai-as-promised');
-var sinonChai = require('sinon-chai');
+const chaiAsPromised = require('chai-as-promised');
+const sinonChai = require('sinon-chai');
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
-var bufferEqual = require('buffer-equal');
+const bufferEqual = require('buffer-equal');
 
-var k = openBCISample.k;
+const k = require('../openBCIConstants');
 
 const defaultChannelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
 
-var sampleBuf = openBCISample.samplePacket();
+const sampleBuf = openBCISample.samplePacket();
 
-var accelArray;
+let accelArray;
 
-var channelScaleFactor = 4.5 / 24 / (Math.pow(2, 23) - 1);
+const channelScaleFactor = 4.5 / 24 / (Math.pow(2, 23) - 1);
 
 describe('openBCISample', function () {
   beforeEach(function () {
@@ -600,28 +600,6 @@ describe('openBCISample', function () {
       expect(sample.timeStamp).to.equal(time + timeOffset);
     });
   });
-  describe('#interpret24bitAsInt32', function () {
-    it('converts a small positive number', function () {
-      var buf1 = new Buffer([0x00, 0x06, 0x90]); // 0x000690 === 1680
-      var num = openBCISample.interpret24bitAsInt32(buf1);
-      assert.equal(num, 1680);
-    });
-    it('converts a large positive number', function () {
-      var buf1 = new Buffer([0x02, 0xC0, 0x01]); // 0x02C001 === 180225
-      var num = openBCISample.interpret24bitAsInt32(buf1);
-      assert.equal(num, 180225);
-    });
-    it('converts a small negative number', function () {
-      var buf1 = new Buffer([0xFF, 0xFF, 0xFF]); // 0xFFFFFF === -1
-      var num = openBCISample.interpret24bitAsInt32(buf1);
-      num.should.be.approximately(-1, 1);
-    });
-    it('converts a large negative number', function () {
-      var buf1 = new Buffer([0x81, 0xA1, 0x01]); // 0x81A101 === -8281855
-      var num = openBCISample.interpret24bitAsInt32(buf1);
-      num.should.be.approximately(-8281855, 1);
-    });
-  });
   describe('#interpret16bitAsInt32', function () {
     it('converts a small positive number', function () {
       var buf1 = new Buffer([0x06, 0x90]); // 0x0690 === 1680
@@ -642,6 +620,28 @@ describe('openBCISample', function () {
       var buf1 = new Buffer([0x81, 0xA1]); // 0x81A1 === -32351
       var num = openBCISample.interpret16bitAsInt32(buf1);
       assert.equal(num, -32351);
+    });
+  });
+  describe('#interpret24bitAsInt32', function () {
+    it('converts a small positive number', function () {
+      var buf1 = new Buffer([0x00, 0x06, 0x90]); // 0x000690 === 1680
+      var num = openBCISample.interpret24bitAsInt32(buf1);
+      assert.equal(num, 1680);
+    });
+    it('converts a large positive number', function () {
+      var buf1 = new Buffer([0x02, 0xC0, 0x01]); // 0x02C001 === 180225
+      var num = openBCISample.interpret24bitAsInt32(buf1);
+      assert.equal(num, 180225);
+    });
+    it('converts a small negative number', function () {
+      var buf1 = new Buffer([0xFF, 0xFF, 0xFF]); // 0xFFFFFF === -1
+      var num = openBCISample.interpret24bitAsInt32(buf1);
+      num.should.be.approximately(-1, 1);
+    });
+    it('converts a large negative number', function () {
+      var buf1 = new Buffer([0x81, 0xA1, 0x01]); // 0x81A101 === -8281855
+      var num = openBCISample.interpret24bitAsInt32(buf1);
+      num.should.be.approximately(-8281855, 1);
     });
   });
   describe('#floatTo3ByteBuffer', function () {
