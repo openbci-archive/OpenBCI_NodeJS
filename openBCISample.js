@@ -522,6 +522,7 @@ var sampleModule = {
   makeTailByteFromPacketType,
   isStopByte,
   newSyncObject,
+  stripToEOTBuffer,
   /**
   * @description Checks to make sure the previous sample number is one less
   *  then the new sample number. Takes into account sample numbers wrapping
@@ -1109,6 +1110,31 @@ function isSuccessInBuffer (dataBuffer) {
 
   // Check and see if there is a match
   return s.matches >= 1;
+}
+
+/**
+ * @description Used to slice a buffer for the EOT '$$$'.
+ * @param dataBuffer {Buffer} - The buffer of some length to parse
+ * @returns {Buffer} - The remaining buffer.
+ */
+function stripToEOTBuffer (dataBuffer) {
+  let indexOfEOT = dataBuffer.indexOf(k.OBCIParseEOT);
+  if (indexOfEOT > 0) {
+    indexOfEOT += k.OBCIParseEOT.length;
+  } else {
+    return dataBuffer;
+  }
+
+  if (indexOfEOT < dataBuffer.byteLength) {
+    if (k.getVersionNumber(process.version) >= 6) {
+      // From introduced in node version 6.x.x
+      return Buffer.from(dataBuffer.slice(indexOfEOT));
+    } else {
+      return new Buffer(dataBuffer.slice(indexOfEOT));
+    }
+  } else {
+    return null;
+  }
 }
 
 /**

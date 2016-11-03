@@ -1692,7 +1692,7 @@ function OpenBCIFactory () {
         if (openBCISample.doesBufferHaveEOT(data)) {
           this.curParsingMode = k.OBCIParsingNormal;
           this.emit('eot', data);
-          this.buffer = null;
+          this.buffer = openBCISample.stripToEOTBuffer(data);
         } else {
           this.buffer = data;
         }
@@ -1702,8 +1702,8 @@ function OpenBCIFactory () {
         if (openBCISample.doesBufferHaveEOT(data)) {
           this._processParseBufferForReset(data);
           this.curParsingMode = k.OBCIParsingNormal;
-          this.buffer = null;
           this.emit('ready');
+          this.buffer = openBCISample.stripToEOTBuffer(data);
         } else {
           this.buffer = data;
         }
@@ -1795,11 +1795,12 @@ function OpenBCIFactory () {
   };
 
   /**
-  * @description Alters the global info object by parseing an incoming soft reset key
-  * @param dataBuffer {Buffer} - The soft reset data buffer
-  * @private
-  * @author AJ Keller (@pushtheworldllc)
-  */
+   * @description Alters the global info object by parseing an incoming soft reset key
+   * @param dataBuffer {Buffer} - The soft reset data buffer
+   * @returns {Buffer} - If there is data left in the buffer, just it will be returned.
+   * @private
+   * @author AJ Keller (@pushtheworldllc)
+   */
   OpenBCIBoard.prototype._processParseBufferForReset = function (dataBuffer) {
     if (openBCISample.countADSPresent(dataBuffer) === 2) {
       this.info.boardType = k.OBCIBoardDaisy;
