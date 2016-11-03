@@ -1,3 +1,8 @@
+# 1.4.1
+
+### Bug Fixes
+* Fixes bug where extra data after EOT (`$$$`) was dumped by preserving the poriton after the EOT for further decomposition.
+
 # 1.4.0
 
 ### New Features
