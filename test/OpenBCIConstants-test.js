@@ -792,32 +792,60 @@ describe('OpenBCIConstants', function () {
     describe('channel input selection works', function () {
       // this.timeout(5000)
       it('channel 2', function (done) {
-        k.getChannelSetter(2, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[1].should.equal('2');
+        k.getChannelSetter(2, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[1].should.equal('2');
+          val.newChannelSettingsObject.channelNumber.should.equal(2);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('channel 5', function (done) {
-        k.getChannelSetter(5, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[1].should.equal('5');
+        k.getChannelSetter(5, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[1].should.equal('5');
+          val.newChannelSettingsObject.channelNumber.should.equal(5);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('channel 9', function (done) {
-        k.getChannelSetter(9, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[1].should.equal('Q');
+        k.getChannelSetter(9, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[1].should.equal('Q');
+          val.newChannelSettingsObject.channelNumber.should.equal(9);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('channel 15', function (done) {
-        k.getChannelSetter(15, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[1].should.equal('U');
+        k.getChannelSetter(15, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[1].should.equal('U');
+          val.newChannelSettingsObject.channelNumber.should.equal(15);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
@@ -832,16 +860,30 @@ describe('OpenBCIConstants', function () {
     });
     describe('power selection works', function () {
       it('on', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[2].should.equal('0');
+        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[2].should.equal('0');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('off', function (done) {
-        k.getChannelSetter(1, true, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[2].should.equal('1');
+        k.getChannelSetter(1, true, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[2].should.equal('1');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(true);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
@@ -853,56 +895,105 @@ describe('OpenBCIConstants', function () {
     });
     describe('gain selection works', function () {
       it('1x', function (done) {
-        k.getChannelSetter(1, false, 1, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[3].should.equal('0');
+        k.getChannelSetter(1, false, 1, 'normal', true, true, false).then(function (val) {
+          val.commandArray[3].should.equal('0');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(1);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('2x', function (done) {
-        k.getChannelSetter(1, false, 2, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[3].should.equal('1');
+        k.getChannelSetter(1, false, 2, 'normal', true, true, false).then(function (val) {
+          val.commandArray[3].should.equal('1');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(2);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('4x', function (done) {
-        k.getChannelSetter(1, false, 4, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[3].should.equal('2');
+        k.getChannelSetter(1, false, 4, 'normal', true, true, false).then(function (val) {
+          val.commandArray[3].should.equal('2');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(4);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('6x', function (done) {
-        k.getChannelSetter(1, false, 6, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[3].should.equal('3');
+        k.getChannelSetter(1, false, 6, 'normal', true, true, false).then(function (val) {
+          val.commandArray[3].should.equal('3');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(6);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('8x', function (done) {
-        k.getChannelSetter(1, false, 8, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[3].should.equal('4');
+        k.getChannelSetter(1, false, 8, 'normal', true, true, false).then(function (val) {
+          val.commandArray[3].should.equal('4');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(8);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('12x', function (done) {
-        k.getChannelSetter(1, false, 12, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[3].should.equal('5');
+        k.getChannelSetter(1, false, 12, 'normal', true, true, false).then(function (val) {
+          val.commandArray[3].should.equal('5');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(12);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('24x', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[3].should.equal('6');
+        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[3].should.equal('6');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
@@ -917,64 +1008,120 @@ describe('OpenBCIConstants', function () {
     });
     describe('input type', function () {
       it('normal', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('0');
+        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('0');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('shorted', function (done) {
-        k.getChannelSetter(1, false, 24, 'shorted', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('1');
+        k.getChannelSetter(1, false, 24, 'shorted', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('1');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('shorted');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('biasMethod', function (done) {
-        k.getChannelSetter(1, false, 24, 'biasMethod', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('2');
+        k.getChannelSetter(1, false, 24, 'biasMethod', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('2');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('biasMethod');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('mvdd', function (done) {
-        k.getChannelSetter(1, false, 24, 'mvdd', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('3');
+        k.getChannelSetter(1, false, 24, 'mvdd', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('3');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('mvdd');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('temp', function (done) {
-        k.getChannelSetter(1, false, 24, 'temp', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('4');
+        k.getChannelSetter(1, false, 24, 'temp', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('4');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('temp');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('testsig', function (done) {
-        k.getChannelSetter(1, false, 24, 'testSig', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('5');
+        k.getChannelSetter(1, false, 24, 'testSig', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('5');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('testSig');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('biasDrp', function (done) {
-        k.getChannelSetter(1, false, 24, 'biasDrp', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('6');
+        k.getChannelSetter(1, false, 24, 'biasDrp', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('6');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('biasDrp');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('biasDrn', function (done) {
-        k.getChannelSetter(1, false, 24, 'biasDrn', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[4].should.equal('7');
+        k.getChannelSetter(1, false, 24, 'biasDrn', true, true, false).then(function (val) {
+          val.commandArray[4].should.equal('7');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('biasDrn');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
@@ -989,16 +1136,30 @@ describe('OpenBCIConstants', function () {
     });
     describe('bias selection works', function () {
       it('Include', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[5].should.equal('1');
+        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[5].should.equal('1');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('Remove', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', false, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[5].should.equal('0');
+        k.getChannelSetter(1, false, 24, 'normal', false, true, false).then(function (val) {
+          val.commandArray[5].should.equal('0');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(false);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
@@ -1010,16 +1171,30 @@ describe('OpenBCIConstants', function () {
     });
     describe('SRB2 selection works', function () {
       it('Connect', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[6].should.equal('1');
+        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[6].should.equal('1');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('Disconnect', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, false, false).then(function (arrayOfCommands) {
-          arrayOfCommands[6].should.equal('0');
+        k.getChannelSetter(1, false, 24, 'normal', true, false, false).then(function (val) {
+          val.commandArray[6].should.equal('0');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(false);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);
@@ -1031,16 +1206,30 @@ describe('OpenBCIConstants', function () {
     });
     describe('SRB1 selection works', function () {
       it('Connect', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, true, true).then(function (arrayOfCommands) {
-          arrayOfCommands[7].should.equal('1');
+        k.getChannelSetter(1, false, 24, 'normal', true, true, true).then(function (val) {
+          val.commandArray[7].should.equal('1');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(true);
           done();
         }).catch(function (err) {
           done(err);
         });
       });
       it('Disconnect', function (done) {
-        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (arrayOfCommands) {
-          arrayOfCommands[7].should.equal('0');
+        k.getChannelSetter(1, false, 24, 'normal', true, true, false).then(function (val) {
+          val.commandArray[7].should.equal('0');
+          val.newChannelSettingsObject.channelNumber.should.equal(1);
+          val.newChannelSettingsObject.powerDown.should.equal(false);
+          val.newChannelSettingsObject.gain.should.equal(24);
+          val.newChannelSettingsObject.inputType.should.equal('normal');
+          val.newChannelSettingsObject.bias.should.equal(true);
+          val.newChannelSettingsObject.srb2.should.equal(true);
+          val.newChannelSettingsObject.srb1.should.equal(false);
           done();
         }).catch(function (err) {
           done(err);

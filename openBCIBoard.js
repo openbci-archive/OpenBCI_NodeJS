@@ -1092,9 +1092,9 @@ function OpenBCIFactory () {
     var arrayOfCommands = [];
     return new Promise((resolve, reject) => {
       k.getChannelSetter(channelNumber, powerDown, gain, inputType, bias, srb2, srb1)
-        .then((arr, newChannelSettingObject) => {
-          arrayOfCommands = arr;
-          this.channelSettingsArray[channelNumber - 1] = newChannelSettingObject;
+        .then((val) => {
+          arrayOfCommands = val.commandArray;
+          this.channelSettingsArray[channelNumber - 1] = val.newChannelSettingsObject;
           resolve(this.write(arrayOfCommands));
         }, function (err) {
           reject(err);

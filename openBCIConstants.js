@@ -926,7 +926,10 @@ module.exports = {
 *                     false -> Disconnect all N inputs from SRB1 (default))
 *          Select to connect (true) all channels' N inputs to SRB1. This effects all pins,
 *              and disconnects all N inputs from the ADC.
-* @returns {Promise} resolves array of commands to be sent, rejects on bad input or no board
+* @returns {Promise} resolves {commandArray: array of commands to be sent,
+                               newChannelSettingsObject: an updated channel settings object
+                                                         to be stored in openBCIBoard.channelSettingsArray},
+                     rejects on bad input or no board
 */
 function channelSetter (channelNumber, powerDown, gain, inputType, bias, srb2, srb1) {
   // Used to store and assemble the commands
@@ -991,8 +994,7 @@ function channelSetter (channelNumber, powerDown, gain, inputType, bias, srb2, s
         cmdSrb1,
         obciChannelCmdLatch
       ];
-      // console.log(outputArray)
-      resolve(outputArray, newChannelSettingsObject);
+      resolve({commandArray: outputArray, newChannelSettingsObject: newChannelSettingsObject});
     });
   });
 }
