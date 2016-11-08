@@ -2,6 +2,7 @@
 
 ### Bug Fixes
 * Fixes bug where extra data after EOT (`$$$`) was dumped by preserving the poriton after the EOT for further decomposition.
+* Fixes bug where any calls to channel set would actually break the openBCISample code as the channelSettingsArray contained an undefined.
 
 # 1.4.0
 
