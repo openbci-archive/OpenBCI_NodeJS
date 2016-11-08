@@ -28,7 +28,7 @@ The purpose of this module is to **get connected** and **start streaming** as fa
   4. [Constants](#constants)
 6. [Interfacing With Other Tools](#interfacing-with-other-tools)
 7. [Developing](#developing)
-8. [Testing](#testing)
+8. [Testing](#developing-testing)
 9. [Contribute](#contribute)
 10. [License](#license)
 11. [Roadmap](#roadmap)
@@ -846,7 +846,7 @@ To leave simulate mode.
 
 ### <a name="method-sntp"></a> .sntp
 
-Extends the popular STNP package on [npmjs](https://www.npmjs.com/package/sntp)
+Extends the popular SNTP package on [npmjs](https://www.npmjs.com/package/sntp)
 
 ### <a name="method-sntp-get-offset"></a> .sntpGetOffset()
 
@@ -1166,13 +1166,14 @@ npm test
 ## <a name="contribute"></a> Contribute:
 
 1. Fork it!
+2. Branch off of `development`: `git checkout development`
 2. Create your feature branch: `git checkout -b my-new-feature`
 3. Make changes
 4. If adding a feature, please add test coverage.
 5. Ensure tests all pass. (`npm test`)
 6. Commit your changes: `git commit -m 'Add some feature'`
 7. Push to the branch: `git push origin my-new-feature`
-8. Submit a pull request :D
+8. Submit a pull request. Make sure it is based off of the `development` branch when submitting! :D
 
 ## <a name="license"></a> License:
 
