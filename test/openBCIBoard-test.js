@@ -245,34 +245,18 @@ describe('openbci-sdk', function () {
       expect(ourBoard2.options.simulatorSerialPortFailure).to.be.true;
     });
     it('should be able to enter sync mode', function () {
-      var ourBoard1, ourBoard2;
-
-      ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard = new openBCIBoard.OpenBCIBoard({
         sntpTimeSync: true
       });
-      expect(ourBoard1.options.sntpTimeSync).to.be.true;
+      expect(ourBoard.options.sntpTimeSync).to.be.true;
 
-      // Verify multi case support
-      ourBoard2 = new openBCIBoard.OpenBCIBoard({
-        sntptimesync: true
-      });
-      expect(ourBoard2.options.sntpTimeSync).to.be.true;
-
-      return Promise.all([
-        new Promise((resolve, reject) => {
-          ourBoard1.once('sntpTimeLock', resolve);
-          ourBoard1.once('error', reject);
-        }),
-        new Promise((resolve, reject) => {
-          ourBoard2.once('sntpTimeLock', resolve);
-          ourBoard2.once('error', reject);
-        })
-      ]).then(() => {
-        ourBoard1.sntpStop();
-        ourBoard2.sntpStop();
+      return new Promise((resolve, reject) => {
+        ourBoard.once('sntpTimeLock', resolve);
+        ourBoard.once('error', reject);
+      }).then(() => {
+        ourBoard.sntpStop();
       }, err => {
-        ourBoard1.sntpStop();
-        ourBoard2.sntpStop();
+        ourBoard.sntpStop();
         return Promise.reject(err);
       });
     });
