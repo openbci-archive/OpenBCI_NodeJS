@@ -667,7 +667,7 @@ describe('openBCISimulator', function () {
         bufferSize: bufferSize,
         latencyTime: 1000
       });
-      simulator.on('data', function (buffer) {
+      simulator.once('data', function (buffer) {
         expect(buffer.length).to.equal(bufferSize);
         done();
       });

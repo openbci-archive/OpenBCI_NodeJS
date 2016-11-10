@@ -28,6 +28,7 @@
 * The `.streaming` property has been removed, replaced by `.isStreaming()`. Removed from docs.
 * An error event will be emitted if sntp fails to initialize on construction
 * The simulator will no longer communicate when disconnected
+* Promises returned by writes will now only resolve after the write has been sent
 
 ### Bug Fixes
 
