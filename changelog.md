@@ -1,3 +1,9 @@
+# 1.4.1
+
+### Bug Fixes
+* Fixes bug where extra data after EOT (`$$$`) was dumped by preserving the poriton after the EOT for further decomposition.
+* Fixes bug where any calls to channel set would actually break the openBCISample code as the channelSettingsArray contained an undefined.
+
 # 1.4.0
 
 ### New Features
@@ -22,6 +28,7 @@
 * The `.streaming` property has been removed, replaced by `.isStreaming()`. Removed from docs.
 * An error event will be emitted if sntp fails to initialize on construction
 * The simulator will no longer communicate when disconnected
+* Promises returned by writes will now only resolve after the write has been sent
 
 ### Bug Fixes
 

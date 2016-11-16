@@ -101,11 +101,13 @@ function OpenBCISimulatorFactory () {
   // TODO: upgrade from old-style streams to stream.Duplex or stream.Transform
   util.inherits(OpenBCISimulator, stream.Stream);
 
-  OpenBCISimulator.prototype.flush = function () {
+  OpenBCISimulator.prototype.flush = function (callback) {
     this.outputBuffered = 0;
 
     clearTimeout(this.outputLoopHandle);
     this.outputLoopHandle = null;
+
+    if (callback) callback();
   };
 
   OpenBCISimulator.prototype.isOpen = function () {
