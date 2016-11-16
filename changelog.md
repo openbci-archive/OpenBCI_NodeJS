@@ -3,6 +3,7 @@
 ### Bug Fixes
 * Fixes bug where extra data after EOT (`$$$`) was dumped by preserving the poriton after the EOT for further decomposition.
 * Fixes bug where any calls to channel set would actually break the openBCISample code as the channelSettingsArray contained an undefined.
+* Writes promises resolve when they are actually sent over the serial port. 
 
 # 1.4.0
 
