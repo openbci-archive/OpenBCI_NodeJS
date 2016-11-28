@@ -889,7 +889,23 @@ describe('openbci-sdk', function () {
         ourBoard.channelSet(1, true, 24, 'normal', 'taco', true, true).should.be.rejected.and.notify(done);
       });
     });
-
+    describe('#printRegisterSettings', function () {
+      before(function (done) {
+        ourBoard.printRegisterSettings()
+          .then(() => {
+            done();
+          }).catch(done);
+      });
+      after(function () {
+        ourBoard.curParsingMode = k.OBCIParsingNormal;
+      });
+      it('should send the correct register setting', function () {
+        spy.should.have.been.calledWith(k.OBCIMiscQueryRegisterSettings);
+      });
+      it('should have set the proper parseing mode', function () {
+        ourBoard.curParsingMode = k.OBCIParsingEOT;
+      });
+    });
     describe('#impedanceTest Not Connected Rejects ', function () {
       it('rejects all channeles when not streaming', function (done) {
         ourBoard.impedanceTestAllChannels().should.be.rejected.and.notify(done);
