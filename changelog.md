@@ -17,6 +17,12 @@
 * Major change to how board is initialized with removal of `factory` paradigm.
 * Drop support for Node 4 and 5 due to lack of EMACS 6
 
+### Bug Fixes
+* Documentation error with `testSignal` function.
+ 
+### Enhancements
+* Add more tests for public API functions.
+
 # 1.4.3
 
 ### New examples

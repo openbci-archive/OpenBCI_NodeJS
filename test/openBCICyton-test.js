@@ -906,6 +906,59 @@ describe('openbci-sdk', function () {
         ourBoard.curParsingMode = k.OBCIParsingEOT;
       });
     });
+    describe('#testSignal', function () {
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('dc').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToDC);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('ground').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToGround);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse1xFast').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse1xFast);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse1xSlow').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse1xSlow);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse2xFast').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse2xFast);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse2xSlow').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse2xSlow);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should reject with invalid test signal', function (done) {
+        ourBoard.testSignal('taco').should.be.rejected.and.notify(done);
+      });
+    });
     describe('#impedanceTest Not Connected Rejects ', function () {
       it('rejects all channeles when not streaming', function (done) {
         ourBoard.impedanceTestAllChannels().should.be.rejected.and.notify(done);
