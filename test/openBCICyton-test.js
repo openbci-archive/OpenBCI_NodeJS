@@ -86,6 +86,11 @@ describe('openbci-sdk', function () {
       expect(board.numberOfChannels()).to.equal(8);
       expect(board.isConnected()).to.be.false;
       expect(board.isStreaming()).to.be.false;
+      it('should still get proper values if no info object', function () {
+        board.info = null;
+        expect(board.sampleRate()).to.equal(250);
+        expect(board.numberOfChannels()).to.equal(8);
+      });
     });
     it('should be able to set ganglion mode', () => {
       var board = new Cyton({
@@ -102,6 +107,7 @@ describe('openbci-sdk', function () {
       });
       (ourBoard1.options.boardType).should.equal('daisy');
       (ourBoard2.options.boardType).should.equal('daisy');
+      ourBoard1.info = null;
       it('should get value for daisy', () => {
         ourBoard1.sampleRate().should.equal(125);
       });
