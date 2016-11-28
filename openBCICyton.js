@@ -1113,7 +1113,7 @@ Cyton.prototype.channelSet = function (channelNumber, powerDown, gain, inputType
 *          - Connect to test signal 1x Amplitude, slow pulse
 *      - `pulse2xFast`
 *          - Connect to test signal 2x Amplitude, fast pulse
-*      - `pulse2xFast`
+*      - `pulse2xSlow`
 *          - Connect to test signal 2x Amplitude, slow pulse
 *      - `none`
 *          - Reset to default
