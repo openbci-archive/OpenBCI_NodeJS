@@ -1,8 +1,8 @@
 {
   "name": "openbci",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
-  "main": "openBCIBoard",
+  "main": "index.js",
   "scripts": {
     "start": "node index",
     "test": "semistandard | snazzy && mocha test",
@@ -16,10 +16,12 @@
   "license": "MIT",
   "dependencies": {
     "buffer-equal": "^1.0.0",
+    "clone": "^2.0.0",
     "gaussian": "^1.0.0",
+    "lodash": "^4.16.6",
     "mathjs": "^3.3.0",
     "performance-now": "^0.2.0",
-    "serialport": "4.0.1",
+    "serialport": "4.0.6",
     "sntp": "^2.0.0",
     "streamsearch": "^0.1.2"
   },
@@ -53,6 +55,7 @@
   "semistandard": {
     "globals": [
       "describe",
+      "xdescribe",
       "context",
       "before",
       "beforeEach",

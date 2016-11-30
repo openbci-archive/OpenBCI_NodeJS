@@ -1,13 +1,13 @@
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var chai = require('chai');
-var should = chai.should(); // eslint-disable-line no-unused-vars
-var openBCIBoard = require('../openBCIBoard');
-var openBCISample = openBCIBoard.OpenBCISample;
-var k = openBCISample.k;
+const bluebirdChecks = require('./bluebirdChecks');
+const chai = require('chai');
+const should = chai.should(); // eslint-disable-line no-unused-vars
+const Cyton = require('../openBCICyton');
+const openBCISample = require('../openBCISample');
+const k = openBCISample.k;
 
-var chaiAsPromised = require('chai-as-promised');
-var sinonChai = require('sinon-chai');
+const chaiAsPromised = require('chai-as-promised');
+const sinonChai = require('sinon-chai');
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
 
@@ -16,7 +16,7 @@ describe('#impedanceTesting', function () {
   this.timeout(20000);
 
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new Cyton({
       verbose: true,
       simulatorFragmentation: k.OBCISimulatorFragmentationRandom
     });

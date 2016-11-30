@@ -120,7 +120,7 @@ function OpenBCISimulatorFactory () {
 
     if (size > this.outputBuffered) size = this.outputBuffered;
 
-    // buffer is copied because presently openBCIBoard.js reuses it
+    // buffer is copied because presently openBCICyton.js reuses it
     var outBuffer = new Buffer(this.outputBuffer.slice(0, size));
 
     this.outputBuffer.copy(this.outputBuffer, 0, size, this.outputBuffered);
