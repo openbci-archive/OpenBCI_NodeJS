@@ -31,10 +31,6 @@ npm install
 ```
 npm start
 ```
-Verbose:
-```
-npm run start-verbose
-```
 For running just the node, for example if you were running the python in a separate ide and debugging, it's useful.
 ```python
 npm run start-node
