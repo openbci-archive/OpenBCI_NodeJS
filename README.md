@@ -14,6 +14,8 @@ We are proud to support all functionality of the OpenBCI 8 and 16 Channel boards
 
 The purpose of this module is to **get connected** and **start streaming** as fast as possible.
 
+Python researcher or developer? Check out how easy it is to [get access to the entire API in the Python example](examples/python)!
+
 ### Table of Contents:
 ---
 
