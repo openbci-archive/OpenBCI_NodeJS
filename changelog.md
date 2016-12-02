@@ -1,3 +1,9 @@
+# 1.4.2
+
+### New examples
+* Add example of debug
+* Add example of get streaming
+
 # 1.4.1
 
 ### Bug Fixes
