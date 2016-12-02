@@ -6,7 +6,6 @@
   "scripts": {
     "start": "concurrently --kill-others \"python handoff.py\" \"node index.js\"",
     "start-node": "node index.js",
-    "start-verbose": "concurrently --kill-others \"python handoff.py -v\" \"node index.js\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
