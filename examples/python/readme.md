@@ -10,7 +10,8 @@ This module has every feature available on the OpenBCI Board.
 
 * [Python 2.7](https://www.python.org/downloads/)
 * [ZeroMQ](http://zeromq.org/bindings:python)
-  ```python
+
+  ```py
   pip install pyzmq
   ```
 * [Node.js LTS](https://nodejs.org/en/)
