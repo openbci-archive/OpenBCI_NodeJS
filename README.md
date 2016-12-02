@@ -38,7 +38,7 @@ The purpose of this module is to **get connected** and **start streaming** as fa
 npm install openbci
 ```
 ### <a name="tldr"></a> TL;DR:
-Get connected and start streaming right now
+Get connected and [start streaming right now with the example code](examples/getStreaming/getStreaming.js).
 
 ```js
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
@@ -118,6 +118,15 @@ ourBoard.connect(k.OBCISimulatorPortName) // This will set `simulate` to true
     });
 ```
 
+To debug, it's amazing, do:
+
+```js
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard({
+    simulate: true
+});
+```
+ps: go [checkout out the example](examples/debug/debug.js) to do it right now!
 
 'ready' event
 ------------
