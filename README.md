@@ -73,6 +73,8 @@ Still not satisfied it works?? Check out this [detailed report](http://s13234284
 
 How are you still doubting and not using this already? Fine, go look at some of the [700 **_automatic_** tests](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS) written for it!
 
+Python researcher or developer? Check out how easy it is to [get access to the entire API in the Python example](examples/python)!
+
 ### <a name="general-overview"></a> General Overview:
 
 Initialization
