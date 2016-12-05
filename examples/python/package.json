@@ -1,0 +1,29 @@
+{
+  "name": "python",
+  "version": "1.0.0",
+  "description": "node to python example",
+  "main": "index.js",
+  "scripts": {
+    "start": "concurrently --kill-others \"python handoff.py\" \"node index.js\"",
+    "start-node": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "python",
+    "openbci",
+    "node"
+  ],
+  "author": "AJ Keller",
+  "license": "MIT",
+  "dependencies": {
+    "openbci": "^1.4.2",
+    "zmq-prebuilt": "^2.1.0"
+  },
+  "devEngines": {
+    "node": "<=6.x",
+    "npm": ">=3.x"
+  },
+  "devDependencies": {
+    "concurrently": "^3.1.0"
+  }
+}

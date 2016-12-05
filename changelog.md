@@ -23,6 +23,17 @@
 ### Enhancements
 * Add more tests for public API functions.
 
+# 1.4.3
+
+### New examples
+* Add example of node to python
+
+# 1.4.2
+
+### New examples
+* Add example of debug
+* Add example of get streaming
+
 # 1.4.1
 
 ### Bug Fixes

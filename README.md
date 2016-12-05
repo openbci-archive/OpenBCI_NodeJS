@@ -14,6 +14,8 @@ We are proud to support all functionality of the Cyton (8 and 16 Channel boards)
 
 The purpose of this module is to **get connected** and **start streaming** as fast as possible.
 
+Python researcher or developer? Check out how easy it is to [get access to the entire API in the Python example](examples/python)!
+
 ### Table of Contents:
 ---
 
@@ -35,7 +37,7 @@ The purpose of this module is to **get connected** and **start streaming** as fa
 11. [Roadmap](#roadmap)
 
 ### <a name="tldr"></a> TL;DR:
-Get connected and start streaming right now
+Get connected and [start streaming right now with the example code](examples/getStreaming/getStreaming.js).
 
 #### Cyton (8 and 16 channel boards)
 ```ecmascript 6
@@ -82,6 +84,8 @@ How are you still doubting and not using this already? Fine, go look at some of 
 
 ## <a name="general-overview"></a> General Overview:
 
+Python researcher or developer? Check out how easy it is to [get access to the entire API in the Python example](examples/python)!
+
 Initialization
 --------------
 
@@ -124,12 +128,22 @@ ourBoard.connect(k.OBCISimulatorPortName) // This will set `simulate` to true
         /** Handle connection errors */
     });
 ```
+
 or if you are using ES6:
 ```js
 import { Cyton, Constants } from 'openbci';
 const ourBoard = new Cyton();
 ourBoard.connect(Constants.OBCISimulatorPortName);
 ```
+
+To debug, it's amazing, do:
+```js
+const Cyton = require('openbci').Cyton;
+const ourBoard = new Cyton({
+    debug: true
+});
+```
+ps: go [checkout out the example](examples/debug/debug.js) to do it right now!
 
 'ready' event
 ------------
