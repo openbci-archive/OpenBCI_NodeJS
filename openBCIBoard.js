@@ -1013,6 +1013,53 @@ function OpenBCIFactory () {
   };
 
   /**
+   * Get the core info object.
+   * @return {{boardType: string, sampleRate: number, firmware: string, numberOfChannels: number, missedPackets: number}}
+   */
+  OpenBCIBoard.prototype.getInfo = function() {
+    return this.info;
+  };
+
+  /**
+   * Set the info property for board type.
+   * @param boardType {String}
+   *  `default` or `daisy`. Defaults to `default`.
+   */
+  OpenBCIBoard.prototype.setInfoForBoardType = function(boardType) {
+    switch (boardType) {
+      case k.OBCIBoardDaisy:
+        this.info.boardType = k.OBCIBoardDaisy;
+        this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
+        this.info.sampleRate = k.OBCISampleRate125;
+        break;
+      case k.OBCIBoardDefault:
+      default:
+        this.info.boardType = k.OBCIBoardDefault;
+        this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
+        this.info.sampleRate = k.OBCISampleRate250;
+        break;
+    }
+  };
+
+  /**
+   * Used to set the max number of channels on the Cyton board.
+   * @param numberOfChannels {number}
+   *  Either 8 or 16
+   * @return {Promise}
+   */
+  OpenBCIBoard.prototype.setMaxChannels = function (numberOfChannels) {
+    if (numberOfChannels === k.OBCINumberOfChannelsDefault) {
+      this.curParsingMode = k.OBCIParsingEOT;
+      return this.write(k.OBCIChannelMaxNumber8);
+    } else if (numberOfChannels === k.OBCINumberOfChannelsDaisy) {
+      this.curParsingMode = k.OBCIParsingEOT;
+      return this.write(k.OBCIChannelMaxNumber16);
+    } else {
+      return Promise.reject('invalid number of channels');
+    }
+  };
+
+  /**
   * @description Sends a soft reset command to the board
   * @returns {Promise}
   * Note: The softReset command MUST be sent to the board before you can start
@@ -1807,13 +1854,9 @@ function OpenBCIFactory () {
    */
   OpenBCIBoard.prototype._processParseBufferForReset = function (dataBuffer) {
     if (openBCISample.countADSPresent(dataBuffer) === 2) {
-      this.info.boardType = k.OBCIBoardDaisy;
-      this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
-      this.info.sampleRate = k.OBCISampleRate125;
+      this.setInfoForBoardType(k.OBCIBoardDaisy);
     } else {
-      this.info.boardType = k.OBCIBoardDefault;
-      this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
-      this.info.sampleRate = k.OBCISampleRate250;
+      this.setInfoForBoardType(k.OBCIBoardDefault);
     }
 
     if (openBCISample.findV2Firmware(dataBuffer)) {

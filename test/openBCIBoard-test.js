@@ -9,6 +9,7 @@ var openBCISample = openBCIBoard.OpenBCISample;
 var k = openBCISample.k;
 var chaiAsPromised = require('chai-as-promised');
 var sinonChai = require('sinon-chai');
+var sinonAsPromised = require('sinon-as-promised')(bluebirdChecks.BluebirdPromise);
 var bufferEqual = require('buffer-equal');
 var fs = require('fs');
 var math = require('mathjs');
@@ -451,6 +452,34 @@ describe('openbci-sdk', function () {
           });
         }).catch(err => done(err));
     });
+    it('should be able to set info for default board', function () {
+      ourBoard.info.boardType = 'burrito';
+      ourBoard.info.sampleRate = 60;
+      ourBoard.info.numberOfChannels = 200;
+      ourBoard.setInfoForBoardType('default');
+      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
+      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
+      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
+    });
+    it('should be able to set info for daisy board', function () {
+      ourBoard.info.boardType = 'burrito';
+      ourBoard.info.sampleRate = 60;
+      ourBoard.info.numberOfChannels = 200;
+      ourBoard.setInfoForBoardType('daisy');
+      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDaisy);
+      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDaisy);
+      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate125);
+    });
+    it('should set info to default on bad input string', function () {
+      ourBoard.info.boardType = 'burrito';
+      ourBoard.info.sampleRate = 60;
+      ourBoard.info.numberOfChannels = 200;
+      ourBoard.setInfoForBoardType('taco');
+      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
+      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
+      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
+    });
+
   });
   describe('#debug', function () {
     before(function (done) {
@@ -664,7 +693,7 @@ describe('openbci-sdk', function () {
           ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
           ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
           ourBoard.disconnect()
-        ]).then(() => {+
+        ]).then(() => {
           writeSpy.should.have.not.been.called;
           writeSpy.restore();
         });
@@ -783,6 +812,38 @@ describe('openbci-sdk', function () {
           spy.should.have.been.calledWith('j');
           done();
         });
+      });
+    });
+    describe('#setMaxChannels', function () {
+      before(function (done) {
+        if (!ourBoard.isConnected()) {
+          ourBoard.connect(masterPortName)
+            .then(done)
+            .catch(err => done(err));
+        } else {
+          done();
+        }
+      });
+      it('should write the command to set channels to 8', function (done) {
+        ourBoard.setMaxChannels(8)
+          .then(() => {
+            setTimeout(() => {
+              spy.should.have.been.calledWith(k.OBCIChannelMaxNumber8);
+              done();
+            }, 5 * k.OBCIWriteIntervalDelayMSShort);
+          }).catch(done);
+      });
+      it('should write the command to set channels to 16', function (done) {
+        ourBoard.setMaxChannels(16)
+          .then(() => {
+            setTimeout(() => {
+              spy.should.have.been.calledWith(k.OBCIChannelMaxNumber16);
+              done();
+            }, 5 * k.OBCIWriteIntervalDelayMSShort);
+          }).catch(done);
+      });
+      it('should not write a command if invalid channel number', function (done) {
+        ourBoard.setMaxChannels(0).should.be.rejected.and.notify(done);
       });
     });
     // bad
