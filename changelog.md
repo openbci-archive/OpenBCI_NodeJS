@@ -1,3 +1,13 @@
+# 1.4.4
+
+### New Features
+* Set max number of channels for the board to use with `.setMaxChannels()` see readme.md
+* Set the core info object that drives the module with `.setInfoForBoardType()` see readme.md
+* Get info for the core obhect that drives the module with `.getInfo()` see readme.md
+
+### Work In Progress
+* Bug where daisy would sometimes not be recognized which destroyed all data.
+
 # 1.4.3
 
 ### New examples
