@@ -514,6 +514,12 @@ Closes the serial port opened by [`.connect()`](#method-connect).  Waits for sto
 
 **_Returns_** a promise, fulfilled by a successful close of the serial port object, rejected otherwise.
 
+### <a name="method-get-info"></a> .getInfo()
+
+Get the core info object. It's the object that actually drives the parsing of data.
+
+**_Returns_** Object - {{boardType: string, sampleRate: number, firmware: string, numberOfChannels: number, missedPackets: number}}
+
 ### <a name="method-get-settings-for-channel"></a> .getSettingsForChannel(channelNumber)
 
 Gets the specified channelSettings register data from printRegisterSettings call.
@@ -840,6 +846,34 @@ The duration you want to log SD information for. Opens a new SD file to write in
 Stop logging to the SD card and close any open file. If you are not streaming when you send this command, then you should expect to get a success or failure message followed by and end of transmission `$$$`. The success message contains a lot of useful information about what happened when writing to the SD card.
 
 **_Returns_** resolves if the command was added to the write queue.
+
+### <a name="method-set-info-for-board-type"></a> .setInfoForBoardType(boardType)
+
+Set the info property for board type. 
+
+**Note: This has the potential to change the way data is parsed** 
+ 
+**_boardType_**
+
+A String indicating the number of channels.
+
+* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`. 
+* `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
+
+**_Returns_** a promise, fulfilled if the command was sent to the write queue. Rejects if input is not `8` or `16`.
+
+### <a name="method-set-max-channels"></a> .setMaxChannels(numberOfChannels)
+
+Sends a command to the board to set the max channels. If you have a daisy attached, calling this function will re-sniff for the daisy ADS and attempt to use it.
+ 
+**_numberOfChannels_**
+
+A Number indicating the number of channels.
+
+* `8` - Default number of channels.
+* `16` - Daisy number of channels.
+
+**_Returns_** a promise, fulfilled if the command was sent to the write queue. Rejects if input is not `8` or `16`.
 
 ### <a name="method-simulator-enable"></a> .simulatorEnable()
 
