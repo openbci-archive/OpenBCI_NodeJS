@@ -73,6 +73,7 @@ describe('openbci-sdk', function () {
       expect(board.options.simulate).to.be.false;
       expect(board.options.simulatorBoardFailure).to.be.false;
       expect(board.options.simulatorDaisyModuleAttached).to.be.false;
+      expect(board.options.simulatorDaisyModuleCanBeAttached).to.be.true;
       expect(board.options.simulatorFirmwareVersion).to.equal(k.OBCIFirmwareV1);
       expect(board.options.simulatorHasAccelerometer).to.be.true;
       expect(board.options.simulatorInternalClockDrift).to.equal(0);
@@ -402,6 +403,7 @@ describe('openbci-sdk', function () {
       });
       ourBoard.connect(k.OBCISimulatorPortName).catch(done);
       ourBoard.on('ready', function () {
+        expect(ourBoard.isSimulating()).to.equal(true);
         var disconnectSpy = sinon.spy(ourBoard, 'disconnect');
         ourBoard.options.simulate.should.equal(true);
         ourBoard.simulatorDisable().then(() => {
@@ -418,6 +420,7 @@ describe('openbci-sdk', function () {
         simulate: true,
         simulatorBoardFailure: true,
         simulatorDaisyModuleAttached: true,
+        simulatorDaisyModuleCanBeAttached: false,
         simulatorFirmwareVersion: k.OBCIFirmwareV2,
         simulatorHasAccelerometer: false,
         simulatorInternalClockDrift: -1,
@@ -439,6 +442,7 @@ describe('openbci-sdk', function () {
             expect(simOptions.alpha).to.be.false;
             expect(simOptions.boardFailure).to.be.true;
             expect(simOptions.daisy).to.be.true;
+            expect(simOptions.daisyCanBeAttached).to.be.false;
             expect(simOptions.drift).to.be.below(0);
             expect(simOptions.firmwareVersion).to.be.equal(k.OBCIFirmwareV2);
             expect(simOptions.fragmentation).to.be.equal(k.OBCISimulatorFragmentationOneByOne);
@@ -456,7 +460,7 @@ describe('openbci-sdk', function () {
       ourBoard.info.boardType = 'burrito';
       ourBoard.info.sampleRate = 60;
       ourBoard.info.numberOfChannels = 200;
-      ourBoard.setInfoForBoardType('default');
+      ourBoard.overrideInfoForBoardType('default');
       expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
       expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
       expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
@@ -465,7 +469,7 @@ describe('openbci-sdk', function () {
       ourBoard.info.boardType = 'burrito';
       ourBoard.info.sampleRate = 60;
       ourBoard.info.numberOfChannels = 200;
-      ourBoard.setInfoForBoardType('daisy');
+      ourBoard.overrideInfoForBoardType('daisy');
       expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDaisy);
       expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDaisy);
       expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate125);
@@ -474,7 +478,7 @@ describe('openbci-sdk', function () {
       ourBoard.info.boardType = 'burrito';
       ourBoard.info.sampleRate = 60;
       ourBoard.info.numberOfChannels = 200;
-      ourBoard.setInfoForBoardType('taco');
+      ourBoard.overrideInfoForBoardType('taco');
       expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
       expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
       expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
@@ -814,36 +818,98 @@ describe('openbci-sdk', function () {
         });
       });
     });
-    describe('#setMaxChannels', function () {
+    describe('#setBoardType', function () {
       before(function (done) {
         if (!ourBoard.isConnected()) {
           ourBoard.connect(masterPortName)
             .then(done)
-            .catch(err => done(err));
+            .catch(done);
         } else {
           done();
         }
       });
-      it('should write the command to set channels to 8', function (done) {
-        ourBoard.setMaxChannels(8)
-          .then(() => {
-            setTimeout(() => {
-              spy.should.have.been.calledWith(k.OBCIChannelMaxNumber8);
-              done();
-            }, 5 * k.OBCIWriteIntervalDelayMSShort);
-          }).catch(done);
+      after(function (done) {
+        ourBoard.disconnect()
+          .then(done)
+          .catch(done);
       });
-      it('should write the command to set channels to 16', function (done) {
-        ourBoard.setMaxChannels(16)
-          .then(() => {
-            setTimeout(() => {
-              spy.should.have.been.calledWith(k.OBCIChannelMaxNumber16);
+      it('should resolve for setting max channels to 8 when already 8', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = false;
+          ourBoard.hardSetBoardType('default')
+            .then((res) => {
+              expect(res).to.equal('no daisy to remove');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
               done();
-            }, 5 * k.OBCIWriteIntervalDelayMSShort);
-          }).catch(done);
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should resolve for setting max channels to 8', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = true;
+          ourBoard.hardSetBoardType('default')
+            .then((res) => {
+              expect(res).to.equal('daisy removed');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              done();
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should resolve for setting max channels to 16 if daisy already attached', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = true;
+          ourBoard.hardSetBoardType('daisy')
+            .then((res) => {
+              expect(res).to.equal('daisy already attached');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+              done();
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should resolve for setting max channels to 16 if daisy able to be attached', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = false;
+          ourBoard.hardSetBoardType('daisy')
+            .then((res) => {
+              expect(res).to.equal('daisy attached');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+              done();
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should reject when setting max channels to 16 if daisy not able to be attached', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = false;
+          ourBoard.serial.options.daisyCanBeAttached = false;
+          ourBoard.hardSetBoardType('daisy')
+            .then(done)
+            .catch((err) => {
+              expect(err).to.equal('unable to attach daisy');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              done();
+            });
+        } else {
+          done();
+        }
       });
       it('should not write a command if invalid channel number', function (done) {
-        ourBoard.setMaxChannels(0).should.be.rejected.and.notify(done);
+        ourBoard.once('sample', () => {
+          ourBoard.streamStop();
+          ourBoard.hardSetBoardType('default').should.be.rejected.and.notify(done);
+        });
+        ourBoard.streamStart()
+          .catch(done);
+      });
+      it('should not write a command if invalid channel number', function (done) {
+        ourBoard.hardSetBoardType(0).should.be.rejected.and.notify(done);
       });
     });
     // bad

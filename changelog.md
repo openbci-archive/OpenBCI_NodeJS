@@ -1,9 +1,21 @@
+# 1.5.0
+
+### New Features
+* New simulator option `simulatorDaisyModuleCanBeAttached` - Boolean, deafults to true, allows the simulation of the a hot swapped daisy board or simulates a misinformed module.
+
+### Bug Fixes
+* Fixes #131 - 16 chan not working by sending a channel command and parsing the return.
+* Fixed bug where end of transmission characters would not be ejected from buffer.
+
+### Breaking changes
+* `.overrideInfoForBoardType()` changed to `.overrideInfoForBoardType()` to elevate it's dangerous nature.
+ 
 # 1.4.4
 
 ### New Features
 * Set max number of channels for the board to use with `.setMaxChannels()` see readme.md
-* Set the core info object that drives the module with `.setInfoForBoardType()` see readme.md
-* Get info for the core obhect that drives the module with `.getInfo()` see readme.md
+* Set the core info object that drives the module with `.overrideInfoForBoardType()` see readme.md
+* Get info for the core object that drives the module with `.getInfo()` see readme.md
 
 ### Work In Progress
 * Bug where daisy would sometimes not be recognized which destroyed all data.

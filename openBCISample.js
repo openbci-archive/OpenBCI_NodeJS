@@ -1119,7 +1119,7 @@ function isSuccessInBuffer (dataBuffer) {
  */
 function stripToEOTBuffer (dataBuffer) {
   let indexOfEOT = dataBuffer.indexOf(k.OBCIParseEOT);
-  if (indexOfEOT > 0) {
+  if (indexOfEOT >= 0) {
     indexOfEOT += k.OBCIParseEOT.length;
   } else {
     return dataBuffer;

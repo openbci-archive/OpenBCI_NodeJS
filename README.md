@@ -847,7 +847,7 @@ Stop logging to the SD card and close any open file. If you are not streaming wh
 
 **_Returns_** resolves if the command was added to the write queue.
 
-### <a name="method-set-info-for-board-type"></a> .setInfoForBoardType(boardType)
+### <a name="method-set-info-for-board-type"></a> .overrideInfoForBoardType(boardType)
 
 Set the info property for board type. 
 
