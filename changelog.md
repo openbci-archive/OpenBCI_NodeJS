@@ -2,13 +2,18 @@
 
 ### New Features
 * New simulator option `simulatorDaisyModuleCanBeAttached` - Boolean, deafults to true, allows the simulation of the a hot swapped daisy board or simulates a misinformed module.
+* New `EventEmitter` - `hardSet` - for when the module detects the board is not configured as the options for the module intended and tries to save itself. i.e. when the `daisy` option is `true` and a soft reset message is parsed and the module determines that a daisy was not detected, the module will emit `hardSet` then send an attach daisy command to recover. Either `error` will be emitted if unable to attach or `ready` will be emitted if success.
+
+### Breaking changes
+* `.setInfoForBoardType()` changed to `.overrideInfoForBoardType()` to elevate it's dangerous nature.
+* `.setMaxChannels()` changed to `.hardSetBoardType()` and input changed from numerical to string: 8 and 16 to `default` and `daisy` respectively.
 
 ### Bug Fixes
 * Fixes #131 - 16 chan not working by sending a channel command and parsing the return.
 * Fixed bug where end of transmission characters would not be ejected from buffer.
-
-### Breaking changes
-* `.overrideInfoForBoardType()` changed to `.overrideInfoForBoardType()` to elevate it's dangerous nature.
+ 
+### Enhancements
+* Separated radio tests from main board test file.
  
 # 1.4.4
 

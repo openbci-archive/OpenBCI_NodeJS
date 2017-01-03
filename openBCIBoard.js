@@ -20,6 +20,7 @@ function OpenBCIFactory () {
   var _options = {
     boardType: [k.OBCIBoardDefault, k.OBCIBoardDaisy, k.OBCIBoardGanglion],
     baudRate: 115200,
+    hardSet: false,
     simulate: false,
     simulatorBoardFailure: false,
     simulatorDaisyModuleAttached: false,
@@ -53,6 +54,10 @@ function OpenBCIFactory () {
    *              `daisy` - 8 Channel OpenBCI board with Daisy Module. Total of 16 channels.
    *              `ganglion` - 4 Channel board
    *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
+   *
+   *     - `hardSet` {Boolean} - Recommended if using `daisy` board! For some reason, the `daisy` is sometimes
+   *                  not picked up by the module so you can set `hardSet` to true which will ensure the daisy
+   *                  is picked up. (Default `false`)
    *
    *     - `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting
    *                  `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
@@ -1056,12 +1061,18 @@ function OpenBCIFactory () {
         this.info.boardType = k.OBCIBoardDaisy;
         this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
         this.info.sampleRate = k.OBCISampleRate125;
+        this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
+        this.goertzelObject = openBCISample.goertzelNewObject(k.OBCINumberOfChannelsDaisy);
+        this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDaisy);
         break;
       case k.OBCIBoardDefault:
       default:
         this.info.boardType = k.OBCIBoardDefault;
         this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
         this.info.sampleRate = k.OBCISampleRate250;
+        this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
+        this.goertzelObject = openBCISample.goertzelNewObject(k.OBCINumberOfChannelsDefault);
+        this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDefault);
         break;
     }
   };
@@ -1807,7 +1818,7 @@ function OpenBCIFactory () {
       case k.OBCIParsingEOT:
         if (openBCISample.doesBufferHaveEOT(data)) {
           this.curParsingMode = k.OBCIParsingNormal;
-          this.emit('eot', data);
+          this.emit(k.OBCIEmitterEot, data);
           this.buffer = openBCISample.stripToEOTBuffer(data);
         } else {
           this.buffer = data;
@@ -1817,9 +1828,31 @@ function OpenBCIFactory () {
         // Does the buffer have an EOT in it?
         if (openBCISample.doesBufferHaveEOT(data)) {
           this._processParseBufferForReset(data);
-          this.curParsingMode = k.OBCIParsingNormal;
-          this.emit('ready');
-          this.buffer = openBCISample.stripToEOTBuffer(data);
+          if (this.options.hardSet) {
+            if (this.getBoardType() !== this.options.boardType) {
+              this.emit(k.OBCIEmitterHardSet);
+              this.hardSetBoardType(this.options.boardType)
+                .then(() => {
+                  this.emit(k.OBCIEmitterReady)
+                })
+                .catch((err) => {
+                  this.emit(k.OBCIEmitterError, err);
+                });
+
+            } else {
+              this.curParsingMode = k.OBCIParsingNormal;
+              this.emit(k.OBCIEmitterReady);
+              this.buffer = openBCISample.stripToEOTBuffer(data);
+            }
+
+          } else {
+            if (this.getBoardType() !== this.options.boardType && this.options.verbose) {
+              console.log(`Module detected ${this.getBoardType()} board type but you specified ${this.options.boardType}, use 'hardSet' to force the module to correct itself`);
+            }
+            this.curParsingMode = k.OBCIParsingNormal;
+            this.emit(k.OBCIEmitterReady);
+            this.buffer = openBCISample.stripToEOTBuffer(data);
+          }
         } else {
           this.buffer = data;
         }
