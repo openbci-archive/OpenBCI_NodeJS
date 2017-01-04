@@ -1078,7 +1078,7 @@ function OpenBCIFactory () {
   };
 
   /**
-   * Used to set the max number of channels on the Cyton board.
+   * Used to sync the module and board to `boardType`
    * @param boardType {String}
    *  Either `default` or `daisy`
    * @return {Promise}
