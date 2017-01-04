@@ -1088,10 +1088,6 @@ function OpenBCIFactory () {
     return new Promise((resolve, reject) => {
       const eotFunc = (data) => {
         switch (data.slice(0, data.length - k.OBCIParseEOT.length).toString()) {
-          case k.OBCIChannelMaxNumber8NoDaisyToRemove:
-            this.overrideInfoForBoardType(k.OBCIBoardDefault);
-            resolve('no daisy to remove');
-            break;
           case k.OBCIChannelMaxNumber8SuccessDaisyRemoved:
             this.overrideInfoForBoardType(k.OBCIBoardDefault);
             resolve('daisy removed');
@@ -1108,8 +1104,10 @@ function OpenBCIFactory () {
             this.overrideInfoForBoardType(k.OBCIBoardDefault);
             reject('unable to attach daisy');
             break;
+          case k.OBCIChannelMaxNumber8NoDaisyToRemove:
           default:
-            reject(Error('invalid return, board may not be configured correctly.'));
+            this.overrideInfoForBoardType(k.OBCIBoardDefault);
+            resolve('no daisy to remove');
             break;
         }
       };

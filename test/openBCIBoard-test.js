@@ -756,6 +756,104 @@ describe('openbci-sdk', function () {
           done();
         }
       });
+      it('daisy attached in soft reset, daisy requested by user in options, module is successful', function (done) {
+        if (ourBoard.isSimulating()) {
+          // Turn hardSet on
+          ourBoard.options.hardSet = true;
+          // Set the options to daisy boardType
+          ourBoard.options.boardType = k.OBCIBoardDaisy;
+          // The simulator does have a daisy
+          ourBoard.options.simulatorDaisyModuleAttached = true;
+          // The simulator is able to attach daisy
+          ourBoard.options.simulatorDaisyModuleCanBeAttached = true;
+          const failTestWithErr = (err) => {
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done(err);
+            }).catch(() => {
+              done(err);
+            });
+          };
+          var hardSetFuncFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not hardSet');
+          };
+          var errorFuncTestFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not error');
+          };
+          var readyFuncSuccess = () => {
+            ourBoard.removeListener('error', errorFuncTestFailure);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done();
+            }).catch(() => {
+              done();
+            });
+          };
+
+          ourBoard.once('error', errorFuncTestFailure);
+          ourBoard.once('ready', readyFuncSuccess);
+          ourBoard.once('hardSet', hardSetFuncFailure);
+          ourBoard.connect(masterPortName).catch(err => done(err));
+        } else {
+          done();
+        }
+      });
+      it('no daisy attached in soft reset, default requested by user in options, module is successful', function (done) {
+        if (ourBoard.isSimulating()) {
+          // Turn hardSet on
+          ourBoard.options.hardSet = true;
+          // Set the options to default boardType
+          ourBoard.options.boardType = k.OBCIBoardDefault;
+          // The simulator does not have a daisy
+          ourBoard.options.simulatorDaisyModuleAttached = false;
+          // The simulator is able to attach daisy
+          ourBoard.options.simulatorDaisyModuleCanBeAttached = false;
+          const failTestWithErr = (err) => {
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done(err);
+            }).catch(() => {
+              done(err);
+            });
+          };
+          var hardSetFuncFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not hard set');
+          };
+          var errorFuncTestFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not emit error');
+          };
+          var readyFuncSuccess = () => {
+            ourBoard.removeListener('error', errorFuncTestFailure);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done();
+            }).catch(() => {
+              done();
+            });
+          };
+
+          ourBoard.once('error', errorFuncTestFailure);
+          ourBoard.once('ready', readyFuncSuccess);
+          ourBoard.once('hardSet', hardSetFuncFailure);
+          ourBoard.connect(masterPortName).catch(err => done(err));
+        } else {
+          done();
+        }
+      });
     });
     describe('#connected', function () {
       beforeEach(function (done) {
