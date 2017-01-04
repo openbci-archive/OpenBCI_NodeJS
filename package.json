@@ -1,6 +1,6 @@
 {
   "name": "openbci",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
   "main": "openBCIBoard",
   "scripts": {

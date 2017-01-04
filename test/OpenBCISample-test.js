@@ -1221,6 +1221,21 @@ $$$`);
       }
       expect(openBCISample.stripToEOTBuffer(buf).toString()).to.equal(buf.toString());
     });
+    it('should slice the buffer after just eot $$$', function () {
+      let eotBuf = null;
+      let bufPost = null;
+      if (k.getVersionNumber(process.version) >= 6) {
+        // From introduced in node version 6.x.x
+        eotBuf = Buffer.from(k.OBCIParseEOT);
+        bufPost = Buffer.from('tacos');
+      } else {
+        eotBuf = new Buffer(k.OBCIParseEOT);
+        bufPost = new Buffer('tacos');
+      }
+
+      let totalBuf = Buffer.concat([eotBuf, bufPost]);
+      expect(openBCISample.stripToEOTBuffer(totalBuf).toString()).to.equal(bufPost.toString());
+    });
     it('should slice the buffer after eot $$$', function () {
       let bufPre = null;
       let eotBuf = null;

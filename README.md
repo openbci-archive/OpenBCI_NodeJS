@@ -73,7 +73,7 @@ Want to know if the module really works? Check out some projects and organizatio
 
 Still not satisfied it works?? Check out this [detailed report](http://s132342840.onlinehome.us/pushtheworld/files/voltageVerificationTestPlanAndResults.pdf) that scientifically validates the output voltages of this module.
 
-How are you still doubting and not using this already? Fine, go look at some of the [700 **_automatic_** tests](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS) written for it!
+How are you still doubting and not using this already? Fine, go look at some of the [800 **_automatic_** tests](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS) written for it!
 
 Python researcher or developer? Check out how easy it is to [get access to the entire API in the Python example](examples/python)!
 
@@ -88,6 +88,7 @@ Initializing the board:
 var OpenBCIBoard = require('openbci');
 var ourBoard = new OpenBCIBoard.OpenBCIBoard();
 ```
+Go [checkout out the get streaming example](examples/getStreaming/getStreaming.js)!
 
 For initializing with options, such as verbose print outs:
 
@@ -106,6 +107,16 @@ var ourBoard = new OpenBCIBoard({
     simulate: true
 });
 ```
+
+Have a daisy?:
+```js
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard({
+    boardType: `daisy`,
+    hardSet: true
+});
+```
+Go [checkout out the get streaming with daisy example](examples/getStreamingDaisy/getStreamingDaisy.js)!
 
 Another useful way to start the simulator:
 ```js
@@ -130,7 +141,7 @@ var ourBoard = new OpenBCIBoard({
     simulate: true
 });
 ```
-ps: go [checkout out the example](examples/debug/debug.js) to do it right now!
+Go [checkout out the debug example](examples/debug/debug.js)!
 
 'ready' event
 ------------
@@ -395,6 +406,7 @@ Board optional configurations.
   * `daisy` - 8 Channel board with Daisy Module - 16 Channels
   * `ganglion` - 4 Channel board
     (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 08/2016)
+* `hardSet` {Boolean} - Recommended if using `daisy` board! For some reason, the `daisy` is sometimes not picked up by the module so you can set `hardSet` to true which will ensure the daisy is picked up. (Default `false`)
 * `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
 * `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on the board is not polling the RFduino on the dongle. (Default `false`)
 * `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board. This is useful if you want to test how your application reacts to a user requesting 16 channels but there is no daisy module actually attached, or vice versa, where there is a daisy module attached and the user only wants to use 8 channels. (Default `false`)
@@ -531,6 +543,21 @@ A number specifying which channel you want to get data on. Only 1-8 at this time
 **Note, at this time this does not work for the daisy board**
 
 **_Returns_** a promise, fulfilled if the command was sent to the board and the `.processBytes()` function is ready to reach for the specified channel.
+
+### <a name="method-hard-set-board-type"></a> .hardSetBoardType(boardType)
+
+Used to sync the module and board to `boardType`.
+
+**Note: This has the potential to change the way data is parsed** 
+ 
+**_boardType_**
+
+A String indicating the number of channels.
+
+* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`. 
+* `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
+
+**_Returns_** a promise, fulfilled if both the board and module are the requested `boardType`, rejects otherwise.
 
 ### <a name="method-impedance-test-all-channels"></a> .impedanceTestAllChannels()
 
@@ -721,6 +748,19 @@ Get the current number of channels available to use. (i.e. 8 or 16).
 
 **_Returns_** a number, the total number of available channels.
 
+### <a name="method-override-info-for-board-type"></a> .overrideInfoForBoardType(boardType)
+
+Set the info property for board type. 
+
+**Note: This has the potential to change the way data is parsed** 
+ 
+**_boardType_**
+
+A String indicating the number of channels.
+
+* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`. 
+* `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
+
 ### <a name="method-print-bytes-in"></a> .printBytesIn()
 
 Prints the total number of bytes that were read in this session to the console.
@@ -846,34 +886,6 @@ The duration you want to log SD information for. Opens a new SD file to write in
 Stop logging to the SD card and close any open file. If you are not streaming when you send this command, then you should expect to get a success or failure message followed by and end of transmission `$$$`. The success message contains a lot of useful information about what happened when writing to the SD card.
 
 **_Returns_** resolves if the command was added to the write queue.
-
-### <a name="method-set-info-for-board-type"></a> .setInfoForBoardType(boardType)
-
-Set the info property for board type. 
-
-**Note: This has the potential to change the way data is parsed** 
- 
-**_boardType_**
-
-A String indicating the number of channels.
-
-* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`. 
-* `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
-
-**_Returns_** a promise, fulfilled if the command was sent to the write queue. Rejects if input is not `8` or `16`.
-
-### <a name="method-set-max-channels"></a> .setMaxChannels(numberOfChannels)
-
-Sends a command to the board to set the max channels. If you have a daisy attached, calling this function will re-sniff for the daisy ADS and attempt to use it.
- 
-**_numberOfChannels_**
-
-A Number indicating the number of channels.
-
-* `8` - Default number of channels.
-* `16` - Daisy number of channels.
-
-**_Returns_** a promise, fulfilled if the command was sent to the write queue. Rejects if input is not `8` or `16`.
 
 ### <a name="method-simulator-enable"></a> .simulatorEnable()
 
@@ -1113,6 +1125,10 @@ Emitted when a packet (or packets) are dropped. Returns an array.
 ### <a name="event-error"></a> .on('error', callback)
 
 Emitted when there is an on the serial port.
+
+### <a name="event-hard-set"></a> .on('hardSet', callback)
+
+Emitted when the module detects the board is not configured as the options for the module intended and tries to save itself. i.e. when the `daisy` option is `true` and a soft reset message is parsed and the module determines that a daisy was not detected, the module will emit `hardSet` then send an attach daisy command to recover. Either `error` will be emitted if unable to attach or `ready` will be emitted if success.
 
 ### <a name="event-impedance-array"></a> .on('impedanceArray', callback)
 

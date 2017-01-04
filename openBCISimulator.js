@@ -15,6 +15,7 @@ function OpenBCISimulatorFactory () {
     alpha: true,
     boardFailure: false,
     daisy: false,
+    daisyCanBeAttached: true,
     drift: 0,
     firmwareVersion: [k.OBCIFirmwareV1, k.OBCIFirmwareV2],
     fragmentation: [k.OBCISimulatorFragmentationNone, k.OBCISimulatorFragmentationRandom, k.OBCISimulatorFragmentationFullBuffers, k.OBCISimulatorFragmentationOneByOne],
@@ -250,6 +251,30 @@ function OpenBCISimulatorFactory () {
             this._output(new Buffer(k.OBCISyncTimeSent));
             this._syncUp();
           }, 10);
+        }
+        break;
+      case k.OBCIChannelMaxNumber8:
+        if (this.options.daisy) {
+          this.options.daisy = false;
+          this._output(new Buffer(k.OBCIChannelMaxNumber8SuccessDaisyRemoved));
+          this._printEOT();
+        } else {
+          this._printEOT();
+        }
+        break;
+      case k.OBCIChannelMaxNumber16:
+        if (this.options.daisy) {
+          this._output(new Buffer(k.OBCIChannelMaxNumber16DaisyAlreadyAttached));
+          this._printEOT();
+        } else {
+          if (this.options.daisyCanBeAttached) {
+            this.options.daisy = true;
+            this._output(new Buffer(k.OBCIChannelMaxNumber16DaisyAttached));
+            this._printEOT();
+          } else {
+            this._output(new Buffer(k.OBCIChannelMaxNumber16NoDaisyAttached));
+            this._printEOT();
+          }
         }
         break;
       default:
