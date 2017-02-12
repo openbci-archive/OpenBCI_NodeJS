@@ -177,12 +177,15 @@ function OpenBCIFactory () {
     this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
     this.impedanceTest = {
       active: false,
+      buffer: [],
+      count: 0,
       isTestingPInput: false,
       isTestingNInput: false,
       onChannel: 0,
       sampleNumber: 0,
       continuousMode: false,
-      impedanceForChannel: 0
+      impedanceForChannel: 0,
+      window: 40
     };
     this.info = {
       boardType: this.options.boardType,
@@ -2021,13 +2024,13 @@ function OpenBCIFactory () {
     if (this.impedanceTest.continuousMode) {
       // console.log('running in continuous mode...')
       // openBCISample.debugPrettyPrint(sampleObject)
-      impedanceArray = openBCISample.goertzelProcessSample(sampleObject, this.goertzelObject);
+      impedanceArray = openBCISample.impedanceCalculateArray(sampleObject, this.impedanceTest);
       if (impedanceArray) {
         this.emit('impedanceArray', impedanceArray);
       }
     } else if (this.impedanceTest.onChannel !== 0) {
       // Only calculate impedance for one channel
-      impedanceArray = openBCISample.goertzelProcessSample(sampleObject, this.goertzelObject);
+      impedanceArray = openBCISample.impedanceCalculateArray(sampleObject, this.impedanceTest);
       if (impedanceArray) {
         this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
       }

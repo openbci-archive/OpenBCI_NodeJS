@@ -418,6 +418,39 @@ var sampleModule = {
   scaleFactorAux: SCALE_FACTOR_ACCEL,
   k,
   /**
+   * Calculate the impedance
+   * @param sample - Standard sample
+   * @param impedanceTest - Impedance Object from openBCIBoard.js
+   */
+  impedanceCalculateArray: (sample, impedanceTest) => {
+    impedanceTest.buffer.push(sample.channelData);
+    impedanceTest.count++;
+
+    if (impedanceTest.count > impedanceTest.window) {
+      let output = [];
+      for (let i = 0; i < sample.channelData.length; i++) {
+        let max = 0.0; /// sumSquared
+        for (let j = 0; i < impedanceTest.window; i++) {
+          if (impedanceTest.buffer[i][j] > max) {
+            max = impedanceTest.buffer[i][j];
+          }
+        }
+        let min = 0.0;
+        for (let j = 0; j < impedanceTest.window; j++) {
+          if (impedanceTest.buffer[i][j] < min) {
+            min = impedanceTest.buffer[i][j];
+          }
+        }
+        const vP2P = max - min; // peak to peak
+
+        output.push(vP2P / 2 / k.OBCILeadOffDriveInAmps);
+      }
+      impedanceTest.count = 0;
+      return output;
+    }
+    return null;
+  },
+  /**
   * @description Use the Goertzel algorithm to calculate impedances
   * @param sample - a sample with channelData Array
   * @param goertzelObj - An object that was created by a call to this.goertzelNewObject()
