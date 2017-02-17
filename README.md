@@ -849,15 +849,15 @@ Stop logging to the SD card and close any open file. If you are not streaming wh
 
 ### <a name="method-set-info-for-board-type"></a> .setInfoForBoardType(boardType)
 
-Set the info property for board type. 
+Set the info property for board type.
 
-**Note: This has the potential to change the way data is parsed** 
- 
+**Note: This has the potential to change the way data is parsed**
+
 **_boardType_**
 
 A String indicating the number of channels.
 
-* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`. 
+* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`.
 * `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
 
 **_Returns_** a promise, fulfilled if the command was sent to the write queue. Rejects if input is not `8` or `16`.
@@ -865,7 +865,7 @@ A String indicating the number of channels.
 ### <a name="method-set-max-channels"></a> .setMaxChannels(numberOfChannels)
 
 Sends a command to the board to set the max channels. If you have a daisy attached, calling this function will re-sniff for the daisy ADS and attempt to use it.
- 
+
 **_numberOfChannels_**
 
 A Number indicating the number of channels.
@@ -1156,46 +1156,12 @@ The name of the simulator port.
 
 ### <a name="interfacing-with-other-tools-labstreaminglayer"></a> LabStreamingLayer
 
-[LabStreamingLayer](https://github.com/sccn/labstreaminglayer) by SCCN is a stream management tool designed to time-synchronize multiple data streams, potentially from different sources, over a LAN network with millisecond accuracy (given configuration).
+[LabStreamingLayer](https://github.com/sccn/labstreaminglayer) is a tool for streaming or recording time-series data. It can be used to interface with [Matlab](https://github.com/sccn/labstreaminglayer/tree/master/LSL/liblsl-Matlab), [Python](https://github.com/sccn/labstreaminglayer/tree/master/LSL/liblsl-Python), [Unity](https://github.com/xfleckx/LSL4Unity), and many other programs. 
 
-For example, a VR display device running a Unity simulation may, using the [LSL4Unity](https://github.com/xfleckx/LSL4Unity) library, emit string markers into LSL corresponding to events of interest (For the P300 ERP, this event would be the onset of an attended, unusual noise in a pattern of commonplace ones). The computer doing data collection via the OpenBCI_NodeJS library (potentially with 4ms accuracy) would then output into an LSL stream the EEG and AUX data. LSL can then synchronize the two clocks relative to each other before inputting into a different program or toolkit, like [BCILAB](https://github.com/sccn/BCILAB) for analysis to trigger responses in the Unity display.
+To use LSL with the NodeJS SDK, go to our [labstreaminglayer example](https://github.com/OpenBCI/OpenBCI_NodeJS/tree/master/examples/labstreaminglayer), which contains code that is ready to start an LSL stream of OpenBCI data.
 
-This requires OpenBCI_NodeJS exporting data into LSL. Currently, there does not exist a pre-built NodeJS module for LSL, though LSL comes with tools that could possibly allow creation of one. In the meantime, the simpler route is to use a concurrent python script (driven by NodeJS module [python-shell](https://www.npmjs.com/package/python-shell)) to handoff the data to LSL for you, like so:
+Follow the directions in the [readme](https://github.com/OpenBCI/OpenBCI_NodeJS/blob/master/examples/labstreaminglayer/readme.md) to get started.
 
-In your NodeJS code, before initializing/connecting to the OpenBCIBoard:
-```js
-// Construct LSL Handoff Python Shell
-var PythonShell = require('python-shell');
-var lsloutlet = new PythonShell('LslHandoff.py');
-
-lsloutlet.on('message', function(message){
-    console.log('LslOutlet: ' + message);
-});
-console.log('Python Shell Created for LSLHandoff');
-```
-
-In your NodeJS code, when reading samples:
-```js
-st = sample.channelData.join(' ')
-//getTime returns milliseconds since midnight 1970/01/01
-var s = ''+ sample.timeStamp + ': '+ st
-lsloutlet.send(s)
-```
-
-in LSLHandoff.py:
-```py
-from pylsl import StreamInfo, StreamOutlet
-info = StreamInfo('OpenBCI_EEG', 'EEG', 8, 250, 'float32', '[RANDOM NUMBER HERE]')
-outlet = StreamOutlet(info)
-while True:
-    strSample = raw_input().split(': ',1)
-    sample = map(float, strSample[1].split(' '))
-    stamp = float(strSample[0])
-
-    outlet.push_sample(sample, stamp)
-    print('Pushed Sample At: ' + strSample[0])
-```
-AUX data would be done the same way in a separate LSL stream.
 
 ## <a name="developing"></a> Developing:
 ### <a name="developing-running"></a> Running:
