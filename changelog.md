@@ -1,9 +1,27 @@
+# 1.5.0
+
+### New Features
+* New simulator option `simulatorDaisyModuleCanBeAttached` - Boolean, deafults to true, allows the simulation of the a hot swapped daisy board or simulates a misinformed module.
+* New `EventEmitter` - `hardSet` - for when the module detects the board is not configured as the options for the module intended and tries to save itself. i.e. when the `daisy` option is `true` and a soft reset message is parsed and the module determines that a daisy was not detected, the module will emit `hardSet` then send an attach daisy command to recover. Either `error` will be emitted if unable to attach or `ready` will be emitted if success.
+* Add example for streaming with `daisy` and `hardSet`.
+
+### Breaking changes
+* `.setInfoForBoardType()` changed to `.overrideInfoForBoardType()` to elevate it's dangerous nature.
+* `.setMaxChannels()` changed to `.hardSetBoardType()` and input changed from numerical to string: 8 and 16 to `default` and `daisy` respectively.
+
+### Bug Fixes
+* Fixes #131 - 16 chan not working by sending a channel command and parsing the return.
+* Fixed bug where end of transmission characters would not be ejected from buffer.
+ 
+### Enhancements
+* Separated radio tests from main board test file.
+ 
 # 1.4.4
 
 ### New Features
 * Set max number of channels for the board to use with `.setMaxChannels()` see readme.md
-* Set the core info object that drives the module with `.setInfoForBoardType()` see readme.md
-* Get info for the core obhect that drives the module with `.getInfo()` see readme.md
+* Set the core info object that drives the module with `.overrideInfoForBoardType()` see readme.md
+* Get info for the core object that drives the module with `.getInfo()` see readme.md
 
 ### Work In Progress
 * Bug where daisy would sometimes not be recognized which destroyed all data.

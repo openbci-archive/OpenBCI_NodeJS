@@ -20,9 +20,11 @@ function OpenBCIFactory () {
   var _options = {
     boardType: [k.OBCIBoardDefault, k.OBCIBoardDaisy, k.OBCIBoardGanglion],
     baudRate: 115200,
+    hardSet: false,
     simulate: false,
     simulatorBoardFailure: false,
     simulatorDaisyModuleAttached: false,
+    simulatorDaisyModuleCanBeAttached: true,
     simulatorFirmwareVersion: [k.OBCIFirmwareV1, k.OBCIFirmwareV2],
     simulatorFragmentation: [k.OBCISimulatorFragmentationNone, k.OBCISimulatorFragmentationRandom, k.OBCISimulatorFragmentationFullBuffers, k.OBCISimulatorFragmentationOneByOne],
     simulatorLatencyTime: 16,
@@ -41,80 +43,88 @@ function OpenBCIFactory () {
   };
 
   /**
-  * @description The initialization method to call first, before any other method.
-  * @param options (optional) - Board optional configurations.
-  *     - `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if
-  *                      firmware on board has been previously configured.
-  *
-  *     - `boardType` {String} - Specifies type of OpenBCI board.
-  *          3 Possible Boards:
-  *              `default` - 8 Channel OpenBCI board (Default)
-  *              `daisy` - 8 Channel OpenBCI board with Daisy Module. Total of 16 channels.
-  *              `ganglion` - 4 Channel board
-  *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
-  *
-  *     - `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting
-  *                  `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
-  *
-  *     - `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on
-  *                  the board is not polling the RFduino on the dongle. (Default `false`)
-  *
-  *     - `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board.
-  *                  This is useful if you want to test how your application reacts to a user requesting 16 channels
-  *                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
-  *                  attached and the user only wants to use 8 channels. (Default `false`)
-  *
-  *     - `simulatorFirmwareVersion` {String} - Allows simulator to be started with firmware version 2 features
-  *          2 Possible Options:
-  *              `v1` - Firmware Version 1 (Default)
-  *              `v2` - Firmware Version 2
-  *
-  *     - `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which
-  *                  occurs commonly in real devices.  It is recommended to test code with this enabled.
-  *          4 Possible Options:
-  *              `none` - do not fragment packets; output complete chunks immediately when produced (Default)
-  *              `random` - output random small chunks of data interspersed with full buffers
-  *              `fullBuffers` - allow buffers to fill up until the latency timer has expired
-  *              `oneByOne` - output each byte separately
-  *
-  *     - `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers,
-                     if `simulatorFragmentation` is specified. (Default `16`)
-  *
-  *     - `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is
-  *                  specified. (Default `4096`)
-  *
-  *     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
-  *
-  *     - `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
-  *
-  *     - `simulatorInjectLineNoise` {String} - Injects line noise on channels.
-  *          3 Possible Options:
-  *              `60Hz` - 60Hz line noise (Default) [America]
-  *              `50Hz` - 50Hz line noise [Europe]
-  *              `none` - Do not inject line noise.
-  *
-  *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if
-  *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that
-  *                  setting and this sample rate will be used. (Default is `250`)
-  *
-  *     - `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely
-  *                  due to a OpenBCI dongle not being plugged in.
-  *
-  *     - `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source
-  *                  of truth instead of local computer time. If you are running experiements on your local
-  *                  computer, keep this `false`. (Default `false`)
-  *
-  *     - `sntpTimeSyncHost` - {String} The ntp server to use, can be either sntp or ntp. (Defaults `pool.ntp.org`).
-  *
-  *     - `sntpTimeSyncPort` - {Number} The port to access the ntp server. (Defaults `123`)
-  *
-  *     - `verbose` {Boolean} - Print out useful debugging events. (Default `false`)
-  *
-  *     - `debug` {Boolean} - Print out a raw dump of bytes sent and received. (Default `false`)
-  *
-  * @constructor
-  * @author AJ Keller (@pushtheworldllc)
-  */
+   * @description The initialization method to call first, before any other method.
+   * @param options (optional) - Board optional configurations.
+   *     - `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if
+   *                      firmware on board has been previously configured.
+   *
+   *     - `boardType` {String} - Specifies type of OpenBCI board.
+   *          3 Possible Boards:
+   *              `default` - 8 Channel OpenBCI board (Default)
+   *              `daisy` - 8 Channel OpenBCI board with Daisy Module. Total of 16 channels.
+   *              `ganglion` - 4 Channel board
+   *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
+   *
+   *     - `hardSet` {Boolean} - Recommended if using `daisy` board! For some reason, the `daisy` is sometimes
+   *                  not picked up by the module so you can set `hardSet` to true which will ensure the daisy
+   *                  is picked up. (Default `false`)
+   *
+   *     - `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting
+   *                  `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
+   *
+   *     - `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on
+   *                  the board is not polling the RFduino on the dongle. (Default `false`)
+   *
+   *     - `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board.
+   *                  This is useful if you want to test how your application reacts to a user requesting 16 channels
+   *                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
+   *                  attached and the user only wants to use 8 channels. (Default `false`)
+   *
+   *     - `simulatorDaisyModuleCanBeAttached` {Boolean} - Allows the simulation of the a hot swapped daisy board.
+   *                  For example: You coule simulate if the board has only detected 8 channels and the user requested
+   *                  16 channels.  (Default `true`)
+   *
+   *     - `simulatorFirmwareVersion` {String} - Allows simulator to be started with firmware version 2 features
+   *          2 Possible Options:
+   *              `v1` - Firmware Version 1 (Default)
+   *              `v2` - Firmware Version 2
+   *
+   *     - `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which
+   *                  occurs commonly in real devices.  It is recommended to test code with this enabled.
+   *          4 Possible Options:
+   *              `none` - do not fragment packets; output complete chunks immediately when produced (Default)
+   *              `random` - output random small chunks of data interspersed with full buffers
+   *              `fullBuffers` - allow buffers to fill up until the latency timer has expired
+   *              `oneByOne` - output each byte separately
+   *
+   *     - `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers,
+   *                  if `simulatorFragmentation` is specified. (Default `16`)
+   *
+   *     - `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is
+   *                  specified. (Default `4096`)
+   *
+   *     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
+   *
+   *     - `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+   *
+   *     - `simulatorInjectLineNoise` {String} - Injects line noise on channels.
+   *          3 Possible Options:
+   *              `60Hz` - 60Hz line noise (Default) [America]
+   *              `50Hz` - 50Hz line noise [Europe]
+   *              `none` - Do not inject line noise.
+   *
+   *     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if
+   *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that
+   *                  setting and this sample rate will be used. (Default is `250`)
+   *
+   *     - `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely
+   *                  due to a OpenBCI dongle not being plugged in.
+   *
+   *     - `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source
+   *                  of truth instead of local computer time. If you are running experiements on your local
+   *                  computer, keep this `false`. (Default `false`)
+   *
+   *     - `sntpTimeSyncHost` - {String} The ntp server to use, can be either sntp or ntp. (Defaults `pool.ntp.org`).
+   *
+   *     - `sntpTimeSyncPort` - {Number} The port to access the ntp server. (Defaults `123`)
+   *
+   *     - `verbose` {Boolean} - Print out useful debugging events. (Default `false`)
+   *
+   *     - `debug` {Boolean} - Print out a raw dump of bytes sent and received. (Default `false`)
+   *
+   * @constructor
+   * @author AJ Keller (@pushtheworldllc)
+   */
   function OpenBCIBoard (options) {
     options = (typeof options !== 'function') && options || {};
     var opts = {};
@@ -206,6 +216,7 @@ function OpenBCIFactory () {
     this.timeOfPacketArrival = 0;
     this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
     // Strings
+    this.portName = null;
 
     // NTP
     if (this.options.sntpTimeSync) {
@@ -254,6 +265,7 @@ function OpenBCIFactory () {
           alpha: this.options.simulatorInjectAlpha,
           boardFailure: this.options.simulatorBoardFailure,
           daisy: this.options.simulatorDaisyModuleAttached,
+          daisyCanBeAttached: this.options.simulatorDaisyModuleCanBeAttached,
           drift: this.options.simulatorInternalClockDrift,
           firmwareVersion: this.options.simulatorFirmwareVersion,
           fragmentation: this.options.simulatorFragmentation,
@@ -378,13 +390,23 @@ function OpenBCIFactory () {
     return this.serial.isOpen();
   };
 
+
   /**
   * @description Checks if the board is currently sending samples.
   * @returns {boolean} - True if streaming.
   */
+  OpenBCIBoard.prototype.isSimulating = function () {
+    return this.options.simulate;
+  };
+
+  /**
+   * @description Checks if the board is currently sending samples.
+   * @returns {boolean} - True if streaming.
+   */
   OpenBCIBoard.prototype.isStreaming = function () {
     return this._streaming;
   };
+
 
   /**
   * @description Sends a start streaming command to the board.
@@ -1013,6 +1035,14 @@ function OpenBCIFactory () {
   };
 
   /**
+   * Get the board type.
+   * @return boardType: string
+   */
+  OpenBCIBoard.prototype.getBoardType = function() {
+    return this.info.boardType;
+  };
+
+  /**
    * Get the core info object.
    * @return {{boardType: string, sampleRate: number, firmware: string, numberOfChannels: number, missedPackets: number}}
    */
@@ -1025,38 +1055,82 @@ function OpenBCIFactory () {
    * @param boardType {String}
    *  `default` or `daisy`. Defaults to `default`.
    */
-  OpenBCIBoard.prototype.setInfoForBoardType = function(boardType) {
+  OpenBCIBoard.prototype.overrideInfoForBoardType = function(boardType) {
     switch (boardType) {
       case k.OBCIBoardDaisy:
         this.info.boardType = k.OBCIBoardDaisy;
         this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
         this.info.sampleRate = k.OBCISampleRate125;
+        this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
+        this.goertzelObject = openBCISample.goertzelNewObject(k.OBCINumberOfChannelsDaisy);
+        this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDaisy);
         break;
       case k.OBCIBoardDefault:
       default:
         this.info.boardType = k.OBCIBoardDefault;
         this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
         this.info.sampleRate = k.OBCISampleRate250;
+        this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
+        this.goertzelObject = openBCISample.goertzelNewObject(k.OBCINumberOfChannelsDefault);
+        this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDefault);
         break;
     }
   };
 
   /**
-   * Used to set the max number of channels on the Cyton board.
-   * @param numberOfChannels {number}
-   *  Either 8 or 16
+   * Used to sync the module and board to `boardType`
+   * @param boardType {String}
+   *  Either `default` or `daisy`
    * @return {Promise}
    */
-  OpenBCIBoard.prototype.setMaxChannels = function (numberOfChannels) {
-    if (numberOfChannels === k.OBCINumberOfChannelsDefault) {
-      this.curParsingMode = k.OBCIParsingEOT;
-      return this.write(k.OBCIChannelMaxNumber8);
-    } else if (numberOfChannels === k.OBCINumberOfChannelsDaisy) {
-      this.curParsingMode = k.OBCIParsingEOT;
-      return this.write(k.OBCIChannelMaxNumber16);
-    } else {
-      return Promise.reject('invalid number of channels');
-    }
+  OpenBCIBoard.prototype.hardSetBoardType = function (boardType) {
+    if (this.isStreaming()) return Promise.reject('Must not be streaming!');
+    return new Promise((resolve, reject) => {
+      const eotFunc = (data) => {
+        switch (data.slice(0, data.length - k.OBCIParseEOT.length).toString()) {
+          case k.OBCIChannelMaxNumber8SuccessDaisyRemoved:
+            this.overrideInfoForBoardType(k.OBCIBoardDefault);
+            resolve('daisy removed');
+            break;
+          case k.OBCIChannelMaxNumber16DaisyAlreadyAttached:
+            this.overrideInfoForBoardType(k.OBCIBoardDaisy);
+            resolve('daisy already attached');
+            break;
+          case k.OBCIChannelMaxNumber16DaisyAttached:
+            this.overrideInfoForBoardType(k.OBCIBoardDaisy);
+            resolve('daisy attached');
+            break;
+          case k.OBCIChannelMaxNumber16NoDaisyAttached:
+            this.overrideInfoForBoardType(k.OBCIBoardDefault);
+            reject('unable to attach daisy');
+            break;
+          case k.OBCIChannelMaxNumber8NoDaisyToRemove:
+          default:
+            this.overrideInfoForBoardType(k.OBCIBoardDefault);
+            resolve('no daisy to remove');
+            break;
+        }
+      };
+      if (boardType === k.OBCIBoardDefault) {
+        this.curParsingMode = k.OBCIParsingEOT;
+        this.once(k.OBCIEmitterEot, eotFunc);
+        this.write(k.OBCIChannelMaxNumber8)
+          .catch((err) => {
+            this.removeListener(k.OBCIEmitterEot, eotFunc);
+            reject(err);
+          });
+      } else if (boardType === k.OBCIBoardDaisy) {
+        this.curParsingMode = k.OBCIParsingEOT;
+        this.once(k.OBCIEmitterEot, eotFunc);
+        this.write(k.OBCIChannelMaxNumber16)
+          .catch((err) => {
+            this.removeListener(k.OBCIEmitterEot, eotFunc);
+            reject(err);
+          });
+      } else {
+        reject('invalid board type');
+      }
+    });
   };
 
   /**
@@ -1742,7 +1816,7 @@ function OpenBCIFactory () {
       case k.OBCIParsingEOT:
         if (openBCISample.doesBufferHaveEOT(data)) {
           this.curParsingMode = k.OBCIParsingNormal;
-          this.emit('eot', data);
+          this.emit(k.OBCIEmitterEot, data);
           this.buffer = openBCISample.stripToEOTBuffer(data);
         } else {
           this.buffer = data;
@@ -1752,9 +1826,31 @@ function OpenBCIFactory () {
         // Does the buffer have an EOT in it?
         if (openBCISample.doesBufferHaveEOT(data)) {
           this._processParseBufferForReset(data);
-          this.curParsingMode = k.OBCIParsingNormal;
-          this.emit('ready');
-          this.buffer = openBCISample.stripToEOTBuffer(data);
+          if (this.options.hardSet) {
+            if (this.getBoardType() !== this.options.boardType) {
+              this.emit(k.OBCIEmitterHardSet);
+              this.hardSetBoardType(this.options.boardType)
+                .then(() => {
+                  this.emit(k.OBCIEmitterReady)
+                })
+                .catch((err) => {
+                  this.emit(k.OBCIEmitterError, err);
+                });
+
+            } else {
+              this.curParsingMode = k.OBCIParsingNormal;
+              this.emit(k.OBCIEmitterReady);
+              this.buffer = openBCISample.stripToEOTBuffer(data);
+            }
+
+          } else {
+            if (this.getBoardType() !== this.options.boardType && this.options.verbose) {
+              console.log(`Module detected ${this.getBoardType()} board type but you specified ${this.options.boardType}, use 'hardSet' to force the module to correct itself`);
+            }
+            this.curParsingMode = k.OBCIParsingNormal;
+            this.emit(k.OBCIEmitterReady);
+            this.buffer = openBCISample.stripToEOTBuffer(data);
+          }
         } else {
           this.buffer = data;
         }
@@ -1854,9 +1950,9 @@ function OpenBCIFactory () {
    */
   OpenBCIBoard.prototype._processParseBufferForReset = function (dataBuffer) {
     if (openBCISample.countADSPresent(dataBuffer) === 2) {
-      this.setInfoForBoardType(k.OBCIBoardDaisy);
+      this.overrideInfoForBoardType(k.OBCIBoardDaisy);
     } else {
-      this.setInfoForBoardType(k.OBCIBoardDefault);
+      this.overrideInfoForBoardType(k.OBCIBoardDefault);
     }
 
     if (openBCISample.findV2Firmware(dataBuffer)) {
