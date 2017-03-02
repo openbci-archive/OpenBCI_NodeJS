@@ -10,6 +10,7 @@
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
 
 var ourBoard = new OpenBCIBoard({});
+var verbose = true; // Adds verbosity to functions
 
 var sampleRate = 250; // Default to 250, ALWAYS verify with a call to `.sampleRate()` after 'ready' event!
 var timeSyncPossible = false;
@@ -100,14 +101,14 @@ function exitHandler (options, err) {
   }
 }
 
-if (process.platform === "win32") {
-  const rl = require("readline").createInterface({
+if (process.platform === 'win32') {
+  const rl = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  rl.on("SIGINT", function () {
-    process.emit("SIGINT");
+  rl.on('SIGINT', function () {
+    process.emit('SIGINT');
   });
 }
 

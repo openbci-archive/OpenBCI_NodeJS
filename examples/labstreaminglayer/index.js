@@ -13,12 +13,10 @@ var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var portPub = 'tcp://127.0.0.1:3004';
 var zmq = require('zmq-prebuilt');
 var socket = zmq.socket('pair');
-var simulate = false; // Sends synthetic data
 var debug = false; // Pretty print any bytes in and out... it's amazing...
 var verbose = true; // Adds verbosity to functions
 
 var ourBoard = new OpenBCIBoard({
-  simulate: simulate, // Uncomment to see how it works with simulator!
   simulatorFirmwareVersion: 'v2',
   debug: debug,
   verbose: verbose
@@ -27,6 +25,7 @@ var ourBoard = new OpenBCIBoard({
 var timeSyncPossible = false;
 var resyncPeriodMin = 1;
 var secondsInMinute = 60;
+var numChans = 8;
 var resyncPeriod = ourBoard.sampleRate() * resyncPeriodMin * secondsInMinute;
 
 ourBoard.autoFindOpenBCIBoard().then(portName => {
@@ -39,9 +38,16 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
     ourBoard.connect(portName)
       .then(() => {
         ourBoard.on('ready', () => {
+          // Get the sample rate after 'ready'
+          numChans = ourBoard.numberOfChannels();
+          if (numChans === 16) {
+            ourBoard.overrideInfoForBoardType('daisy');
+          }
+
           // Find out if you can even time sync, you must be using v2 and this is only accurate after a `.softReset()` call which is called internally on `.connect()`. We parse the `.softReset()` response for the presence of firmware version 2 properties.
           timeSyncPossible = ourBoard.usingVersionTwoFirmware();
 
+          sendToPython({'numChans': numChans, 'sampleRate': ourBoard.sampleRate()});
           if (timeSyncPossible) {
             ourBoard.streamStart()
               .catch(err => {
@@ -92,8 +98,7 @@ var sampleFunc = sample => {
 // Subscribe to your functions
 ourBoard.on('sample', sampleFunc);
 
-// ZMQ fun
-
+// ZMQ
 socket.bind(portPub, function (err) {
   if (err) throw err;
   console.log(`bound to ${portPub}`);
@@ -112,62 +117,6 @@ var sendToPython = (interProcessObject, verbose) => {
     socket.send(JSON.stringify(interProcessObject));
   }
 };
-
-var receiveFromPython = (rawData) => {
-  try {
-    let body = JSON.parse(rawData); // five because `resp `
-    processInterfaceObject(body);
-  } catch (err) {
-    console.log('in -> ' + 'bad json');
-  }
-};
-
-socket.on('message', receiveFromPython);
-
-var sendStatus = () => {
-  sendToPython({'action': 'active', 'message': 'ready', 'command': 'status'}, true);
-};
-
-sendStatus();
-
-/**
- * Process an incoming message
- * @param  {String} body   A stringify JSON object that shall be parsed.
- * @return {None}
- */
-var processInterfaceObject = (body) => {
-  switch (body.command) {
-    case 'status':
-      processStatus(body);
-      break;
-    default:
-      unrecognizedCommand(body);
-      break;
-  }
-};
-
-/**
- * Used to process a status related command from TCP IPC.
- * @param  {Object} body
- * @return {None}
- */
-var processStatus = (body) => {
-  switch (body.action) {
-    case 'started':
-      console.log(`python started @ ${body.message}ms`);
-      break;
-    case 'alive':
-      console.log(`python duplex communication test completed @ ${body.message}ms`);
-      break;
-    default:
-      unrecognizedCommand(body);
-      break;
-  }
-};
-
-function unrecognizedCommand (body) {
-  console.log(`unrecognizedCommand ${body}`);
-}
 
 function exitHandler (options, err) {
   if (options.cleanup) {

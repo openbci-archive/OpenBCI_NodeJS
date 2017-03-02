@@ -1,9 +1,10 @@
 {
   "name": "openbci",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
   "main": "openBCIBoard",
   "scripts": {
+    "lint": "semistandard | snazzy",
     "start": "node index",
     "test": "semistandard | snazzy && mocha test",
     "test-cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec && codecov"
