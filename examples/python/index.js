@@ -10,21 +10,20 @@
  *   then `npm start`
  */
 var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var port_pub = 'tcp://127.0.0.1:3004';
+var portPub = 'tcp://127.0.0.1:3004';
 var zmq = require('zmq-prebuilt');
 var socket = zmq.socket('pair');
-var simulate = true; // Sends synthetic data
+var simulate = false; // Sends synthetic data
 var debug = false; // Pretty print any bytes in and out... it's amazing...
 var verbose = true; // Adds verbosity to functions
 
 var ourBoard = new OpenBCIBoard({
-  // simulate: simulate, // Uncomment to see how it works with simulator!
+  simulate: simulate, // Uncomment to see how it works with simulator!
   simulatorFirmwareVersion: 'v2',
   debug: debug,
   verbose: verbose
 });
 
-var sampleRate = 250; // Default to 250, ALWAYS verify with a call to `.sampleRate()` after 'ready' event!
 var timeSyncPossible = false;
 var resyncPeriodMin = 1;
 var secondsInMinute = 60;
@@ -40,9 +39,6 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
     ourBoard.connect(portName)
       .then(() => {
         ourBoard.on('ready', () => {
-
-          // Get the sample rate after 'ready'
-          sampleRate = ourBoard.sampleRate();
           // Find out if you can even time sync, you must be using v2 and this is only accurate after a `.softReset()` call which is called internally on `.connect()`. We parse the `.softReset()` response for the presence of firmware version 2 properties.
           timeSyncPossible = ourBoard.usingVersionTwoFirmware();
 
@@ -54,7 +50,7 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
           } else {
             console.log('not able to time sync');
           }
-        })
+        });
       })
       .catch(err => {
         console.log(`connect: ${err}`);
@@ -98,9 +94,9 @@ ourBoard.on('sample', sampleFunc);
 
 // ZMQ fun
 
-socket.bind(port_pub, function (err) {
+socket.bind(portPub, function (err) {
   if (err) throw err;
-  console.log(`bound to ${port_pub}`);
+  console.log(`bound to ${portPub}`);
 });
 
 /**
@@ -117,9 +113,9 @@ var sendToPython = (interProcessObject, verbose) => {
   }
 };
 
-var receiveFromPython = (raw_data) => {
+var receiveFromPython = (rawData) => {
   try {
-    let body = JSON.parse(raw_data); // five because `resp `
+    let body = JSON.parse(rawData); // five because `resp `
     processInterfaceObject(body);
   } catch (err) {
     console.log('in -> ' + 'bad json');
@@ -185,14 +181,14 @@ function exitHandler (options, err) {
   }
 }
 
-if (process.platform === "win32") {
-  const rl = require("readline").createInterface({
+if (process.platform === 'win32') {
+  const rl = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  rl.on("SIGINT", function () {
-    process.emit("SIGINT");
+  rl.on('SIGINT', function () {
+    process.emit('SIGINT');
   });
 }
 

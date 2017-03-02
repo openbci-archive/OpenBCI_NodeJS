@@ -9,7 +9,6 @@ var openBCISample = openBCIBoard.OpenBCISample;
 var k = openBCISample.k;
 var chaiAsPromised = require('chai-as-promised');
 var sinonChai = require('sinon-chai');
-var sinonAsPromised = require('sinon-as-promised')(bluebirdChecks.BluebirdPromise);
 var bufferEqual = require('buffer-equal');
 var fs = require('fs');
 var math = require('mathjs');
@@ -484,7 +483,6 @@ describe('openbci-sdk', function () {
       expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
       expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
     });
-
   });
   describe('#debug', function () {
     before(function (done) {

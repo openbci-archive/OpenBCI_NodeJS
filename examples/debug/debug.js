@@ -45,7 +45,6 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
  */
 var readyFunc = () => {
   // Get the sample rate after 'ready'
-  sampleRate = ourBoard.sampleRate();
   if (stream) {
     ourBoard.streamStart()
       .catch(err => {
@@ -65,10 +64,10 @@ var sampleFunc = sample => {
 ourBoard.on('ready', readyFunc);
 ourBoard.on('sample', sampleFunc);
 
-
 function exitHandler (options, err) {
   if (options.cleanup) {
     if (verbose) console.log('clean');
+    ourBoard.removeAllListeners();
     /** Do additional clean up here */
   }
   if (err) console.log(err.stack);
@@ -81,14 +80,14 @@ function exitHandler (options, err) {
   }
 }
 
-if (process.platform === "win32") {
-  const rl = require("readline").createInterface({
+if (process.platform === 'win32') {
+  const rl = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  rl.on("SIGINT", function () {
-    process.emit("SIGINT");
+  rl.on('SIGINT', function () {
+    process.emit('SIGINT');
   });
 }
 
