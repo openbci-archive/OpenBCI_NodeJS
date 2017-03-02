@@ -887,34 +887,6 @@ Stop logging to the SD card and close any open file. If you are not streaming wh
 
 **_Returns_** resolves if the command was added to the write queue.
 
-### <a name="method-set-info-for-board-type"></a> .setInfoForBoardType(boardType)
-
-Set the info property for board type.
-
-**Note: This has the potential to change the way data is parsed**
-
-**_boardType_**
-
-A String indicating the number of channels.
-
-* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`.
-* `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
-
-**_Returns_** a promise, fulfilled if the command was sent to the write queue. Rejects if input is not `8` or `16`.
-
-### <a name="method-set-max-channels"></a> .setMaxChannels(numberOfChannels)
-
-Sends a command to the board to set the max channels. If you have a daisy attached, calling this function will re-sniff for the daisy ADS and attempt to use it.
-
-**_numberOfChannels_**
-
-A Number indicating the number of channels.
-
-* `8` - Default number of channels.
-* `16` - Daisy number of channels.
-
-**_Returns_** a promise, fulfilled if the command was sent to the write queue. Rejects if input is not `8` or `16`.
-
 ### <a name="method-simulator-enable"></a> .simulatorEnable()
 
 To enter simulate mode. Must call [`.connect()`](#method-connect) after.
