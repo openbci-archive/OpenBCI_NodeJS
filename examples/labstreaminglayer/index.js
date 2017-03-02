@@ -17,13 +17,11 @@ var debug = false; // Pretty print any bytes in and out... it's amazing...
 var verbose = true; // Adds verbosity to functions
 
 var ourBoard = new OpenBCIBoard({
-  // simulate: simulate, // Uncomment to see how it works with simulator!
   simulatorFirmwareVersion: 'v2',
   debug: debug,
   verbose: verbose
 });
 
-var sampleRate = 250; // Default to 250, ALWAYS verify with a call to `.sampleRate()` after 'ready' event!
 var timeSyncPossible = false;
 var resyncPeriodMin = 1;
 var secondsInMinute = 60;
@@ -41,7 +39,6 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
       .then(() => {
         ourBoard.on('ready', () => {
           // Get the sample rate after 'ready'
-          sampleRate = ourBoard.sampleRate();
           numChans = ourBoard.numberOfChannels();
           if (numChans === 16) {
             ourBoard.overrideInfoForBoardType('daisy');
@@ -50,7 +47,7 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
           // Find out if you can even time sync, you must be using v2 and this is only accurate after a `.softReset()` call which is called internally on `.connect()`. We parse the `.softReset()` response for the presence of firmware version 2 properties.
           timeSyncPossible = ourBoard.usingVersionTwoFirmware();
 
-          sendToPython({'numChans': numChans, 'sampleRate': sampleRate});
+          sendToPython({'numChans': numChans, 'sampleRate': ourBoard.sampleRate()});
           if (timeSyncPossible) {
             ourBoard.streamStart()
               .catch(err => {

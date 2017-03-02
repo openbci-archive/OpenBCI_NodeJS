@@ -1,6 +1,6 @@
 'use strict';
 var bluebirdChecks = require('./bluebirdChecks');
-var sinon = require('sinon');
+var sinon = require('sinon'); // eslint-disable-line no-unused-vars
 var chai = require('chai');
 var expect = chai.expect;
 var should = chai.should(); // eslint-disable-line no-unused-vars
@@ -9,28 +9,24 @@ var openBCISample = openBCIBoard.OpenBCISample;
 var k = openBCISample.k;
 var chaiAsPromised = require('chai-as-promised');
 var sinonChai = require('sinon-chai');
-var sinonAsPromised = require('sinon-as-promised')(bluebirdChecks.BluebirdPromise);
-var fs = require('fs');
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
 
 describe('openbci-radios', function () {
   this.timeout(2000);
-  var ourBoard, masterPortName, realBoard;
+  var ourBoard, masterPortName;
 
   before(function (done) {
     ourBoard = new openBCIBoard.OpenBCIBoard();
     ourBoard.autoFindOpenBCIBoard()
       .then(portName => {
         ourBoard = null;
-        realBoard = true;
         masterPortName = portName;
         done();
       })
       .catch(() => {
         ourBoard = null;
-        realBoard = false;
         masterPortName = k.OBCISimulatorPortName;
         done();
       });
@@ -950,5 +946,4 @@ describe('openbci-radios', function () {
       }).catch(err => done(err));
     });
   });
-
 });

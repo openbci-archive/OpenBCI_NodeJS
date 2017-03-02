@@ -174,19 +174,7 @@ function OpenBCIFactory () {
     this.buffer = null;
     this.masterBuffer = masterBufferMaker();
     // Objects
-    this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
-    this.impedanceTest = {
-      active: false,
-      buffer: [],
-      count: 0,
-      isTestingPInput: false,
-      isTestingNInput: false,
-      onChannel: 0,
-      sampleNumber: 0,
-      continuousMode: false,
-      impedanceForChannel: 0,
-      window: 40
-    };
+    this.impedanceTest = openBCISample.impedanceTestObjDefault();
     this.info = {
       boardType: this.options.boardType,
       sampleRate: k.OBCISampleRate125,
@@ -393,7 +381,6 @@ function OpenBCIFactory () {
     return this.serial.isOpen();
   };
 
-
   /**
   * @description Checks if the board is currently sending samples.
   * @returns {boolean} - True if streaming.
@@ -409,7 +396,6 @@ function OpenBCIFactory () {
   OpenBCIBoard.prototype.isStreaming = function () {
     return this._streaming;
   };
-
 
   /**
   * @description Sends a start streaming command to the board.
@@ -1041,7 +1027,7 @@ function OpenBCIFactory () {
    * Get the board type.
    * @return boardType: string
    */
-  OpenBCIBoard.prototype.getBoardType = function() {
+  OpenBCIBoard.prototype.getBoardType = function () {
     return this.info.boardType;
   };
 
@@ -1049,7 +1035,7 @@ function OpenBCIFactory () {
    * Get the core info object.
    * @return {{boardType: string, sampleRate: number, firmware: string, numberOfChannels: number, missedPackets: number}}
    */
-  OpenBCIBoard.prototype.getInfo = function() {
+  OpenBCIBoard.prototype.getInfo = function () {
     return this.info;
   };
 
@@ -1058,14 +1044,13 @@ function OpenBCIFactory () {
    * @param boardType {String}
    *  `default` or `daisy`. Defaults to `default`.
    */
-  OpenBCIBoard.prototype.overrideInfoForBoardType = function(boardType) {
+  OpenBCIBoard.prototype.overrideInfoForBoardType = function (boardType) {
     switch (boardType) {
       case k.OBCIBoardDaisy:
         this.info.boardType = k.OBCIBoardDaisy;
         this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
         this.info.sampleRate = k.OBCISampleRate125;
         this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
-        this.goertzelObject = openBCISample.goertzelNewObject(k.OBCINumberOfChannelsDaisy);
         this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDaisy);
         break;
       case k.OBCIBoardDefault:
@@ -1074,7 +1059,6 @@ function OpenBCIFactory () {
         this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
         this.info.sampleRate = k.OBCISampleRate250;
         this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
-        this.goertzelObject = openBCISample.goertzelNewObject(k.OBCINumberOfChannelsDefault);
         this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDefault);
         break;
     }
@@ -1834,18 +1818,16 @@ function OpenBCIFactory () {
               this.emit(k.OBCIEmitterHardSet);
               this.hardSetBoardType(this.options.boardType)
                 .then(() => {
-                  this.emit(k.OBCIEmitterReady)
+                  this.emit(k.OBCIEmitterReady);
                 })
                 .catch((err) => {
                   this.emit(k.OBCIEmitterError, err);
                 });
-
             } else {
               this.curParsingMode = k.OBCIParsingNormal;
               this.emit(k.OBCIEmitterReady);
               this.buffer = openBCISample.stripToEOTBuffer(data);
             }
-
           } else {
             if (this.getBoardType() !== this.options.boardType && this.options.verbose) {
               console.log(`Module detected ${this.getBoardType()} board type but you specified ${this.options.boardType}, use 'hardSet' to force the module to correct itself`);

@@ -33,12 +33,12 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
      */
     ourBoard.connect(portName) // Port name is a serial port name, see `.listPorts()`
       .then(() => {
-        ourBoard.once('ready',() => {
+        ourBoard.once('ready', () => {
           ourBoard.streamStart();
-          ourBoard.on('sample',(sample) => {
+          ourBoard.on('sample', (sample) => {
             /** Work with sample */
-            for (var i = 0; i < ourBoard.numberOfChannels(); i++) {
-              console.log("Channel " + (i + 1) + ": " + sample.channelData[i].toFixed(8) + " Volts.");
+            for (let i = 0; i < ourBoard.numberOfChannels(); i++) {
+              console.log(`Channel ${(i + 1)}: ${sample.channelData[i].toFixed(8)} Volts.`);
               // prints to the console
               //  "Channel 1: 0.00001987 Volts."
               //  "Channel 2: 0.00002255 Volts."
@@ -57,6 +57,7 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
 function exitHandler (options, err) {
   if (options.cleanup) {
     if (verbose) console.log('clean');
+    ourBoard.removeAllListeners();
     /** Do additional clean up here */
   }
   if (err) console.log(err.stack);
@@ -66,14 +67,14 @@ function exitHandler (options, err) {
   }
 }
 
-if (process.platform === "win32") {
-  const rl = require("readline").createInterface({
+if (process.platform === 'win32') {
+  const rl = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  rl.on("SIGINT", function () {
-    process.emit("SIGINT");
+  rl.on('SIGINT', function () {
+    process.emit('SIGINT');
   });
 }
 

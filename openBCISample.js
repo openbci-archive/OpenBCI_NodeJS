@@ -13,14 +13,6 @@ const SCALE_FACTOR_ACCEL = 0.002 / Math.pow(2, 4);
 const ACCEL_NUMBER_AXIS = 3;
 // Default ADS1299 gains array
 
-// For computing Goertzel Algorithm
-// See: http://www.embedded.com/design/configurable-systems/4024443/The-Goertzel-Algorithm
-// In the tutorial cited above, GOERTZEL_BLOCK_SIZE is referred to as N
-const GOERTZEL_BLOCK_SIZE = 62;
-const GOERTZEL_K_250 = Math.floor(0.5 + ((GOERTZEL_BLOCK_SIZE * k.OBCILeadOffFrequencyHz) / k.OBCISampleRate250));
-const GOERTZEL_W_250 = ((2 * Math.PI) / GOERTZEL_BLOCK_SIZE) * GOERTZEL_K_250;
-const GOERTZEL_COEFF_250 = 2 * Math.cos(GOERTZEL_W_250);
-
 var sampleModule = {
 
   /**
@@ -219,19 +211,18 @@ var sampleModule = {
   * @author AJ Keller
   */
   impedanceCalculationForChannel: (sampleObject, channelNumber) => {
-    const sqrt2 = Math.sqrt(2);
     return new Promise((resolve, reject) => {
       if (sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
       if (sampleObject.channelData === undefined || sampleObject.channelData === null) reject('Channel cannot be null or undefined');
       if (channelNumber < 1 || channelNumber > k.OBCINumberOfChannelsDefault) reject('Channel number invalid.');
 
-      var index = channelNumber - 1;
+      const index = channelNumber - 1;
 
       if (sampleObject.channelData[index] < 0) {
         sampleObject.channelData[index] *= -1;
       }
-      var impedance = (sqrt2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
-      // if (index === 0) console.log("Voltage: " + (sqrt2*sampleObject.channelData[index]) + " leadoff amps: " + k.OBCILeadOffDriveInAmps + " impedance: " + impedance)
+
+      const impedance = (Math.SQRT2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
       resolve(impedance);
     });
   },
@@ -242,25 +233,20 @@ var sampleModule = {
   * @author AJ Keller
   */
   impedanceCalculationForAllChannels: sampleObject => {
-    const sqrt2 = Math.sqrt(2);
     return new Promise((resolve, reject) => {
       if (sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
       if (sampleObject.channelData === undefined || sampleObject.channelData === null) reject('Channel cannot be null or undefined');
 
-      var sampleImpedances = [];
-      var numChannels = sampleObject.channelData.length;
-      for (var index = 0; index < numChannels; index++) {
+      let sampleImpedances = [];
+      const numChannels = sampleObject.channelData.length;
+      for (let index = 0; index < numChannels; index++) {
         if (sampleObject.channelData[index] < 0) {
           sampleObject.channelData[index] *= -1;
         }
-        var impedance = (sqrt2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
+        const impedance = (Math.SQRT2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
         sampleImpedances.push(impedance);
-
-      // if (index === 0) console.log("Voltage: " + (sqrt2*sampleObject.channelData[index]) + " leadoff amps: " + k.OBCILeadOffDriveInAmps + " impedance: " + impedance)
       }
-
       sampleObject.impedances = sampleImpedances;
-
       resolve(sampleObject);
     });
   },
@@ -419,18 +405,19 @@ var sampleModule = {
   k,
   /**
    * Calculate the impedance
-   * @param sample - Standard sample
-   * @param impedanceTest - Impedance Object from openBCIBoard.js
+   * @param sample {Object} - Standard sample
+   * @param impedanceTest {Object} - Impedance Object from openBCIBoard.js
+   * @return {null | Object} - Null if not enough samples have passed to calculate an accurate
    */
   impedanceCalculateArray: (sample, impedanceTest) => {
     impedanceTest.buffer.push(sample.channelData);
     impedanceTest.count++;
 
-    if (impedanceTest.count > impedanceTest.window) {
+    if (impedanceTest.count >= impedanceTest.window) {
       let output = [];
       for (let i = 0; i < sample.channelData.length; i++) {
-        let max = 0.0; /// sumSquared
-        for (let j = 0; i < impedanceTest.window; i++) {
+        let max = 0.0; // sumSquared
+        for (let j = 0; j < impedanceTest.window; j++) {
           if (impedanceTest.buffer[i][j] > max) {
             max = impedanceTest.buffer[i][j];
           }
@@ -450,74 +437,20 @@ var sampleModule = {
     }
     return null;
   },
-  /**
-  * @description Use the Goertzel algorithm to calculate impedances
-  * @param sample - a sample with channelData Array
-  * @param goertzelObj - An object that was created by a call to this.goertzelNewObject()
-  * @returns {Array} - Returns an array if finished computing
-  */
-  goertzelProcessSample: (sample, goertzelObj) => {
-    // calculate the goertzel values for all channels
-    for (var i = 0; i < goertzelObj.numberOfChannels; i++) {
-      var q0 = GOERTZEL_COEFF_250 * goertzelObj.q1[i] - goertzelObj.q2[i] + sample.channelData[i];
-      goertzelObj.q2[i] = goertzelObj.q1[i];
-      goertzelObj.q1[i] = q0;
-
-    // console.log('Q1: ' + goertzelObj.q1[i] + ' Q2: ' + goertzelObj.q2[i])
-    }
-
-    // Increment the index counter
-    goertzelObj.index++;
-
-    // Have we iterated more times then block size?
-    if (goertzelObj.index > GOERTZEL_BLOCK_SIZE) {
-      var impedanceArray = [];
-      for (var j = 0; j < goertzelObj.numberOfChannels; j++) {
-        // Calculate the magnitude of the voltage
-        // var q1SQRD = goertzelObj.q1[j] * goertzelObj.q1[j];
-        // var q2SQRD = goertzelObj.q2[j] * goertzelObj.q2[j];
-        // var lastPart = goertzelObj.q1[j] * goertzelObj.q2[j] * GOERTZEL_COEFF_250;
-
-        // console.log('Chan ' + j + ', Q1^2: ' + q1SQRD + ', Q2^2: ' + q2SQRD + ', Last Part: ' + lastPart)
-
-        var voltage = Math.sqrt((goertzelObj.q1[j] * goertzelObj.q1[j]) + (goertzelObj.q2[j] * goertzelObj.q2[j]) - goertzelObj.q1[j] * goertzelObj.q2[j] * GOERTZEL_COEFF_250);
-
-        // Calculate the impedance r = v/i
-        var impedance = voltage / k.OBCILeadOffDriveInAmps;
-        // Push the impedance into the final array
-        impedanceArray.push(impedance);
-
-        // Reset the goertzel variables to get ready for the next iteration
-        goertzelObj.q1[j] = 0;
-        goertzelObj.q2[j] = 0;
-      }
-
-      // Reset the goertzel index counter
-      goertzelObj.index = 0;
-
-      // Pass out the impedance array
-      return impedanceArray;
-    } else {
-      // This reject is really just for debugging
-      return;
-    }
+  impedanceTestObjDefault: (impedanceTestObj) => {
+    let newObj = impedanceTestObj || {};
+    newObj['active'] = false;
+    newObj['buffer'] = [];
+    newObj['count'] = 0;
+    newObj['isTestingPInput'] = false;
+    newObj['isTestingNInput'] = false;
+    newObj['onChannel'] = 0;
+    newObj['sampleNumber'] = 0;
+    newObj['continuousMode'] = false;
+    newObj['impedanceForChannel'] = 0;
+    newObj['window'] = 40;
+    return newObj;
   },
-  goertzelNewObject: numberOfChannels => {
-    // Object to help calculate the goertzel
-    var q1 = [];
-    var q2 = [];
-    for (var i = 0; i < numberOfChannels; i++) {
-      q1.push(0);
-      q2.push(0);
-    }
-    return {
-      q1: q1,
-      q2: q2,
-      index: 0,
-      numberOfChannels: numberOfChannels
-    };
-  },
-  GOERTZEL_BLOCK_SIZE,
   samplePacket: sampleNumber => {
     return new Buffer([0xA0, sampleNumberNormalize(sampleNumber), 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 7, 0, 0, 8, 0, 0, 0, 1, 0, 2, makeTailByteFromPacketType(k.OBCIStreamPacketStandardAccel)]);
   },
