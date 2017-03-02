@@ -7,7 +7,7 @@
 * Removed `impedanceCalculationForChannel()` and `impedanceCalculationForAllChannels` from `OpenBCISample.js`
 
 ### Bug Fixes
-* Fixes #131 - 16 chan not working by sending a channel command and parsing the return.
+* Fixes #28- Impedance not working properly.
 
 # 1.5.0
 
