@@ -203,53 +203,6 @@ var sampleModule = {
   },
   floatTo3ByteBuffer,
   floatTo2ByteBuffer,
-  /**
-  * @description Calculate the impedance for one channel only.
-  * @param sampleObject - Standard OpenBCI sample object
-  * @param channelNumber - Number, the channel you want to calculate impedance for.
-  * @returns {Promise} - Fulfilled with impedance value for the specified channel.
-  * @author AJ Keller
-  */
-  impedanceCalculationForChannel: (sampleObject, channelNumber) => {
-    return new Promise((resolve, reject) => {
-      if (sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
-      if (sampleObject.channelData === undefined || sampleObject.channelData === null) reject('Channel cannot be null or undefined');
-      if (channelNumber < 1 || channelNumber > k.OBCINumberOfChannelsDefault) reject('Channel number invalid.');
-
-      const index = channelNumber - 1;
-
-      if (sampleObject.channelData[index] < 0) {
-        sampleObject.channelData[index] *= -1;
-      }
-
-      const impedance = (Math.SQRT2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
-      resolve(impedance);
-    });
-  },
-  /**
-  * @description Calculate the impedance for all channels.
-  * @param sampleObject - Standard OpenBCI sample object
-  * @returns {Promise} - Fulfilled with impedances for the sample
-  * @author AJ Keller
-  */
-  impedanceCalculationForAllChannels: sampleObject => {
-    return new Promise((resolve, reject) => {
-      if (sampleObject === undefined || sampleObject === null) reject('Sample Object cannot be null or undefined');
-      if (sampleObject.channelData === undefined || sampleObject.channelData === null) reject('Channel cannot be null or undefined');
-
-      let sampleImpedances = [];
-      const numChannels = sampleObject.channelData.length;
-      for (let index = 0; index < numChannels; index++) {
-        if (sampleObject.channelData[index] < 0) {
-          sampleObject.channelData[index] *= -1;
-        }
-        const impedance = (Math.SQRT2 * sampleObject.channelData[index]) / k.OBCILeadOffDriveInAmps;
-        sampleImpedances.push(impedance);
-      }
-      sampleObject.impedances = sampleImpedances;
-      resolve(sampleObject);
-    });
-  },
   interpret16bitAsInt32: twoByteBuffer => {
     var prefix = 0;
 

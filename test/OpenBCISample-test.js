@@ -708,19 +708,6 @@ describe('openBCISample', function () {
       assert(passed, 'a sample with accel data was produced');
     });
   });
-  describe('#impedanceCalculationForChannel', function () {
-    it('rejects when undefined sampleObject', function (done) {
-      var bad;
-      openBCISample.impedanceCalculationForChannel(bad, 1).should.be.rejected.and.notify(done);
-    });
-    it('rejects when undefined channel number', function (done) {
-      var bad;
-      openBCISample.impedanceCalculationForChannel('taco', bad).should.be.rejected.and.notify(done);
-    });
-    it('rejects when invalid channel number', function (done) {
-      openBCISample.impedanceCalculationForChannel('taco', 69).should.be.rejected.and.notify(done);
-    });
-  });
   describe('#impedanceSummarize', function () {
     var impedanceArray = [];
     var numberOfChannels = 8;

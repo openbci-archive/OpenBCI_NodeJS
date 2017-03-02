@@ -3,6 +3,9 @@
 ### New Features
 * Add new example for Lab stream layer (#139) thanks @gabrielibagon
 
+### Breaking changes
+* Removed `impedanceCalculationForChannel()` and `impedanceCalculationForAllChannels` from `OpenBCISample.js`
+
 ### Bug Fixes
 * Fixes #131 - 16 chan not working by sending a channel command and parsing the return.
 
