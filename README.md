@@ -39,6 +39,19 @@ Python researcher or developer? Check out how easy it is to [get access to the e
 ```
 npm install openbci
 ```
+#### serialport dependency
+If you encounter this error when trying to run:
+```
+Error: The module '/path/to/your/project/node_modules/serialport/build/Release/serialport.node'
+was compiled against a different Node.js version using
+NODE_MODULE_VERSION 48. This version of Node.js requires
+NODE_MODULE_VERSION 51. Please try re-compiling or re-installing
+the module (for instance, using `npm rebuild` or`npm install`).
+```
+...the issue can be resolved by running:
+```
+npm rebuild --build-from-source
+```
 ### <a name="tldr"></a> TL;DR:
 Get connected and [start streaming right now with the example code](examples/getStreaming/getStreaming.js).
 
