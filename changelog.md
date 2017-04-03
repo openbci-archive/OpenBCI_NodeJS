@@ -1,3 +1,17 @@
+# 1.5.2
+
+### Dependency Package Updates
+* `performance-now`: from `^0.2.0` to `2.1.0`
+* `serialport` - from `4.0.1` to `4.0.7`
+
+### Development Dependency Package Updates
+* `bluebird`: from `3.4.6` to `3.5.0`
+* `chai-as-promised`: from `^5.2.0` to `^6.0.0`
+* `codecov`: from `^1.0.1` to `^2.1.0`
+* `semistandard`: from `^9.0.0` to `^10.0.0`
+* `sinon`: from `^1.17.2` to `^2.1.0`
+* `snazzy`: from `^5.0.0` to `^6.0.0`
+
 # 1.5.1
 
 ### New Features
