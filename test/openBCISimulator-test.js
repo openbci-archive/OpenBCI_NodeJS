@@ -32,6 +32,7 @@ describe('openBCISimulator', function () {
       expect(simulator.options.alpha).to.be.true;
       expect(simulator.options.boardFailure).to.be.false;
       expect(simulator.options.daisy).to.be.false;
+      expect(simulator.options.daisyCanBeAttached).to.be.true;
       expect(simulator.options.drift).to.equal(0);
       expect(simulator.options.firmwareVersion).to.equal(k.OBCIFirmwareV1);
       expect(simulator.options.lineNoise).to.equal(k.OBCISimulatorLineNoiseHz60);
@@ -272,12 +273,69 @@ describe('openBCISimulator', function () {
       simulator.once('open', done);
     });
     afterEach(() => {
+      simulator.removeAllListeners('data');
       simulator = null;
+    });
+    describe('set max channels', function () {
+      this.timeout(100);
+      it('should send nothing if no daisy attached', function (done) {
+        simulator.options.daisy = false;
+        simulator.on('data', function (data) {
+          expect(data.toString().match(k.OBCIParseEOT)).to.not.equal(null);
+          if (data.toString().match(k.OBCIParseEOT)) {
+            done();
+          }
+        });
+        simulator.write(k.OBCIChannelMaxNumber8);
+      });
+      it('should send daisy removed if daisy attached', function (done) {
+        simulator.options.daisy = true;
+        simulator.on('data', function (data) {
+          expect(data.toString().match(`daisy removed${k.OBCIParseEOT}`)).to.not.equal(null);
+          if (data.toString().match(k.OBCIParseEOT)) {
+            expect(simulator.options.daisy).to.equal(false);
+            done();
+          }
+        });
+        simulator.write(k.OBCIChannelMaxNumber8);
+      });
+      it('should send just 16 if daisy already attached', function (done) {
+        simulator.options.daisy = true;
+        simulator.on('data', function (data) {
+          expect(data.toString().match(`16${k.OBCIParseEOT}`)).to.not.equal(null);
+          if (data.toString().match(k.OBCIParseEOT)) {
+            done();
+          }
+        });
+        simulator.write(k.OBCIChannelMaxNumber16);
+      });
+      it('should send daisy attached if able to attach', function (done) {
+        simulator.options.daisy = false;
+        simulator.options.daisyCanBeAttached = true;
+        simulator.on('data', function (data) {
+          expect(data.toString().match(`daisy attached16`)).to.not.equal(null);
+          if (data.toString().match(k.OBCIParseEOT)) {
+            expect(simulator.options.daisy).to.equal(true);
+            done();
+          }
+        });
+        simulator.write(k.OBCIChannelMaxNumber16);
+      });
+      it('should send daisy attached if not able to attach', function (done) {
+        simulator.options.daisy = false;
+        simulator.options.daisyCanBeAttached = false;
+        simulator.on('data', function (data) {
+          expect(data.toString().match(`no daisy to attach!`)).to.not.equal(null);
+          if (data.toString().match(k.OBCIParseEOT)) {
+            done();
+          }
+        });
+        simulator.write(k.OBCIChannelMaxNumber16);
+      });
     });
     describe('reset', function () {
       it('should be v2', function (done) {
         simulator.on('data', function (data) {
-          console.log(data.toString());
           expect(data.toString().match('v2')).to.not.equal(null);
           done();
         });

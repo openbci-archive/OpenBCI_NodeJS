@@ -4,6 +4,7 @@
   "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
   "main": "index.js",
   "scripts": {
+    "lint": "semistandard | snazzy",
     "start": "node index",
     "test": "semistandard | snazzy && mocha test",
     "test-cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec && codecov"
@@ -20,8 +21,8 @@
     "gaussian": "^1.0.0",
     "lodash": "^4.16.6",
     "mathjs": "^3.3.0",
-    "performance-now": "^0.2.0",
-    "serialport": "4.0.6",
+    "performance-now": "^2.1.0",
+    "serialport": "4.0.7",
     "sntp": "^2.0.0",
     "streamsearch": "^0.1.2"
   },
@@ -29,17 +30,18 @@
     "test": "test"
   },
   "devDependencies": {
-    "bluebird": "3.4.6",
+    "bluebird": "3.5.0",
     "chai": "^3.4.1",
-    "chai-as-promised": "^5.2.0",
-    "codecov": "^1.0.1",
+    "chai-as-promised": "^6.0.0",
+    "codecov": "^2.1.0",
     "istanbul": "^0.4.4",
     "mocha": "^3.0.2",
     "sandboxed-module": "^2.0.3",
-    "semistandard": "^9.0.0",
-    "sinon": "^1.17.2",
+    "semistandard": "^10.0.0",
+    "sinon": "^2.1.0",
+    "sinon-as-promised": "^4.0.2",
     "sinon-chai": "^2.8.0",
-    "snazzy": "^5.0.0"
+    "snazzy": "^6.0.0"
   },
   "repository": {
     "type": "git",

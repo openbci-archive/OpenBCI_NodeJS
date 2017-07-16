@@ -69,9 +69,11 @@ describe('openbci-sdk', function () {
       var board = new Cyton();
       expect(board.options.boardType).to.equal(k.OBCIBoardDefault);
       expect(board.options.baudRate).to.equal(115200);
+      expect(board.options.hardSet).to.be.false;
       expect(board.options.simulate).to.be.false;
       expect(board.options.simulatorBoardFailure).to.be.false;
       expect(board.options.simulatorDaisyModuleAttached).to.be.false;
+      expect(board.options.simulatorDaisyModuleCanBeAttached).to.be.true;
       expect(board.options.simulatorFirmwareVersion).to.equal(k.OBCIFirmwareV1);
       expect(board.options.simulatorHasAccelerometer).to.be.true;
       expect(board.options.simulatorInternalClockDrift).to.equal(0);
@@ -407,6 +409,7 @@ describe('openbci-sdk', function () {
       });
       ourBoard.connect(k.OBCISimulatorPortName).catch(done);
       ourBoard.on('ready', function () {
+        expect(ourBoard.isSimulating()).to.equal(true);
         var disconnectSpy = sinon.spy(ourBoard, 'disconnect');
         ourBoard.options.simulate.should.equal(true);
         ourBoard.simulatorDisable().then(() => {
@@ -423,6 +426,7 @@ describe('openbci-sdk', function () {
         simulate: true,
         simulatorBoardFailure: true,
         simulatorDaisyModuleAttached: true,
+        simulatorDaisyModuleCanBeAttached: false,
         simulatorFirmwareVersion: k.OBCIFirmwareV2,
         simulatorHasAccelerometer: false,
         simulatorInternalClockDrift: -1,
@@ -444,6 +448,7 @@ describe('openbci-sdk', function () {
             expect(simOptions.alpha).to.be.false;
             expect(simOptions.boardFailure).to.be.true;
             expect(simOptions.daisy).to.be.true;
+            expect(simOptions.daisyCanBeAttached).to.be.false;
             expect(simOptions.drift).to.be.below(0);
             expect(simOptions.firmwareVersion).to.be.equal(k.OBCIFirmwareV2);
             expect(simOptions.fragmentation).to.be.equal(k.OBCISimulatorFragmentationOneByOne);
@@ -456,6 +461,33 @@ describe('openbci-sdk', function () {
             ourBoard.disconnect().then(done).catch(done);
           });
         }).catch(err => done(err));
+    });
+    it('should be able to set info for default board', function () {
+      ourBoard.info.boardType = 'burrito';
+      ourBoard.info.sampleRate = 60;
+      ourBoard.info.numberOfChannels = 200;
+      ourBoard.overrideInfoForBoardType('default');
+      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
+      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
+      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
+    });
+    it('should be able to set info for daisy board', function () {
+      ourBoard.info.boardType = 'burrito';
+      ourBoard.info.sampleRate = 60;
+      ourBoard.info.numberOfChannels = 200;
+      ourBoard.overrideInfoForBoardType('daisy');
+      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDaisy);
+      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDaisy);
+      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate125);
+    });
+    it('should set info to default on bad input string', function () {
+      ourBoard.info.boardType = 'burrito';
+      ourBoard.info.sampleRate = 60;
+      ourBoard.info.numberOfChannels = 200;
+      ourBoard.overrideInfoForBoardType('taco');
+      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
+      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
+      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
     });
   });
   describe('#debug', function () {
@@ -496,7 +528,7 @@ describe('openbci-sdk', function () {
     before(function () {
       ourBoard = new Cyton({
         simulate: !realBoard,
-        verbose: true,
+        verbose: false,
         simulatorFragmentation: k.OBCISimulatorFragmentationRandom
       });
       spy = sinon.spy(ourBoard, '_writeAndDrain');
@@ -561,6 +593,270 @@ describe('openbci-sdk', function () {
             }).catch(err => done(err));
           });
         });
+      });
+      it('daisy not attached in soft reset, daisy requested by user in options, module tries to attach and is successful', function (done) {
+        if (ourBoard.isSimulating()) {
+          // Turn hardSet on
+          ourBoard.options.hardSet = true;
+          // Set the options to daisy boardType
+          ourBoard.options.boardType = k.OBCIBoardDaisy;
+          // The simulator does not have a daisy
+          ourBoard.options.simulatorDaisyModuleAttached = false;
+          // The simulator is able to attach daisy
+          ourBoard.options.simulatorDaisyModuleCanBeAttached = true;
+          const failTestWithErr = (err) => {
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done(err);
+            }).catch(() => {
+              done(err);
+            });
+          };
+          const hardSetFuncOnTime = () => {
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            // Remove the premature ready function because it won't fire
+            ourBoard.removeListener('ready', readyFuncPreMature);
+            // If the board was able to attach the daisy
+            ourBoard.once('ready', readyFuncSuccess);
+            // If the board was unable to attach the daisy.
+            ourBoard.once('error', errorFuncTestFailure); // should not happen
+          };
+          const errorFuncTestFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            failTestWithErr('failed to attach daisy, should emit error');
+          };
+          const readyFuncPreMature = () => {
+            ourBoard.removeListener('hardSet', hardSetFuncOnTime);
+            failTestWithErr('the board should not have been ready yet');
+          };
+          const readyFuncSuccess = () => {
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+            // Remove because it won't fire
+            ourBoard.removeListener('error', errorFuncTestFailure);
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done();
+            }).catch(() => {
+              done();
+            });
+          };
+
+          ourBoard.once('ready', readyFuncPreMature);
+          ourBoard.once('hardSet', hardSetFuncOnTime);
+          ourBoard.connect(masterPortName).catch(err => done(err));
+        } else {
+          done();
+        }
+      });
+      it('daisy not attached in soft reset, daisy requested by user in options, module tries to attach and fails', function (done) {
+        if (ourBoard.isSimulating()) {
+          // Turn hardSet on
+          ourBoard.options.hardSet = true;
+          // Set the options to daisy boardType
+          ourBoard.options.boardType = k.OBCIBoardDaisy;
+          // The simulator does NOT have a daisy
+          ourBoard.options.simulatorDaisyModuleAttached = false;
+          // The simulator is NOT able to attach daisy
+          ourBoard.options.simulatorDaisyModuleCanBeAttached = false;
+          const failTestWithErr = (err) => {
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done(err);
+            }).catch(() => {
+              done(err);
+            });
+          };
+          const hardSetFuncOnTime = () => {
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            // Remove the premature ready function because it won't fire
+            ourBoard.removeListener('ready', readyFuncPreMature);
+            // If the board was able to attach the daisy
+            ourBoard.once('ready', readyFuncTestFailure);
+            // If the board was unable to attach the daisy.
+            ourBoard.once('error', errorFuncTestSuccess); // should not happen
+          };
+          const errorFuncTestSuccess = () => {
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              ourBoard.removeListener('ready', readyFuncTestFailure);
+              done();
+            }).catch(() => {
+              ourBoard.removeListener('ready', readyFuncTestFailure);
+              done();
+            });
+          };
+          const readyFuncPreMature = () => {
+            ourBoard.removeListener('hardSet', hardSetFuncOnTime);
+            failTestWithErr('the board should not have been ready yet');
+          };
+          const readyFuncTestFailure = () => {
+            failTestWithErr('failed to attach daisy when requested, ready should not be emitted');
+          };
+
+          ourBoard.once('ready', readyFuncPreMature);
+          ourBoard.once('hardSet', hardSetFuncOnTime);
+          ourBoard.connect(masterPortName).catch(err => done(err));
+        } else {
+          done();
+        }
+      });
+      it('daisy attached in soft reset, default board (not daisy) requested by user in options, module tries to remove and succeeds', function (done) {
+        if (ourBoard.isSimulating()) {
+          // Turn hardSet on
+          ourBoard.options.hardSet = true;
+          // Set the options to daisy boardType
+          ourBoard.options.boardType = k.OBCIBoardDefault;
+          // The simulator has a daisy attached
+          ourBoard.options.simulatorDaisyModuleAttached = true;
+
+          const failTestWithErr = (err) => {
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done(err);
+            }).catch(() => {
+              done(err);
+            });
+          };
+          const hardSetFuncOnTime = () => {
+            // Verify the module is set to daisy mode
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+            // Remove the premature ready function because it won't fire
+            ourBoard.removeListener('ready', readyFuncPreMature);
+            // If the board was able to remove the daisy
+            ourBoard.once('ready', readyFuncSuccess); // intended
+            // If the board was unable to remove the daisy.
+            ourBoard.once('error', errorFuncTestFailure); // should not happen
+          };
+          const errorFuncTestFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            failTestWithErr('failed to attach daisy, should emit error');
+          };
+          const readyFuncPreMature = () => {
+            ourBoard.removeListener('hardSet', hardSetFuncOnTime);
+            failTestWithErr('the board should not have been ready yet');
+          };
+          const readyFuncSuccess = () => {
+            // Verify the module switched to default type
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            // Remove because it won't fire
+            ourBoard.removeListener('error', errorFuncTestFailure);
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done();
+            }).catch(() => {
+              done();
+            });
+          };
+
+          ourBoard.once('ready', readyFuncPreMature);
+          ourBoard.once('hardSet', hardSetFuncOnTime);
+          ourBoard.connect(masterPortName).catch(err => done(err));
+        } else {
+          done();
+        }
+      });
+      it('daisy attached in soft reset, daisy requested by user in options, module is successful', function (done) {
+        if (ourBoard.isSimulating()) {
+          // Turn hardSet on
+          ourBoard.options.hardSet = true;
+          // Set the options to daisy boardType
+          ourBoard.options.boardType = k.OBCIBoardDaisy;
+          // The simulator does have a daisy
+          ourBoard.options.simulatorDaisyModuleAttached = true;
+          // The simulator is able to attach daisy
+          ourBoard.options.simulatorDaisyModuleCanBeAttached = true;
+          const failTestWithErr = (err) => {
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done(err);
+            }).catch(() => {
+              done(err);
+            });
+          };
+          var hardSetFuncFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not hardSet');
+          };
+          var errorFuncTestFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not error');
+          };
+          var readyFuncSuccess = () => {
+            ourBoard.removeListener('error', errorFuncTestFailure);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done();
+            }).catch(() => {
+              done();
+            });
+          };
+
+          ourBoard.once('error', errorFuncTestFailure);
+          ourBoard.once('ready', readyFuncSuccess);
+          ourBoard.once('hardSet', hardSetFuncFailure);
+          ourBoard.connect(masterPortName).catch(err => done(err));
+        } else {
+          done();
+        }
+      });
+      it('no daisy attached in soft reset, default requested by user in options, module is successful', function (done) {
+        if (ourBoard.isSimulating()) {
+          // Turn hardSet on
+          ourBoard.options.hardSet = true;
+          // Set the options to default boardType
+          ourBoard.options.boardType = k.OBCIBoardDefault;
+          // The simulator does not have a daisy
+          ourBoard.options.simulatorDaisyModuleAttached = false;
+          // The simulator is able to attach daisy
+          ourBoard.options.simulatorDaisyModuleCanBeAttached = false;
+          const failTestWithErr = (err) => {
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done(err);
+            }).catch(() => {
+              done(err);
+            });
+          };
+          var hardSetFuncFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not hard set');
+          };
+          var errorFuncTestFailure = () => {
+            ourBoard.removeListener('ready', readyFuncSuccess);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            failTestWithErr('should not emit error');
+          };
+          var readyFuncSuccess = () => {
+            ourBoard.removeListener('error', errorFuncTestFailure);
+            ourBoard.removeListener('hardSet', hardSetFuncFailure);
+            // Verify the module is still default
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            ourBoard.options.hardSet = false;
+            ourBoard.disconnect().then(() => { // call disconnect
+              done();
+            }).catch(() => {
+              done();
+            });
+          };
+
+          ourBoard.once('error', errorFuncTestFailure);
+          ourBoard.once('ready', readyFuncSuccess);
+          ourBoard.once('hardSet', hardSetFuncFailure);
+          ourBoard.connect(masterPortName).catch(err => done(err));
+        } else {
+          done();
+        }
       });
     });
     describe('#connected', function () {
@@ -676,7 +972,6 @@ describe('openbci-sdk', function () {
         });
       });
     });
-    // good
     describe('#listPorts', function () {
       it('returns a list of ports', function (done) {
         ourBoard.listPorts().then(ports => {
@@ -791,7 +1086,93 @@ describe('openbci-sdk', function () {
         });
       });
     });
-    // bad
+    describe('#setBoardType', function () {
+      before(function (done) {
+        if (!ourBoard.isConnected()) {
+          ourBoard.connect(masterPortName)
+            .then(done)
+            .catch(done);
+        } else {
+          done();
+        }
+      });
+      after(function (done) {
+        ourBoard.disconnect()
+          .then(done)
+          .catch(done);
+      });
+      it('should resolve for setting max channels to 8 when already 8', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = false;
+          ourBoard.hardSetBoardType('default')
+            .then((res) => {
+              expect(res).to.equal('no daisy to remove');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              done();
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should resolve for setting max channels to 8', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = true;
+          ourBoard.hardSetBoardType('default')
+            .then((res) => {
+              expect(res).to.equal('daisy removed');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              done();
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should resolve for setting max channels to 16 if daisy already attached', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = true;
+          ourBoard.hardSetBoardType('daisy')
+            .then((res) => {
+              expect(res).to.equal('daisy already attached');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+              done();
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should resolve for setting max channels to 16 if daisy able to be attached', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = false;
+          ourBoard.serial.options.daisyCanBeAttached = true;
+          ourBoard.hardSetBoardType('daisy')
+            .then((res) => {
+              expect(res).to.equal('daisy attached');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+              done();
+            }).catch(done);
+        } else {
+          done();
+        }
+      });
+      it('should reject when setting max channels to 16 if daisy not able to be attached', function (done) {
+        if (ourBoard.isSimulating()) {
+          ourBoard.serial.options.daisy = false;
+          ourBoard.serial.options.daisyCanBeAttached = false;
+          ourBoard.hardSetBoardType('daisy')
+            .then(done)
+            .catch((err) => {
+              expect(err).to.equal('unable to attach daisy');
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              done();
+            });
+        } else {
+          done();
+        }
+      });
+      it('should not write a command if invalid channel number', function (done) {
+        ourBoard.hardSetBoardType(0).should.be.rejected.and.notify(done);
+      });
+    });
     describe('#channelOff', function () {
       before(function (done) {
         if (!ourBoard.isConnected()) {
@@ -833,7 +1214,6 @@ describe('openbci-sdk', function () {
         });
       });
     });
-    // good
     describe('#channelOn', function () {
       before(function (done) {
         if (!ourBoard.isConnected()) {
@@ -865,7 +1245,6 @@ describe('openbci-sdk', function () {
         ourBoard.channelOn(0).should.be.rejected.and.notify(done);
       });
     });
-    // bad
     describe('#channelSet', function () {
       this.timeout(6000);
       before(function (done) {

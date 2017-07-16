@@ -708,19 +708,6 @@ describe('openBCISample', function () {
       assert(passed, 'a sample with accel data was produced');
     });
   });
-  describe('#impedanceCalculationForChannel', function () {
-    it('rejects when undefined sampleObject', function (done) {
-      var bad;
-      openBCISample.impedanceCalculationForChannel(bad, 1).should.be.rejected.and.notify(done);
-    });
-    it('rejects when undefined channel number', function (done) {
-      var bad;
-      openBCISample.impedanceCalculationForChannel('taco', bad).should.be.rejected.and.notify(done);
-    });
-    it('rejects when invalid channel number', function (done) {
-      openBCISample.impedanceCalculationForChannel('taco', 69).should.be.rejected.and.notify(done);
-    });
-  });
   describe('#impedanceSummarize', function () {
     var impedanceArray = [];
     var numberOfChannels = 8;
@@ -1221,6 +1208,21 @@ $$$`);
       }
       expect(openBCISample.stripToEOTBuffer(buf).toString()).to.equal(buf.toString());
     });
+    it('should slice the buffer after just eot $$$', function () {
+      let eotBuf = null;
+      let bufPost = null;
+      if (k.getVersionNumber(process.version) >= 6) {
+        // From introduced in node version 6.x.x
+        eotBuf = Buffer.from(k.OBCIParseEOT);
+        bufPost = Buffer.from('tacos');
+      } else {
+        eotBuf = new Buffer(k.OBCIParseEOT);
+        bufPost = new Buffer('tacos');
+      }
+
+      let totalBuf = Buffer.concat([eotBuf, bufPost]);
+      expect(openBCISample.stripToEOTBuffer(totalBuf).toString()).to.equal(bufPost.toString());
+    });
     it('should slice the buffer after eot $$$', function () {
       let bufPre = null;
       let eotBuf = null;
@@ -1255,34 +1257,43 @@ $$$`);
       expect(openBCISample.stripToEOTBuffer(totalBuf)).to.equal(null);
     });
   });
-});
+  describe('#impedanceTestObjDefault', function () {
+    it('should give a new impedance object', function () {
+      const expectedImpedanceObj = {
+        active: false,
+        buffer: [],
+        count: 0,
+        isTestingPInput: false,
+        isTestingNInput: false,
+        onChannel: 0,
+        sampleNumber: 0,
+        continuousMode: false,
+        impedanceForChannel: 0,
+        window: 40
+      };
+      expect(openBCISample.impedanceTestObjDefault()).to.deep.equal(expectedImpedanceObj);
+    });
+  });
+  describe('#impedanceCalculateArray', function () {
+    const numberOfChannels = k.OBCINumberOfChannelsDefault;
+    const newRandomSample = openBCISample.randomSample(numberOfChannels, k.OBCISampleRate250, false, 'none');
 
-describe('#goertzelProcessSample', function () {
-  var numberOfChannels = k.OBCINumberOfChannelsDefault;
-  var goertzelObj = openBCISample.goertzelNewObject(numberOfChannels);
-  var newRandomSample = openBCISample.randomSample(numberOfChannels, k.OBCISampleRate250);
+    afterEach(() => bluebirdChecks.noPendingPromises());
 
-  afterEach(() => bluebirdChecks.noPendingPromises());
-
-  it('produces an array of impedances', function (done) {
-    var passed = false;
-    for (var i = 0; i < openBCISample.GOERTZEL_BLOCK_SIZE + 1; i++) {
-      // console.log('Iteration ' + i)
-      var impedanceArray = openBCISample.goertzelProcessSample(newRandomSample(i), goertzelObj);
-      if (impedanceArray) {
-        // console.log('Impedance Array: ')
-        for (var j = 0; j < numberOfChannels; j++) {
-          console.log('Channel ' + (j + 1) + ': ' + impedanceArray[j].toFixed(8));
-        }
-        passed = true;
+    it('should not produce an array of impedances till window', function () {
+      const impTestObj = openBCISample.impedanceTestObjDefault();
+      for (let i = 0; i < impTestObj.window - 1; i++) {
+        expect(openBCISample.impedanceCalculateArray(newRandomSample(i), impTestObj)).to.equal(null);
       }
-    }
-    setTimeout(() => {
-      if (passed) {
-        done();
-      } else {
-        done('Failed to produce impedance array within block size + 1');
+      expect(impTestObj.buffer.length).to.equal(impTestObj.window - 1);
+    });
+    it('should produce and array of impedances at window', function () {
+      const impTestObj = openBCISample.impedanceTestObjDefault();
+      let impedanceArray = null;
+      for (let i = 0; i < impTestObj.window; i++) {
+        impedanceArray = openBCISample.impedanceCalculateArray(newRandomSample(i), impTestObj);
       }
+      expect(impedanceArray.length).to.equal(numberOfChannels);
     });
   });
 });

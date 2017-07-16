@@ -36,6 +36,23 @@ Python researcher or developer? Check out how easy it is to [get access to the e
 10. [License](#license)
 11. [Roadmap](#roadmap)
 
+### <a name="install"></a> Installation:
+```
+npm install openbci
+```
+#### serialport dependency
+If you encounter this error when trying to run:
+```
+Error: The module '/path/to/your/project/node_modules/serialport/build/Release/serialport.node'
+was compiled against a different Node.js version using
+NODE_MODULE_VERSION 48. This version of Node.js requires
+NODE_MODULE_VERSION 51. Please try re-compiling or re-installing
+the module (for instance, using `npm rebuild` or`npm install`).
+```
+...the issue can be resolved by running:
+```
+npm rebuild --build-from-source
+```
 ### <a name="tldr"></a> TL;DR:
 Get connected and [start streaming right now with the example code](examples/getStreaming/getStreaming.js).
 
@@ -95,6 +112,7 @@ Initializing the board:
 const Cyton = require('openbci').Cyton;
 const ourBoard = new Cyton();
 ```
+Go [checkout out the get streaming example](examples/getStreaming/getStreaming.js)!
 
 For initializing with options, such as verbose print outs:
 
@@ -113,6 +131,16 @@ const ourBoard = new Cyton({
   simulate: true
 });
 ```
+
+Have a daisy?:
+```js
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
+var ourBoard = new OpenBCIBoard({
+    boardType: `daisy`,
+    hardSet: true
+});
+```
+Go [checkout out the get streaming with daisy example](examples/getStreamingDaisy/getStreamingDaisy.js)!
 
 Another useful way to start the simulator:
 ```js
@@ -143,7 +171,7 @@ const ourBoard = new Cyton({
     debug: true
 });
 ```
-ps: go [checkout out the example](examples/debug/debug.js) to do it right now!
+Go [checkout out the debug example](examples/debug/debug.js)!
 
 'ready' event
 ------------
@@ -406,8 +434,9 @@ Board optional configurations.
 
 * `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if firmware on board has been previously configured.
 * `boardType` {String} - Specifies type of OpenBCI board (3 possible boards)
-  * `default` - 8 Channel Cyton board (Default)
-  * `daisy` - 8 Channel Cyton board with Daisy Module - 16 Channels
+  * `default` - 8 Channel OpenBCI board (Default)
+  * `daisy` - 8 Channel board with Daisy Module - 16 Channels
+* `hardSet` {Boolean} - Recommended if using `daisy` board! For some reason, the `daisy` is sometimes not picked up by the module so you can set `hardSet` to true which will ensure the daisy is picked up. (Default `false`)
 * `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
 * `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on the board is not polling the RFduino on the dongle. (Default `false`)
 * `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board. This is useful if you want to test how your application reacts to a user requesting 16 channels but there is no daisy module actually attached, or vice versa, where there is a daisy module attached and the user only wants to use 8 channels. (Default `false`)
@@ -527,7 +556,40 @@ Closes the serial port opened by [`.connect()`](#method-connect).  Waits for sto
 
 **_Returns_** a promise, fulfilled by a successful close of the serial port object, rejected otherwise.
 
-#### <a name="method-impedance-test-all-channels"></a> .impedanceTestAllChannels()
+### <a name="method-get-info"></a> .getInfo()
+
+Get the core info object. It's the object that actually drives the parsing of data.
+
+**_Returns_** Object - {{boardType: string, sampleRate: number, firmware: string, numberOfChannels: number, missedPackets: number}}
+
+### <a name="method-get-settings-for-channel"></a> .getSettingsForChannel(channelNumber)
+
+Gets the specified channelSettings register data from printRegisterSettings call.
+
+**_channelNumber_**
+
+A number specifying which channel you want to get data on. Only 1-8 at this time.
+
+**Note, at this time this does not work for the daisy board**
+
+**_Returns_** a promise, fulfilled if the command was sent to the board and the `.processBytes()` function is ready to reach for the specified channel.
+
+### <a name="method-hard-set-board-type"></a> .hardSetBoardType(boardType)
+
+Used to sync the module and board to `boardType`.
+
+**Note: This has the potential to change the way data is parsed** 
+ 
+**_boardType_**
+
+A String indicating the number of channels.
+
+* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`. 
+* `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
+
+**_Returns_** a promise, fulfilled if both the board and module are the requested `boardType`, rejects otherwise.
+
+### <a name="method-impedance-test-all-channels"></a> .impedanceTestAllChannels()
 
 To apply test signals to the channels on the OpenBCI board used to test for impedance. This can take a little while to actually run (<8 seconds)!
 
@@ -715,7 +777,20 @@ Get the current number of channels available to use. (i.e. 8 or 16).
 
 **_Returns_** a number, the total number of available channels.
 
-#### <a name="method-print-bytes-in"></a> .printBytesIn()
+### <a name="method-override-info-for-board-type"></a> .overrideInfoForBoardType(boardType)
+
+Set the info property for board type. 
+
+**Note: This has the potential to change the way data is parsed** 
+ 
+**_boardType_**
+
+A String indicating the number of channels.
+
+* `default` - Default board: Sample rate is `250Hz` and number of channels is `8`. 
+* `daisy` - Daisy board: Sample rate is `125Hz` and number of channels is `16`.
+
+### <a name="method-print-bytes-in"></a> .printBytesIn()
 
 Prints the total number of bytes that were read in this session to the console.
 
@@ -1078,7 +1153,11 @@ Emitted when a packet (or packets) are dropped. Returns an array.
 
 Emitted when there is an on the serial port.
 
-#### <a name="event-impedance-array"></a> .on('impedanceArray', callback)
+### <a name="event-hard-set"></a> .on('hardSet', callback)
+
+Emitted when the module detects the board is not configured as the options for the module intended and tries to save itself. i.e. when the `daisy` option is `true` and a soft reset message is parsed and the module determines that a daisy was not detected, the module will emit `hardSet` then send an attach daisy command to recover. Either `error` will be emitted if unable to attach or `ready` will be emitted if success.
+
+### <a name="event-impedance-array"></a> .on('impedanceArray', callback)
 
 Emitted when there is a new impedanceArray available. Returns an array.
 
@@ -1119,46 +1198,12 @@ The name of the simulator port.
 
 ### <a name="interfacing-with-other-tools-labstreaminglayer"></a> LabStreamingLayer
 
-[LabStreamingLayer](https://github.com/sccn/labstreaminglayer) by SCCN is a stream management tool designed to time-synchronize multiple data streams, potentially from different sources, over a LAN network with millisecond accuracy (given configuration).
+[LabStreamingLayer](https://github.com/sccn/labstreaminglayer) is a tool for streaming or recording time-series data. It can be used to interface with [Matlab](https://github.com/sccn/labstreaminglayer/tree/master/LSL/liblsl-Matlab), [Python](https://github.com/sccn/labstreaminglayer/tree/master/LSL/liblsl-Python), [Unity](https://github.com/xfleckx/LSL4Unity), and many other programs. 
 
-For example, a VR display device running a Unity simulation may, using the [LSL4Unity](https://github.com/xfleckx/LSL4Unity) library, emit string markers into LSL corresponding to events of interest (For the P300 ERP, this event would be the onset of an attended, unusual noise in a pattern of commonplace ones). The computer doing data collection via the OpenBCI_NodeJS library (potentially with 4ms accuracy) would then output into an LSL stream the EEG and AUX data. LSL can then synchronize the two clocks relative to each other before inputting into a different program or toolkit, like [BCILAB](https://github.com/sccn/BCILAB) for analysis to trigger responses in the Unity display.
+To use LSL with the NodeJS SDK, go to our [labstreaminglayer example](https://github.com/OpenBCI/OpenBCI_NodeJS/tree/master/examples/labstreaminglayer), which contains code that is ready to start an LSL stream of OpenBCI data.
 
-This requires OpenBCI_NodeJS exporting data into LSL. Currently, there does not exist a pre-built NodeJS module for LSL, though LSL comes with tools that could possibly allow creation of one. In the meantime, the simpler route is to use a concurrent python script (driven by NodeJS module [python-shell](https://www.npmjs.com/package/python-shell)) to handoff the data to LSL for you, like so:
+Follow the directions in the [readme](https://github.com/OpenBCI/OpenBCI_NodeJS/blob/master/examples/labstreaminglayer/readme.md) to get started.
 
-In your NodeJS code, before initializing/connecting to the OpenBCIBoard:
-```js
-// Construct LSL Handoff Python Shell
-var PythonShell = require('python-shell');
-var lsloutlet = new PythonShell('LslHandoff.py');
-
-lsloutlet.on('message', function(message){
-    console.log('LslOutlet: ' + message);
-});
-console.log('Python Shell Created for LSLHandoff');
-```
-
-In your NodeJS code, when reading samples:
-```js
-st = sample.channelData.join(' ')
-//getTime returns milliseconds since midnight 1970/01/01
-var s = ''+ sample.timeStamp + ': '+ st
-lsloutlet.send(s)
-```
-
-in LSLHandoff.py:
-```py
-from pylsl import StreamInfo, StreamOutlet
-info = StreamInfo('OpenBCI_EEG', 'EEG', 8, 250, 'float32', '[RANDOM NUMBER HERE]')
-outlet = StreamOutlet(info)
-while True:
-    strSample = raw_input().split(': ',1)
-    sample = map(float, strSample[1].split(' '))
-    stamp = float(strSample[0])
-
-    outlet.push_sample(sample, stamp)
-    print('Pushed Sample At: ' + strSample[0])
-```
-AUX data would be done the same way in a separate LSL stream.
 
 ## <a name="developing"></a> Developing:
 ### <a name="developing-running"></a> Running:

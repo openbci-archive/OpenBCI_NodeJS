@@ -1,5 +1,5 @@
 /**
- * This is an example of debugging the board. Thanks to Karl @baffo32
+ * This is an example from the readme.md
  * On windows you should run with PowerShell not git bash.
  * Install
  *   [nodejs](https://nodejs.org/en/)
@@ -9,15 +9,19 @@
  *   do `npm install`
  *   then `npm start`
  */
-
-var stream = true;
-var debug = true; // Pretty print any bytes in and out... it's amazing...
+var debug = false; // Pretty print any bytes in and out... it's amazing...
 var verbose = true; // Adds verbosity to functions
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
 
+var OpenBCIBoard = require('openbci').OpenBCIBoard;
 var ourBoard = new OpenBCIBoard({
+  boardType: 'daisy',
   debug: debug,
+  hardSet: true,
   verbose: verbose
+});
+
+ourBoard.on('error', (err) => {
+  console.log(err);
 });
 
 ourBoard.autoFindOpenBCIBoard().then(portName => {
@@ -27,42 +31,28 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
      * Only works if one board is plugged in
      * i.e. ourBoard.connect(portName).....
      */
-    // Call to connect
-    ourBoard.connect(portName).then(() => {
-      console.log(`connected`);
-    })
-      .catch(err => {
-        console.log(`connect: ${err}`);
+    ourBoard.connect(portName) // Port name is a serial port name, see `.listPorts()`
+      .then(() => {
+        ourBoard.once('ready', () => {
+          ourBoard.streamStart();
+          ourBoard.on('sample', (sample) => {
+            /** Work with sample */
+            for (let i = 0; i < ourBoard.numberOfChannels(); i++) {
+              console.log(`Channel ${(i + 1)}: ${sample.channelData[i].toFixed(8)} Volts.`);
+              // prints to the console
+              //  "Channel 1: 0.00001987 Volts."
+              //  "Channel 2: 0.00002255 Volts."
+              //  ...
+              //  "Channel 16: -0.00001875 Volts."
+            }
+          });
+        });
       });
   } else {
     /** Unable to auto find OpenBCI board */
     console.log('Unable to auto find OpenBCI board');
   }
 });
-
-/**
- * The board is ready to start streaming after the ready function is fired.
- */
-var readyFunc = () => {
-  // Get the sample rate after 'ready'
-  if (stream) {
-    ourBoard.streamStart()
-      .catch(err => {
-        console.log(`stream start: ${err}`);
-      });
-  }
-};
-
-var sampleFunc = sample => {
-  /**
-   * Checkout the README.md for all other API functions.
-   * We support every feature.
-   * */
-};
-
-// Subscribe to your functions
-ourBoard.on('ready', readyFunc);
-ourBoard.on('sample', sampleFunc);
 
 function exitHandler (options, err) {
   if (options.cleanup) {
@@ -73,9 +63,6 @@ function exitHandler (options, err) {
   if (err) console.log(err.stack);
   if (options.exit) {
     if (verbose) console.log('exit');
-    if (stream) {
-      ourBoard.streamStop().catch(console.log);
-    }
     ourBoard.disconnect().catch(console.log);
   }
 }

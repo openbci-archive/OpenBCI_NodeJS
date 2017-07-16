@@ -23,6 +23,59 @@
 ### Enhancements
 * Add more tests for public API functions.
 
+# 1.5.2
+
+### Dependency Package Updates
+* `performance-now`: from `^0.2.0` to `2.1.0`
+* `serialport` - from `4.0.1` to `4.0.7`
+
+### Development Dependency Package Updates
+* `bluebird`: from `3.4.6` to `3.5.0`
+* `chai-as-promised`: from `^5.2.0` to `^6.0.0`
+* `codecov`: from `^1.0.1` to `^2.1.0`
+* `semistandard`: from `^9.0.0` to `^10.0.0`
+* `sinon`: from `^1.17.2` to `^2.1.0`
+* `snazzy`: from `^5.0.0` to `^6.0.0`
+
+# 1.5.1
+
+### New Features
+* Add new example for Lab stream layer (#139) thanks @gabrielibagon
+
+### Breaking changes
+* Removed `impedanceCalculationForChannel()` and `impedanceCalculationForAllChannels` from `OpenBCISample.js`
+
+### Bug Fixes
+* Fixes #28- Impedance not working properly.
+
+# 1.5.0
+
+### New Features
+* New simulator option `simulatorDaisyModuleCanBeAttached` - Boolean, deafults to true, allows the simulation of the a hot swapped daisy board or simulates a misinformed module.
+* New `EventEmitter` - `hardSet` - for when the module detects the board is not configured as the options for the module intended and tries to save itself. i.e. when the `daisy` option is `true` and a soft reset message is parsed and the module determines that a daisy was not detected, the module will emit `hardSet` then send an attach daisy command to recover. Either `error` will be emitted if unable to attach or `ready` will be emitted if success.
+* Add example for streaming with `daisy` and `hardSet`.
+
+### Breaking changes
+* `.setInfoForBoardType()` changed to `.overrideInfoForBoardType()` to elevate it's dangerous nature.
+* `.setMaxChannels()` changed to `.hardSetBoardType()` and input changed from numerical to string: 8 and 16 to `default` and `daisy` respectively.
+
+### Bug Fixes
+* Fixes #131 - 16 chan not working by sending a channel command and parsing the return.
+* Fixed bug where end of transmission characters would not be ejected from buffer.
+ 
+### Enhancements
+* Separated radio tests from main board test file.
+ 
+# 1.4.4
+
+### New Features
+* Set max number of channels for the board to use with `.setMaxChannels()` see readme.md
+* Set the core info object that drives the module with `.overrideInfoForBoardType()` see readme.md
+* Get info for the core object that drives the module with `.getInfo()` see readme.md
+
+### Work In Progress
+* Bug where daisy would sometimes not be recognized which destroyed all data.
+
 # 1.4.3
 
 ### New examples
@@ -262,7 +315,7 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 ### Bug Fixes
 
 * updates to README.me and comments to change ntp to sntp, because the two are similar, but not the same and we do not want to be misleading
-* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCICyton.js
+* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCICyton-old.js
 * Add `.sntpNow()` function to get ntp time.
 
 # 0.3.1

@@ -1,108 +1,26 @@
 'use strict';
+const bufferEqual = require('buffer-equal');
 const EventEmitter = require('events').EventEmitter;
+const math = require('mathjs');
 const util = require('util');
-const stream = require('stream');
 const SerialPort = require('serialport');
 const openBCISample = require('./openBCISample');
 const k = openBCISample.k;
 const openBCISimulator = require('./openBCISimulator');
 const Sntp = require('sntp');
-const bufferEqual = require('buffer-equal');
-const math = require('mathjs');
-
+const openBCIUtils = require('./openBCIUtils');
 /**
- * @typedef {Object} InitializationObject Board optional configurations.
- * @property {Number} baudRate Baud Rate, defaults to 115200. Manipulating this is allowed if
- *                      firmware on board has been previously configured.
- *
- * @property {String} boardType Specifies type of OpenBCI board.
- *          3 Possible Boards:
- *              `default` - 8 Channel OpenBCI board (Default)
- *              `daisy` - 8 Channel OpenBCI board with Daisy Module. Total of 16 channels.
- *              `ganglion` - 4 Channel board
- *                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
- *
- * @property {Boolean} hardSet Recommended if using `daisy` board! For some reason, the `daisy` is sometimes
- *                  not picked up by the module so you can set `hardSet` to true which will ensure the daisy
- *                  is picked up. (Default `false`)
- *
- * @property {Boolean} simulate Full functionality, just mock data. Must attach Daisy module by setting
- *                  `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
- *
- * @property {Boolean} simulatorBoardFailure Simulates board communications failure. This occurs when the RFduino on
- *                  the board is not polling the RFduino on the dongle. (Default `false`)
- *
- * @property {Boolean} simulatorDaisyModuleAttached Simulates a daisy module being attached to the OpenBCI board.
- *                  This is useful if you want to test how your application reacts to a user requesting 16 channels
- *                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
- *                  attached and the user only wants to use 8 channels. (Default `false`)
- *
- * @property {Boolean} simulatorDaisyModuleCanBeAttached Allows the simulation of the a hot swapped daisy board.
- *                  For example: You coule simulate if the board has only detected 8 channels and the user requested
- *                  16 channels.  (Default `true`)
- *
- * @property {String} simulatorFirmwareVersion Allows simulator to be started with firmware version 2 features
- *          2 Possible Options:
- *              `v1` - Firmware Version 1 (Default)
- *              `v2` - Firmware Version 2
- *
- * @property {String} simulatorFragmentation Specifies how to break packets to simulate fragmentation, which
- *                  occurs commonly in real devices.  It is recommended to test code with this enabled.
- *          4 Possible Options:
- *              `none` - do not fragment packets; output complete chunks immediately when produced (Default)
- *              `random` - output random small chunks of data interspersed with full buffers
- *              `fullBuffers` - allow buffers to fill up until the latency timer has expired
- *              `oneByOne` - output each byte separately
- *
- * @property {Number} simulatorLatencyTime The time in milliseconds to wait before sending partially full buffers,
- *                  if `simulatorFragmentation` is specified. (Default `16`)
- *
- * @property {Number} simulatorBufferSize The size of a full buffer of data, if `simulatorFragmentation` is
- *                  specified. (Default `4096`)
- *
- * @property {Boolean} simulatorHasAccelerometer Sets simulator to send packets with accelerometer data. (Default `true`)
- *
- * @property {Boolean} simulatorInjectAlpha Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
- *
- * @property {String} simulatorInjectLineNoise Injects line noise on channels.
- *          3 Possible Options:
- *              `60Hz` - 60Hz line noise (Default) [America]
- *              `50Hz` - 50Hz line noise [Europe]
- *              `none` - Do not inject line noise.
- *
- * @property {Number} simulatorSampleRate The sample rate to use for the simulator. Simulator will set to 125 if
-  *                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that
- *                  setting and this sample rate will be used. (Default is `250`)
- *
- * @property {Boolean} simulatorSerialPortFailure Simulates not being able to open a serial connection. Most likely
- *                  due to a OpenBCI dongle not being plugged in.
- *
- * @property {Boolean} sntpTimeSync Syncs the module up with an SNTP time server and uses that as single source
- *                  of truth instead of local computer time. If you are running experiements on your local
- *                  computer, keep this `false`. (Default `false`)
- *
- * @property {String} sntpTimeSyncHost The ntp server to use, can be either sntp or ntp. (Defaults `pool.ntp.org`).
- *
- * @property {Number} sntpTimeSyncPort The port to access the ntp server. (Defaults `123`)
- *
- * @property {Boolean} verbose Print out useful debugging events. (Default `false`)
- *
- * @property {Boolean} debug Print out a raw dump of bytes sent and received. (Default `false`)
+* @description SDK for OpenBCI Board {@link www.openbci.com}
+* @module 'openbci-sdk'
 */
 
-/**
- * Options object
- * @type {InitializationObject}
- * @private
- */
-var _options = {
+const _options = {
   boardType: [k.OBCIBoardDefault, k.OBCIBoardDaisy, k.OBCIBoardGanglion],
   baudRate: 115200,
   hardSet: false,
   simulate: false,
   simulatorBoardFailure: false,
   simulatorDaisyModuleAttached: false,
-  simulatorDaisyModuleCanBeAttached: true,
   simulatorFirmwareVersion: [k.OBCIFirmwareV1, k.OBCIFirmwareV2],
   simulatorFragmentation: [k.OBCISimulatorFragmentationNone, k.OBCISimulatorFragmentationRandom, k.OBCISimulatorFragmentationFullBuffers, k.OBCISimulatorFragmentationOneByOne],
   simulatorLatencyTime: 16,
@@ -120,19 +38,84 @@ var _options = {
   debug: false
 };
 
-
-
 /**
- * @description The initialization method to call first, before any other method.
- * @param options {InitializationObject} (optional) - Board optional configurations.
- * @constructor
- * @author AJ Keller (@pushtheworldllc)
- */
-function OpenBCICyton (options) {
+* @description The initialization method to call first, before any other method.
+* @param options (optional) - Board optional configurations.
+*     - `baudRate` {Number} - Baud Rate, defaults to 115200. Manipulating this is allowed if
+*                      firmware on board has been previously configured.
+*
+*     - `boardType` {String} - Specifies type of OpenBCI board.
+*          3 Possible Boards:
+*              `default` - 8 Channel OpenBCI board (Default)
+*              `daisy` - 8 Channel OpenBCI board with Daisy Module. Total of 16 channels.
+*              `ganglion` - 4 Channel board
+*                  (NOTE: THIS IS IN-OP TIL RELEASE OF GANGLION BOARD 07/2016)
+*
+*     - `simulate` {Boolean} - Full functionality, just mock data. Must attach Daisy module by setting
+*                  `simulatorDaisyModuleAttached` to `true` in order to get 16 channels. (Default `false`)
+*
+*     - `simulatorBoardFailure` {Boolean} - Simulates board communications failure. This occurs when the RFduino on
+*                  the board is not polling the RFduino on the dongle. (Default `false`)
+*
+*     - `simulatorDaisyModuleAttached` {Boolean} - Simulates a daisy module being attached to the OpenBCI board.
+*                  This is useful if you want to test how your application reacts to a user requesting 16 channels
+*                  but there is no daisy module actually attached, or vice versa, where there is a daisy module
+*                  attached and the user only wants to use 8 channels. (Default `false`)
+*
+*     - `simulatorFirmwareVersion` {String} - Allows simulator to be started with firmware version 2 features
+*          2 Possible Options:
+*              `v1` - Firmware Version 1 (Default)
+*              `v2` - Firmware Version 2
+*
+*     - `simulatorFragmentation` {String} - Specifies how to break packets to simulate fragmentation, which
+*                  occurs commonly in real devices.  It is recommended to test code with this enabled.
+*          4 Possible Options:
+*              `none` - do not fragment packets; output complete chunks immediately when produced (Default)
+*              `random` - output random small chunks of data interspersed with full buffers
+*              `fullBuffers` - allow buffers to fill up until the latency timer has expired
+*              `oneByOne` - output each byte separately
+*
+*     - `simulatorLatencyTime` {Number} - The time in milliseconds to wait before sending partially full buffers,
+                   if `simulatorFragmentation` is specified. (Default `16`)
+*
+*     - `simulatorBufferSize` {Number} - The size of a full buffer of data, if `simulatorFragmentation` is
+*                  specified. (Default `4096`)
+*
+*     - `simulatorHasAccelerometer` - {Boolean} - Sets simulator to send packets with accelerometer data. (Default `true`)
+*
+*     - `simulatorInjectAlpha` - {Boolean} - Inject a 10Hz alpha wave in Channels 1 and 2 (Default `true`)
+*
+*     - `simulatorInjectLineNoise` {String} - Injects line noise on channels.
+*          3 Possible Options:
+*              `60Hz` - 60Hz line noise (Default) [America]
+*              `50Hz` - 50Hz line noise [Europe]
+*              `none` - Do not inject line noise.
+*
+*     - `simulatorSampleRate` {Number} - The sample rate to use for the simulator. Simulator will set to 125 if
+*                  `simulatorDaisyModuleAttached` is set `true`. However, setting this option overrides that
+*                  setting and this sample rate will be used. (Default is `250`)
+*
+*     - `simulatorSerialPortFailure` {Boolean} - Simulates not being able to open a serial connection. Most likely
+*                  due to a OpenBCI dongle not being plugged in.
+*
+*     - `sntpTimeSync` - {Boolean} Syncs the module up with an SNTP time server and uses that as single source
+*                  of truth instead of local computer time. If you are running experiements on your local
+*                  computer, keep this `false`. (Default `false`)
+*
+*     - `sntpTimeSyncHost` - {String} The ntp server to use, can be either sntp or ntp. (Defaults `pool.ntp.org`).
+*
+*     - `sntpTimeSyncPort` - {Number} The port to access the ntp server. (Defaults `123`)
+*
+*     - `verbose` {Boolean} - Print out useful debugging events. (Default `false`)
+*
+*     - `debug` {Boolean} - Print out a raw dump of bytes sent and received. (Default `false`)
+*
+* @constructor
+* @author AJ Keller (@pushtheworldllc)
+*/
+function Cyton (options) {
   options = (typeof options !== 'function') && options || {};
   var opts = {};
-
-  stream.Stream.call(this);
 
   /** Configuring Options */
   var o;
@@ -164,9 +147,6 @@ function OpenBCICyton (options) {
   for (o in options) throw new Error('"' + o + '" is not a valid option');
 
   // Set to global options object
-  /**
-   * @type {InitializationObject}
-   */
   this.options = opts;
 
   /** Properties (keep alphabetical) */
@@ -180,7 +160,16 @@ function OpenBCICyton (options) {
   this.buffer = null;
   this.masterBuffer = masterBufferMaker();
   // Objects
-  this.impedanceTest = openBCISample.impedanceTestObjDefault();
+  this.goertzelObject = openBCISample.goertzelNewObject(k.numberOfChannelsForBoardType(this.options.boardType));
+  this.impedanceTest = {
+    active: false,
+    isTestingPInput: false,
+    isTestingNInput: false,
+    onChannel: 0,
+    sampleNumber: 0,
+    continuousMode: false,
+    impedanceForChannel: 0
+  };
   this.info = {
     boardType: this.options.boardType,
     sampleRate: k.OBCISampleRate125,
@@ -213,7 +202,6 @@ function OpenBCICyton (options) {
   this.timeOfPacketArrival = 0;
   this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
   // Strings
-  this.portName = null;
 
   // NTP
   if (this.options.sntpTimeSync) {
@@ -235,17 +223,14 @@ function OpenBCICyton (options) {
   }
 }
 
-// This allows us to use the emitter class freely outside of the module
-util.inherits(OpenBCIBoard, stream.Stream);
-
 /**
- * @description The essential precursor method to be called initially to establish a
- *              serial connection to the OpenBCI board.
- * @param portName - a string that contains the port name of the OpenBCIBoard.
- * @returns {Promise} if the board was able to connect.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.connect = function (portName) {
+* @description The essential precursor method to be called initially to establish a
+*              serial connection to the OpenBCI board.
+* @param portName - a string that contains the port name of the Cyton.
+* @returns {Promise} if the board was able to connect.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.connect = function (portName) {
   return new Promise((resolve, reject) => {
     if (this.isConnected()) return reject('already connected!');
 
@@ -260,7 +245,6 @@ OpenBCICyton.prototype.connect = function (portName) {
         alpha: this.options.simulatorInjectAlpha,
         boardFailure: this.options.simulatorBoardFailure,
         daisy: this.options.simulatorDaisyModuleAttached,
-        daisyCanBeAttached: this.options.simulatorDaisyModuleCanBeAttached,
         drift: this.options.simulatorInternalClockDrift,
         firmwareVersion: this.options.simulatorFirmwareVersion,
         fragmentation: this.options.simulatorFragmentation,
@@ -328,10 +312,10 @@ OpenBCICyton.prototype.connect = function (portName) {
 };
 
 /**
- * @description Called once when for any reason the serial port is no longer open.
- * @private
- */
-OpenBCICyton.prototype._disconnected = function (err) {
+* @description Called once when for any reason the serial port is no longer open.
+* @private
+*/
+Cyton.prototype._disconnected = function (err) {
   this._streaming = false;
 
   clearTimeout(this.writer);
@@ -349,12 +333,12 @@ OpenBCICyton.prototype._disconnected = function (err) {
 };
 
 /**
- * @description Closes the serial port. Waits for stop streaming command to
- *  be sent if currently streaming.
- * @returns {Promise} - fulfilled by a successful close of the serial port object, rejected otherwise.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.disconnect = function () {
+* @description Closes the serial port. Waits for stop streaming command to
+*  be sent if currently streaming.
+* @returns {Promise} - fulfilled by a successful close of the serial port object, rejected otherwise.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.disconnect = function () {
   return Promise.resolve()
     .then(() => {
       if (this.isStreaming()) {
@@ -377,39 +361,31 @@ OpenBCICyton.prototype.disconnect = function () {
 };
 
 /**
- * @description Checks if the driver is connected to a board.
- * @returns {boolean} - True if connected.
- */
-OpenBCICyton.prototype.isConnected = function () {
+* @description Checks if the driver is connected to a board.
+* @returns {boolean} - True if connected.
+*/
+Cyton.prototype.isConnected = function () {
   if (!this.serial) return false;
   return this.serial.isOpen();
 };
 
 /**
- * @description Checks if the board is currently sending samples.
- * @returns {boolean} - True if streaming.
- */
-OpenBCICyton.prototype.isSimulating = function () {
-  return this.options.simulate;
-};
-
-/**
- * @description Checks if the board is currently sending samples.
- * @returns {boolean} - True if streaming.
- */
-OpenBCICyton.prototype.isStreaming = function () {
+* @description Checks if the board is currently sending samples.
+* @returns {boolean} - True if streaming.
+*/
+Cyton.prototype.isStreaming = function () {
   return this._streaming;
 };
 
 /**
- * @description Sends a start streaming command to the board.
- * @returns {Promise} indicating if the signal was able to be sent.
- * Note: You must have successfully connected to an OpenBCI board using the connect
- *           method. Just because the signal was able to be sent to the board, does not
- *           mean the board will start streaming.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.streamStart = function () {
+* @description Sends a start streaming command to the board.
+* @returns {Promise} indicating if the signal was able to be sent.
+* Note: You must have successfully connected to an OpenBCI board using the connect
+*           method. Just because the signal was able to be sent to the board, does not
+*           mean the board will start streaming.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.streamStart = function () {
   return new Promise((resolve, reject) => {
     if (this.isStreaming()) return reject('Error [.streamStart()]: Already streaming');
     this._streaming = true;
@@ -419,14 +395,14 @@ OpenBCICyton.prototype.streamStart = function () {
 };
 
 /**
- * @description Sends a stop streaming command to the board.
- * @returns {Promise} indicating if the signal was able to be sent.
- * Note: You must have successfully connected to an OpenBCI board using the connect
- *           method. Just because the signal was able to be sent to the board, does not
- *           mean the board stopped streaming.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.streamStop = function () {
+* @description Sends a stop streaming command to the board.
+* @returns {Promise} indicating if the signal was able to be sent.
+* Note: You must have successfully connected to an OpenBCI board using the connect
+*           method. Just because the signal was able to be sent to the board, does not
+*           mean the board stopped streaming.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.streamStop = function () {
   return new Promise((resolve, reject) => {
     if (!this.isStreaming()) return reject('Error [.streamStop()]: No stream to stop');
     this._streaming = false;
@@ -435,12 +411,12 @@ OpenBCICyton.prototype.streamStop = function () {
 };
 
 /**
- * @description To start simulating an open bci board
- * Note: Must be called after the constructor
- * @returns {Promise} - Fulfilled if able to enter simulate mode, reject if not.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.simulatorEnable = function () {
+* @description To start simulating an open bci board
+* Note: Must be called after the constructor
+* @returns {Promise} - Fulfilled if able to enter simulate mode, reject if not.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.simulatorEnable = function () {
   return new Promise((resolve, reject) => {
     if (this.options.simulate) return reject('Already simulating'); // Are we already in simulate mode?
     if (this.isConnected()) {
@@ -458,12 +434,12 @@ OpenBCICyton.prototype.simulatorEnable = function () {
 };
 
 /**
- * @description To stop simulating an open bci board
- * Note: Must be called after the constructor
- * @returns {Promise} - Fulfilled if able to stop simulate mode, reject if not.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.simulatorDisable = function () {
+* @description To stop simulating an open bci board
+* Note: Must be called after the constructor
+* @returns {Promise} - Fulfilled if able to stop simulate mode, reject if not.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.simulatorDisable = function () {
   return new Promise((resolve, reject) => {
     if (!this.options.simulate) return reject('Not simulating'); // Are we already not in simulate mode?
     if (this.isConnected()) {
@@ -481,14 +457,14 @@ OpenBCICyton.prototype.simulatorDisable = function () {
 };
 
 /**
- * @description To be able to easily write to the board but ensure that we never send commands
- *              with less than a 10ms spacing between sends in early version boards. This uses
- *              an array and shifts off the entries until there are none left.
- * @param dataToWrite - Either a single character or an Array of characters
- * @returns {Promise}
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.write = function (dataToWrite) {
+* @description To be able to easily write to the board but ensure that we never send commands
+*              with less than a 10ms spacing between sends in early version boards. This uses
+*              an array and shifts off the entries until there are none left.
+* @param dataToWrite - Either a single character or an Array of characters
+* @returns {Promise}
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.write = function (dataToWrite) {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) {
       reject('not connected');
@@ -535,13 +511,13 @@ OpenBCICyton.prototype.write = function (dataToWrite) {
 };
 
 /**
- * @description Should be used to send data to the board
- * @param data {Buffer} - The data to write out
- * @returns {Promise} if signal was able to be sent
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._writeAndDrain = function (data) {
-  this._debugBytes('>>>', data);
+* @description Should be used to send data to the board
+* @param data {Buffer} - The data to write out
+* @returns {Promise} if signal was able to be sent
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._writeAndDrain = function (data) {
+  if (this.options.debug) openBCIUtils.debugBytes('>>>', data);
 
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Serial port not open');
@@ -559,15 +535,15 @@ OpenBCICyton.prototype._writeAndDrain = function (data) {
 };
 
 /**
- * @description Automatically find an OpenBCI board.
- * Note: This method is used for convenience and should be used when trying to
- *           connect to a board. If you find a case (i.e. a platform (linux,
- *           windows...) that this does not work, please open an issue and
- *           we will add support!
- * @returns {Promise} - Fulfilled with portName, rejected when can't find the board.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.autoFindOpenBCIBoard = function () {
+* @description Automatically find an OpenBCI board.
+* Note: This method is used for convenience and should be used when trying to
+*           connect to a board. If you find a case (i.e. a platform (linux,
+*           windows...) that this does not work, please open an issue and
+*           we will add support!
+* @returns {Promise} - Fulfilled with portName, rejected when can't find the board.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.autoFindOpenBCIBoard = function () {
   var serialPatterns = [
     { // mac
       comName: /usbserial-D/
@@ -594,16 +570,16 @@ OpenBCICyton.prototype.autoFindOpenBCIBoard = function () {
         }
         // This is one big if statement
         if (ports.some(port => {
-            return serialPatterns.some(patterns => {
-              for (var attribute in patterns) {
-                if (!String(port[attribute]).match(patterns[attribute])) {
-                  return false;
-                }
+          return serialPatterns.some(patterns => {
+            for (var attribute in patterns) {
+              if (!String(port[attribute]).match(patterns[attribute])) {
+                return false;
               }
-              this.portName = port.comName;
-              return true;
-            });
-          })) {
+            }
+            this.portName = port.comName;
+            return true;
+          });
+        })) {
           if (this.options.verbose) console.log('auto found board');
           resolve(this.portName);
         } else {
@@ -616,14 +592,14 @@ OpenBCICyton.prototype.autoFindOpenBCIBoard = function () {
 };
 
 /**
- * @description Convenience method to determine if you can use firmware v2.x.x
- *  capabilities.
- * @returns {boolean} - True if using firmware version 2 or greater. Should
- *  be called after a `.softReset()` because we can parse the output of that
- *  to determine if we are using firmware version 2.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.usingVersionTwoFirmware = function () {
+* @description Convenience method to determine if you can use firmware v2.x.x
+*  capabilities.
+* @returns {boolean} - True if using firmware version 2 or greater. Should
+*  be called after a `.softReset()` because we can parse the output of that
+*  to determine if we are using firmware version 2.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.usingVersionTwoFirmware = function () {
   if (this.options.simulate) {
     return this.options.simulatorFirmwareVersion === k.OBCIFirmwareV2;
   } else {
@@ -632,17 +608,17 @@ OpenBCICyton.prototype.usingVersionTwoFirmware = function () {
 };
 
 /**
- * @description Used to set the system radio channel number. The function will reject if not
- *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
- *      Lastly and more important, if the board is not running the new firmware then this functionality does not
- *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
- * @since 1.0.0
- * @returns {Promise} - Resolves with the new channel number, rejects with err.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.radioChannelSet = function (channelNumber) {
+* @description Used to set the system radio channel number. The function will reject if not
+*      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+*      Lastly and more important, if the board is not running the new firmware then this functionality does not
+*      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
+* @since 1.0.0
+* @returns {Promise} - Resolves with the new channel number, rejects with err.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.radioChannelSet = function (channelNumber) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
@@ -681,19 +657,19 @@ OpenBCICyton.prototype.radioChannelSet = function (channelNumber) {
 };
 
 /**
- * @description Used to set the ONLY the radio dongle Host channel number. This will fix your radio system if
- *      your dongle and board are not on the right channel and bring down your radio system if you take your
- *      dongle and board are not on the same channel. Use with caution! The function will reject if not
- *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
- *      Lastly and more important, if the board is not running the new firmware then this functionality does not
- *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
- * @since 1.0.0
- * @returns {Promise} - Resolves with the new channel number, rejects with err.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.radioChannelSetHostOverride = function (channelNumber) {
+* @description Used to set the ONLY the radio dongle Host channel number. This will fix your radio system if
+*      your dongle and board are not on the right channel and bring down your radio system if you take your
+*      dongle and board are not on the same channel. Use with caution! The function will reject if not
+*      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+*      Lastly and more important, if the board is not running the new firmware then this functionality does not
+*      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @param `channelNumber` {Number} - The channel number you want to set to, 1-25.
+* @since 1.0.0
+* @returns {Promise} - Resolves with the new channel number, rejects with err.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.radioChannelSetHostOverride = function (channelNumber) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
@@ -731,18 +707,18 @@ OpenBCICyton.prototype.radioChannelSetHostOverride = function (channelNumber) {
 };
 
 /**
- * @description Used to query the OpenBCI system for it's radio channel number. The function will reject if not
- *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
- *      Lastly and more important, if the board is not running the new firmware then this functionality does not
- *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
- *      an Object. See `returns` below.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @since 1.0.0
- * @returns {Promise} - Resolve an object with keys `channelNumber` which is a Number and `err` which contains an error in
- *      the condition that there system is experiencing board communications failure.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.radioChannelGet = function () {
+* @description Used to query the OpenBCI system for it's radio channel number. The function will reject if not
+*      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+*      Lastly and more important, if the board is not running the new firmware then this functionality does not
+*      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+*      an Object. See `returns` below.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @since 1.0.0
+* @returns {Promise} - Resolve an object with keys `channelNumber` which is a Number and `err` which contains an error in
+*      the condition that there system is experiencing board communications failure.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.radioChannelGet = function () {
   // The function to run on timeout
   var badCommsTimeout;
 
@@ -781,18 +757,18 @@ OpenBCICyton.prototype.radioChannelGet = function () {
 };
 
 /**
- * @description Used to query the OpenBCI system for it's device's poll time. The function will reject if not
- *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
- *      Lastly and more important, if the board is not running the new firmware then this functionality does not
- *      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
- *      the poll time when fulfilled. It's important to note that if the board is not on, this function will always
- *      be rejected with a failure message.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @since 1.0.0
- * @returns {Promise} - Resolves with the poll time, rejects with an error message.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.radioPollTimeGet = function () {
+* @description Used to query the OpenBCI system for it's device's poll time. The function will reject if not
+*      connected to the serial port of the dongle. Further the function should reject if currently streaming.
+*      Lastly and more important, if the board is not running the new firmware then this functionality does not
+*      exist and thus this method will reject. If the board is using firmware 2+ then this function should resolve
+*      the poll time when fulfilled. It's important to note that if the board is not on, this function will always
+*      be rejected with a failure message.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @since 1.0.0
+* @returns {Promise} - Resolves with the poll time, rejects with an error message.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.radioPollTimeGet = function () {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
@@ -827,19 +803,19 @@ OpenBCICyton.prototype.radioPollTimeGet = function () {
 };
 
 /**
- * @description Used to set the OpenBCI poll time. With the RFduino configuration, the Dongle is the Host and the
- *      Board is the Device. Only the Device can initiate a communication between the two entities. Therefore this
- *      sets the interval at which the Device polls the Host for new information. Further the function should reject
- *      if currently streaming. Lastly and more important, if the board is not running the new firmware then this
- *      functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this
- *      function should resolve.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @param `pollTime` {Number} - The poll time you want to set for the system. 0-255
- * @since 1.0.0
- * @returns {Promise} - Resolves with new poll time, rejects with error message.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.radioPollTimeSet = function (pollTime) {
+* @description Used to set the OpenBCI poll time. With the RFduino configuration, the Dongle is the Host and the
+*      Board is the Device. Only the Device can initiate a communication between the two entities. Therefore this
+*      sets the interval at which the Device polls the Host for new information. Further the function should reject
+*      if currently streaming. Lastly and more important, if the board is not running the new firmware then this
+*      functionality does not exist and thus this method will reject. If the board is using firmware 2+ then this
+*      function should resolve.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @param `pollTime` {Number} - The poll time you want to set for the system. 0-255
+* @since 1.0.0
+* @returns {Promise} - Resolves with new poll time, rejects with error message.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.radioPollTimeSet = function (pollTime) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
@@ -878,22 +854,22 @@ OpenBCICyton.prototype.radioPollTimeSet = function (pollTime) {
 };
 
 /**
- * @description Used to set the OpenBCI Host (Dongle) baud rate. With the RFduino configuration, the Dongle is the
- *      Host and the Board is the Device. Only the Device can initiate a communication between the two entities.
- *      There exists a detrimental error where if the Host is interrupted by the radio during a Serial write, then
- *      all hell breaks loose. So this is an effort to eliminate that problem by increasing the rate at which serial
- *      data is sent from the Host to the Serial driver. The rate can either be set to default or fast.
- *      Further the function should reject if currently streaming. Lastly and more important, if the board is not
- *      running the new firmware then this functionality does not exist and thus this method will reject.
- *      If the board is using firmware 2+ then this function should resolve the new baud rate after closing the
- *      current serial port and reopening one.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @since 1.0.0
- * @param speed {String} - The baud rate that to switch to. Can be either `default` (115200) or `fast` (230400)
- * @returns {Promise} - Resolves a {Number} that is the new baud rate, rejects on error.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.radioBaudRateSet = function (speed) {
+* @description Used to set the OpenBCI Host (Dongle) baud rate. With the RFduino configuration, the Dongle is the
+*      Host and the Board is the Device. Only the Device can initiate a communication between the two entities.
+*      There exists a detrimental error where if the Host is interrupted by the radio during a Serial write, then
+*      all hell breaks loose. So this is an effort to eliminate that problem by increasing the rate at which serial
+*      data is sent from the Host to the Serial driver. The rate can either be set to default or fast.
+*      Further the function should reject if currently streaming. Lastly and more important, if the board is not
+*      running the new firmware then this functionality does not exist and thus this method will reject.
+*      If the board is using firmware 2+ then this function should resolve the new baud rate after closing the
+*      current serial port and reopening one.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @since 1.0.0
+* @param speed {String} - The baud rate that to switch to. Can be either `default` (115200) or `fast` (230400)
+* @returns {Promise} - Resolves a {Number} that is the new baud rate, rejects on error.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.radioBaudRateSet = function (speed) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
@@ -953,18 +929,18 @@ OpenBCICyton.prototype.radioBaudRateSet = function (speed) {
 };
 
 /**
- * @description Used to ask the Host if it's radio system is up. This is useful to quickly determine if you are
- *      in fact ready to start trying to connect and such. The function will reject if not connected to the serial
- *      port of the dongle. Further the function should reject if currently streaming.
- *      Lastly and more important, if the board is not running the new firmware then this functionality does not
- *      exist and thus this method will reject. If the board is using firmware +v2.0.0 and the radios are both on the
- *      same channel and powered, then this will resolve true.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @since 1.0.0
- * @returns {Promise} - Resolves true if both radios are powered and on the same channel; false otherwise.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.radioSystemStatusGet = function () {
+* @description Used to ask the Host if it's radio system is up. This is useful to quickly determine if you are
+*      in fact ready to start trying to connect and such. The function will reject if not connected to the serial
+*      port of the dongle. Further the function should reject if currently streaming.
+*      Lastly and more important, if the board is not running the new firmware then this functionality does not
+*      exist and thus this method will reject. If the board is using firmware +v2.0.0 and the radios are both on the
+*      same channel and powered, then this will resolve true.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @since 1.0.0
+* @returns {Promise} - Resolves true if both radios are powered and on the same channel; false otherwise.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.radioSystemStatusGet = function () {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
@@ -1000,14 +976,14 @@ OpenBCICyton.prototype.radioSystemStatusGet = function () {
 };
 
 /**
- * @description List available ports so the user can choose a device when not
- *              automatically found.
- * Note: This method is used for convenience essentially just wrapping up
- *           serial port.
- * @author Andy Heusser (@andyh616)
- * @returns {Promise} - On fulfill will contain an array of Serial ports to use.
- */
-OpenBCICyton.prototype.listPorts = function () {
+* @description List available ports so the user can choose a device when not
+*              automatically found.
+* Note: This method is used for convenience essentially just wrapping up
+*           serial port.
+* @author Andy Heusser (@andyh616)
+* @returns {Promise} - On fulfill will contain an array of Serial ports to use.
+*/
+Cyton.prototype.listPorts = function () {
   return new Promise((resolve, reject) => {
     SerialPort.list((err, ports) => {
       if (err) reject(err);
@@ -1028,146 +1004,49 @@ OpenBCICyton.prototype.listPorts = function () {
 };
 
 /**
- * Get the board type.
- * @return boardType: string
- */
-OpenBCICyton.prototype.getBoardType = function () {
-  return this.info.boardType;
-};
-
-/**
- * Get the core info object.
- * @return {{boardType: string, sampleRate: number, firmware: string, numberOfChannels: number, missedPackets: number}}
- */
-OpenBCICyton.prototype.getInfo = function () {
-  return this.info;
-};
-
-/**
- * Set the info property for board type.
- * @param boardType {String}
- *  `default` or `daisy`. Defaults to `default`.
- */
-OpenBCICyton.prototype.overrideInfoForBoardType = function (boardType) {
-  switch (boardType) {
-    case k.OBCIBoardDaisy:
-      this.info.boardType = k.OBCIBoardDaisy;
-      this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
-      this.info.sampleRate = k.OBCISampleRate125;
-      this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
-      this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDaisy);
-      break;
-    case k.OBCIBoardDefault:
-    default:
-      this.info.boardType = k.OBCIBoardDefault;
-      this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
-      this.info.sampleRate = k.OBCISampleRate250;
-      this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
-      this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDefault);
-      break;
-  }
-};
-
-/**
- * Used to sync the module and board to `boardType`
- * @param boardType {String}
- *  Either `default` or `daisy`
- * @return {Promise}
- */
-OpenBCICyton.prototype.hardSetBoardType = function (boardType) {
-  if (this.isStreaming()) return Promise.reject('Must not be streaming!');
-  return new Promise((resolve, reject) => {
-    const eotFunc = (data) => {
-      switch (data.slice(0, data.length - k.OBCIParseEOT.length).toString()) {
-        case k.OBCIChannelMaxNumber8SuccessDaisyRemoved:
-          this.overrideInfoForBoardType(k.OBCIBoardDefault);
-          resolve('daisy removed');
-          break;
-        case k.OBCIChannelMaxNumber16DaisyAlreadyAttached:
-          this.overrideInfoForBoardType(k.OBCIBoardDaisy);
-          resolve('daisy already attached');
-          break;
-        case k.OBCIChannelMaxNumber16DaisyAttached:
-          this.overrideInfoForBoardType(k.OBCIBoardDaisy);
-          resolve('daisy attached');
-          break;
-        case k.OBCIChannelMaxNumber16NoDaisyAttached:
-          this.overrideInfoForBoardType(k.OBCIBoardDefault);
-          reject('unable to attach daisy');
-          break;
-        case k.OBCIChannelMaxNumber8NoDaisyToRemove:
-        default:
-          this.overrideInfoForBoardType(k.OBCIBoardDefault);
-          resolve('no daisy to remove');
-          break;
-      }
-    };
-    if (boardType === k.OBCIBoardDefault) {
-      this.curParsingMode = k.OBCIParsingEOT;
-      this.once(k.OBCIEmitterEot, eotFunc);
-      this.write(k.OBCIChannelMaxNumber8)
-        .catch((err) => {
-          this.removeListener(k.OBCIEmitterEot, eotFunc);
-          reject(err);
-        });
-    } else if (boardType === k.OBCIBoardDaisy) {
-      this.curParsingMode = k.OBCIParsingEOT;
-      this.once(k.OBCIEmitterEot, eotFunc);
-      this.write(k.OBCIChannelMaxNumber16)
-        .catch((err) => {
-          this.removeListener(k.OBCIEmitterEot, eotFunc);
-          reject(err);
-        });
-    } else {
-      reject('invalid board type');
-    }
-  });
-};
-
-/**
- * @description Sends a soft reset command to the board
- * @returns {Promise}
- * Note: The softReset command MUST be sent to the board before you can start
- *           streaming.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.softReset = function () {
+* @description Sends a soft reset command to the board
+* @returns {Promise}
+* Note: The softReset command MUST be sent to the board before you can start
+*           streaming.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.softReset = function () {
   this.curParsingMode = k.OBCIParsingReset;
   return this.write(k.OBCIMiscSoftReset);
 };
 
-/**
- * @description To get the specified channelSettings register data from printRegisterSettings call
- * @param channelNumber - a number
- * @returns {Promise.<T>|*}
- * @author AJ Keller (@pushtheworldllc)
- */
-// TODO: REDO THIS FUNCTION
-OpenBCICyton.prototype.getSettingsForChannel = function (channelNumber) {
-  return k.channelSettingsKeyForChannel(channelNumber).then((newSearchingBuffer) => {
-    // this.searchingBuf = newSearchingBuffer
-    return this.printRegisterSettings();
-  });
-};
+// /**
+// * @description To get the specified channelSettings register data from printRegisterSettings call
+// * @param channelNumber - a number
+// * @returns {Promise.<T>|*}
+// * @author AJ Keller (@pushtheworldllc)
+// */
+// // TODO: REDO THIS FUNCTION
+// Cyton.prototype.getSettingsForChannel = function (channelNumber) {
+//   return k.channelSettingsKeyForChannel(channelNumber).then((newSearchingBuffer) => {
+//     // this.searchingBuf = newSearchingBuffer
+//     return this.printRegisterSettings();
+//   });
+// };
 
 /**
- * @description To print out the register settings to the console
- * @returns {Promise.<T>|*}
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.printRegisterSettings = function () {
+* @description To print out the register settings to the console
+* @returns {Promise.<T>|*}
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.printRegisterSettings = function () {
   return this.write(k.OBCIMiscQueryRegisterSettings).then(() => {
-    this.curParsingMode = k.OBCIParsingChannelSettings;
+    this.curParsingMode = k.OBCIParsingEOT;
   });
 };
 
 /**
- * @description Send a command to the board to turn a specified channel off
- * @param channelNumber
- * @returns {Promise.<T>}
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.channelOff = function (channelNumber) {
+* @description Send a command to the board to turn a specified channel off
+* @param channelNumber
+* @returns {Promise.<T>}
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.channelOff = function (channelNumber) {
   return k.commandChannelOff(channelNumber).then((charCommand) => {
     // console.log('sent command to turn channel ' + channelNumber + ' by sending command ' + charCommand)
     return this.write(charCommand);
@@ -1175,12 +1054,12 @@ OpenBCICyton.prototype.channelOff = function (channelNumber) {
 };
 
 /**
- * @description Send a command to the board to turn a specified channel on
- * @param channelNumber
- * @returns {Promise.<T>|*}
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.channelOn = function (channelNumber) {
+* @description Send a command to the board to turn a specified channel on
+* @param channelNumber
+* @returns {Promise.<T>|*}
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.channelOn = function (channelNumber) {
   return k.commandChannelOn(channelNumber).then((charCommand) => {
     // console.log('sent command to turn channel ' + channelNumber + ' by sending command ' + charCommand)
     return this.write(charCommand);
@@ -1188,29 +1067,29 @@ OpenBCICyton.prototype.channelOn = function (channelNumber) {
 };
 
 /**
- * @description To send a channel setting command to the board
- * @param channelNumber - Number (1-16)
- * @param powerDown - Bool (true -> OFF, false -> ON (default))
- *          turns the channel on or off
- * @param gain - Number (1,2,4,6,8,12,24(default))
- *          sets the gain for the channel
- * @param inputType - String (normal,shorted,biasMethod,mvdd,temp,testsig,biasDrp,biasDrn)
- *          selects the ADC channel input source
- * @param bias - Bool (true -> Include in bias (default), false -> remove from bias)
- *          selects to include the channel input in bias generation
- * @param srb2 - Bool (true -> Connect this input to SRB2 (default),
- *                     false -> Disconnect this input from SRB2)
- *          Select to connect (true) this channel's P input to the SRB2 pin. This closes
- *              a switch between P input and SRB2 for the given channel, and allows the
- *              P input to also remain connected to the ADC.
- * @param srb1 - Bool (true -> connect all N inputs to SRB1,
- *                     false -> Disconnect all N inputs from SRB1 (default))
- *          Select to connect (true) all channels' N inputs to SRB1. This effects all pins,
- *              and disconnects all N inputs from the ADC.
- * @returns {Promise} resolves if sent, rejects on bad input or no board
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.channelSet = function (channelNumber, powerDown, gain, inputType, bias, srb2, srb1) {
+* @description To send a channel setting command to the board
+* @param channelNumber - Number (1-16)
+* @param powerDown - Bool (true -> OFF, false -> ON (default))
+*          turns the channel on or off
+* @param gain - Number (1,2,4,6,8,12,24(default))
+*          sets the gain for the channel
+* @param inputType - String (normal,shorted,biasMethod,mvdd,temp,testsig,biasDrp,biasDrn)
+*          selects the ADC channel input source
+* @param bias - Bool (true -> Include in bias (default), false -> remove from bias)
+*          selects to include the channel input in bias generation
+* @param srb2 - Bool (true -> Connect this input to SRB2 (default),
+*                     false -> Disconnect this input from SRB2)
+*          Select to connect (true) this channel's P input to the SRB2 pin. This closes
+*              a switch between P input and SRB2 for the given channel, and allows the
+*              P input to also remain connected to the ADC.
+* @param srb1 - Bool (true -> connect all N inputs to SRB1,
+*                     false -> Disconnect all N inputs from SRB1 (default))
+*          Select to connect (true) all channels' N inputs to SRB1. This effects all pins,
+*              and disconnects all N inputs from the ADC.
+* @returns {Promise} resolves if sent, rejects on bad input or no board
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.channelSet = function (channelNumber, powerDown, gain, inputType, bias, srb2, srb1) {
   var arrayOfCommands = [];
   return new Promise((resolve, reject) => {
     k.getChannelSetter(channelNumber, powerDown, gain, inputType, bias, srb2, srb1)
@@ -1223,26 +1102,26 @@ OpenBCICyton.prototype.channelSet = function (channelNumber, powerDown, gain, in
 };
 
 /**
- * @description Apply the internal test signal to all channels
- * @param signal - A string indicating which test signal to apply
- *      - `dc`
- *          - Connect to DC signal
- *      - `ground`
- *          - Connect to internal GND (VDD - VSS)
- *      - `pulse1xFast`
- *          - Connect to test signal 1x Amplitude, fast pulse
- *      - `pulse1xSlow`
- *          - Connect to test signal 1x Amplitude, slow pulse
- *      - `pulse2xFast`
- *          - Connect to test signal 2x Amplitude, fast pulse
- *      - `pulse2xFast`
- *          - Connect to test signal 2x Amplitude, slow pulse
- *      - `none`
- *          - Reset to default
- * @returns {Promise}
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.testSignal = function (signal) {
+* @description Apply the internal test signal to all channels
+* @param signal - A string indicating which test signal to apply
+*      - `dc`
+*          - Connect to DC signal
+*      - `ground`
+*          - Connect to internal GND (VDD - VSS)
+*      - `pulse1xFast`
+*          - Connect to test signal 1x Amplitude, fast pulse
+*      - `pulse1xSlow`
+*          - Connect to test signal 1x Amplitude, slow pulse
+*      - `pulse2xFast`
+*          - Connect to test signal 2x Amplitude, fast pulse
+*      - `pulse2xSlow`
+*          - Connect to test signal 2x Amplitude, slow pulse
+*      - `none`
+*          - Reset to default
+* @returns {Promise}
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.testSignal = function (signal) {
   return new Promise((resolve, reject) => {
     k.getTestSignalCommand(signal)
       .then(command => {
@@ -1254,11 +1133,11 @@ OpenBCICyton.prototype.testSignal = function (signal) {
 };
 
 /**
- * @description - Sends command to turn on impedances for all channels and continuously calculate their impedances
- * @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.impedanceTestContinuousStart = function () {
+* @description - Sends command to turn on impedances for all channels and continuously calculate their impedances
+* @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.impedanceTestContinuousStart = function () {
   return new Promise((resolve, reject) => {
     if (this.impedanceTest.active) return reject('Error: test already active');
     if (this.impedanceTest.continuousMode) return reject('Error: Already in continuous impedance test mode!');
@@ -1277,11 +1156,11 @@ OpenBCICyton.prototype.impedanceTestContinuousStart = function () {
 };
 
 /**
- * @description - Sends command to turn off impedances for all channels and stop continuously calculate their impedances
- * @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.impedanceTestContinuousStop = function () {
+* @description - Sends command to turn off impedances for all channels and stop continuously calculate their impedances
+* @returns {Promise} - Fulfills when all the commands are sent to the internal write buffer
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.impedanceTestContinuousStop = function () {
   return new Promise((resolve, reject) => {
     if (!this.impedanceTest.active) return reject('Error: no test active');
     if (!this.impedanceTest.continuousMode) return reject('Error: Not in continuous impedance test mode!');
@@ -1300,12 +1179,12 @@ OpenBCICyton.prototype.impedanceTestContinuousStop = function () {
 };
 
 /**
- * @description To apply test signals to the channels on the OpenBCI board used to test for impedance. This can take a
- *  little while to actually run (<8 seconds)!
- * @returns {Promise} - Resovles when complete testing all the channels.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.impedanceTestAllChannels = function () {
+* @description To apply test signals to the channels on the OpenBCI board used to test for impedance. This can take a
+*  little while to actually run (<8 seconds)!
+* @returns {Promise} - Resovles when complete testing all the channels.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.impedanceTestAllChannels = function () {
   var upperLimit = k.OBCINumberOfChannelsDefault;
 
   /* istanbul ignore if */
@@ -1327,7 +1206,7 @@ OpenBCICyton.prototype.impedanceTestAllChannels = function () {
         this.impedanceTestChannel(channelNumber)
           .then(() => {
             resolve(completeChannelImpedanceTest(channelNumber + 1));
-            /* istanbul ignore next */
+          /* istanbul ignore next */
           }).catch(err => reject(err));
       }
     });
@@ -1337,19 +1216,19 @@ OpenBCICyton.prototype.impedanceTestAllChannels = function () {
 };
 
 /**
- * @description To test specific input configurations of channels!
- * @param arrayOfChannels - The array of configurations where:
- *              'p' or 'P' is only test P input
- *              'n' or 'N' is only test N input
- *              'b' or 'B' is test both inputs (takes 66% longer to run)
- *              '-' to ignore channel
- *      EXAMPLE:
- *          For 8 channel board: ['-','N','n','p','P','-','b','b']
- *              (Note: it doesn't matter if capitalized or not)
- * @returns {Promise} - Fulfilled with a loaded impedance object.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.impedanceTestChannels = function (arrayOfChannels) {
+* @description To test specific input configurations of channels!
+* @param arrayOfChannels - The array of configurations where:
+*              'p' or 'P' is only test P input
+*              'n' or 'N' is only test N input
+*              'b' or 'B' is test both inputs (takes 66% longer to run)
+*              '-' to ignore channel
+*      EXAMPLE:
+*          For 8 channel board: ['-','N','n','p','P','-','b','b']
+*              (Note: it doesn't matter if capitalized or not)
+* @returns {Promise} - Fulfilled with a loaded impedance object.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.impedanceTestChannels = function (arrayOfChannels) {
   if (!Array.isArray(arrayOfChannels)) return Promise.reject('Input must be array of channels... See Docs!');
   if (!this.isStreaming()) return Promise.reject('Must be streaming!');
   // Check proper length of array
@@ -1389,12 +1268,12 @@ OpenBCICyton.prototype.impedanceTestChannels = function (arrayOfChannels) {
 };
 
 /**
- * @description Run a complete impedance test on a single channel, applying the test signal individually to P & N inputs.
- * @param channelNumber - A Number, specifies which channel you want to test.
- * @returns {Promise} - Fulfilled with a single channel impedance object.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.impedanceTestChannel = function (channelNumber) {
+* @description Run a complete impedance test on a single channel, applying the test signal individually to P & N inputs.
+* @param channelNumber - A Number, specifies which channel you want to test.
+* @returns {Promise} - Fulfilled with a single channel impedance object.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.impedanceTestChannel = function (channelNumber) {
   this.impedanceArray[channelNumber - 1] = openBCISample.impedanceObject(channelNumber);
   return new Promise((resolve, reject) => {
     this._impedanceTestSetChannel(channelNumber, true, false) // Sends command for P input on channel number.
@@ -1419,12 +1298,12 @@ OpenBCICyton.prototype.impedanceTestChannel = function (channelNumber) {
 };
 
 /**
- * @description Run impedance test on a single channel, applying the test signal only to P input.
- * @param channelNumber - A Number, specifies which channel you want to test.
- * @returns {Promise} - Fulfilled with a single channel impedance object.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.impedanceTestChannelInputP = function (channelNumber) {
+* @description Run impedance test on a single channel, applying the test signal only to P input.
+* @param channelNumber - A Number, specifies which channel you want to test.
+* @returns {Promise} - Fulfilled with a single channel impedance object.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.impedanceTestChannelInputP = function (channelNumber) {
   this.impedanceArray[channelNumber - 1] = openBCISample.impedanceObject(channelNumber);
   return new Promise((resolve, reject) => {
     this._impedanceTestSetChannel(channelNumber, true, false) // Sends command for P input on channel number.
@@ -1443,12 +1322,12 @@ OpenBCICyton.prototype.impedanceTestChannelInputP = function (channelNumber) {
 };
 
 /**
- * @description Run impedance test on a single channel, applying the test signal to N input.
- * @param channelNumber - A Number, specifies which channel you want to test.
- * @returns {Promise} - Fulfilled with a single channel impedance object.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.impedanceTestChannelInputN = function (channelNumber) {
+* @description Run impedance test on a single channel, applying the test signal to N input.
+* @param channelNumber - A Number, specifies which channel you want to test.
+* @returns {Promise} - Fulfilled with a single channel impedance object.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.impedanceTestChannelInputN = function (channelNumber) {
   this.impedanceArray[channelNumber - 1] = openBCISample.impedanceObject(channelNumber);
   return new Promise((resolve, reject) => {
     this._impedanceTestSetChannel(channelNumber, false, true) // Sends command for N input on channel number.
@@ -1468,15 +1347,15 @@ OpenBCICyton.prototype.impedanceTestChannelInputN = function (channelNumber) {
 
 /* istanbul ignore next */
 /**
- * @description To apply the impedance test signal to an input for any given channel
- * @param channelNumber -  Number - The channel you want to test.
- * @param pInput - A bool true if you want to apply the test signal to the P input, false to not apply the test signal.
- * @param nInput - A bool true if you want to apply the test signal to the N input, false to not apply the test signal.
- * @returns {Promise} - With Number value of channel number
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._impedanceTestSetChannel = function (channelNumber, pInput, nInput) {
+* @description To apply the impedance test signal to an input for any given channel
+* @param channelNumber -  Number - The channel you want to test.
+* @param pInput - A bool true if you want to apply the test signal to the P input, false to not apply the test signal.
+* @param nInput - A bool true if you want to apply the test signal to the N input, false to not apply the test signal.
+* @returns {Promise} - With Number value of channel number
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._impedanceTestSetChannel = function (channelNumber, pInput, nInput) {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected');
 
@@ -1495,7 +1374,7 @@ OpenBCICyton.prototype._impedanceTestSetChannel = function (channelNumber, pInpu
 
     if (!pInput && !nInput) {
       this.impedanceTest.active = false; // Critical to changing the flow of `._processBytes()`
-      // this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort
+    // this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort
     } else {
       // this.writeOutDelay = k.OBCIWriteIntervalDelayMSLong
     }
@@ -1505,10 +1384,10 @@ OpenBCICyton.prototype._impedanceTestSetChannel = function (channelNumber, pInpu
       return this.write(commandsArray);
     }).then(() => {
       /**
-       * If either pInput or nInput are true then we should start calculating impedance. Setting
-       *  this.impedanceTest.active to true here allows us to route every sample for an impedance
-       *  calculation instead of the normal sample output.
-       */
+      * If either pInput or nInput are true then we should start calculating impedance. Setting
+      *  this.impedanceTest.active to true here allows us to route every sample for an impedance
+      *  calculation instead of the normal sample output.
+      */
       if (pInput || nInput) this.impedanceTest.active = true;
       resolve(channelNumber);
     }, (err) => {
@@ -1518,15 +1397,15 @@ OpenBCICyton.prototype._impedanceTestSetChannel = function (channelNumber, pInpu
 };
 
 /**
- * @description Calculates the impedance for a specified channel for a set time
- * @param channelNumber - A Number, the channel number you want to test.
- * @param pInput - A bool true if you want to calculate impedance on the P input, false to not calculate.
- * @param nInput - A bool true if you want to calculate impedance on the N input, false to not calculate.
- * @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._impedanceTestCalculateChannel = function (channelNumber, pInput, nInput) {
+* @description Calculates the impedance for a specified channel for a set time
+* @param channelNumber - A Number, the channel number you want to test.
+* @param pInput - A bool true if you want to calculate impedance on the P input, false to not calculate.
+* @param nInput - A bool true if you want to calculate impedance on the N input, false to not calculate.
+* @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._impedanceTestCalculateChannel = function (channelNumber, pInput, nInput) {
   /* istanbul ignore if */
   if (this.options.verbose) {
     if (pInput && !nInput) {
@@ -1571,15 +1450,15 @@ OpenBCICyton.prototype._impedanceTestCalculateChannel = function (channelNumber,
 };
 
 /**
- * @description Calculates average and gets textual value of impedance for a specified channel
- * @param channelNumber - A Number, the channel number you want to finalize.
- * @param pInput - A bool true if you want to finalize impedance on the P input, false to not finalize.
- * @param nInput - A bool true if you want to finalize impedance on the N input, false to not finalize.
- * @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._impedanceTestFinalizeChannel = function (channelNumber, pInput, nInput) {
+* @description Calculates average and gets textual value of impedance for a specified channel
+* @param channelNumber - A Number, the channel number you want to finalize.
+* @param pInput - A bool true if you want to finalize impedance on the P input, false to not finalize.
+* @param nInput - A bool true if you want to finalize impedance on the N input, false to not finalize.
+* @returns {Promise} - Resolves channelNumber as value on fulfill, rejects with error...
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._impedanceTestFinalizeChannel = function (channelNumber, pInput, nInput) {
   /* istanbul ignore if */
   if (this.options.verbose) {
     if (pInput && !nInput) {
@@ -1607,15 +1486,15 @@ OpenBCICyton.prototype._impedanceTestFinalizeChannel = function (channelNumber, 
 };
 
 /**
- * @description Start logging to the SD card. If not streaming then `eot` event will be emitted with request
- *      response from the board.
- * @param recordingDuration {String} - The duration you want to log SD information for. Limited to:
- *      '14sec', '5min', '15min', '30min', '1hour', '2hour', '4hour', '12hour', '24hour'
- * @returns {Promise} - Resolves when the command has been written.
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.sdStart = function (recordingDuration) {
+* @description Start logging to the SD card. If not streaming then `eot` event will be emitted with request
+*      response from the board.
+* @param recordingDuration {String} - The duration you want to log SD information for. Limited to:
+*      '14sec', '5min', '15min', '30min', '1hour', '2hour', '4hour', '12hour', '24hour'
+* @returns {Promise} - Resolves when the command has been written.
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.sdStart = function (recordingDuration) {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to the device');
     k.sdSettingForString(recordingDuration)
@@ -1632,12 +1511,12 @@ OpenBCICyton.prototype.sdStart = function (recordingDuration) {
 };
 
 /**
- * @description Sends the stop SD logging command to the board. If not streaming then `eot` event will be emitted
- *      with request response from the board.
- * @returns {Promise} - Resolves when written
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.sdStop = function () {
+* @description Sends the stop SD logging command to the board. If not streaming then `eot` event will be emitted
+*      with request response from the board.
+* @returns {Promise} - Resolves when written
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.sdStop = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to the device');
     // If we are not streaming, then expect a confirmation message back from the board
@@ -1650,12 +1529,12 @@ OpenBCICyton.prototype.sdStop = function () {
 };
 
 /**
- * @description Get the the current sample rate is.
- * @returns {Number} The sample rate
- * Note: This is dependent on if you configured the board correctly on setup options
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.sampleRate = function () {
+* @description Get the the current sample rate is.
+* @returns {Number} The sample rate
+* Note: This is dependent on if you configured the board correctly on setup options
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.sampleRate = function () {
   if (this.options.simulate) {
     return this.options.simulatorSampleRate;
   } else {
@@ -1674,13 +1553,13 @@ OpenBCICyton.prototype.sampleRate = function () {
 };
 
 /**
- * @description This function is used as a convenience method to determine how many
- *              channels the current board is using.
- * @returns {Number} A number
- * Note: This is dependent on if you configured the board correctly on setup options
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.numberOfChannels = function () {
+* @description This function is used as a convenience method to determine how many
+*              channels the current board is using.
+* @returns {Number} A number
+* Note: This is dependent on if you configured the board correctly on setup options
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.numberOfChannels = function () {
   if (this.info) {
     return this.info.numberOfChannels;
   } else {
@@ -1695,14 +1574,14 @@ OpenBCICyton.prototype.numberOfChannels = function () {
 };
 
 /**
- * @description Send the command to tell the board to start the syncing protocol. Must be connected,
- *      streaming and using at least version 2.0.0 firmware.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @since 1.0.0
- * @returns {Promise} - Resolves if sent, rejects if not connected or using firmware verison +2.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.syncClocks = function () {
+* @description Send the command to tell the board to start the syncing protocol. Must be connected,
+*      streaming and using at least version 2.0.0 firmware.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @since 1.0.0
+* @returns {Promise} - Resolves if sent, rejects if not connected or using firmware verison +2.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.syncClocks = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to the device');
     if (!this.isStreaming()) return reject('Must be streaming to sync clocks');
@@ -1715,15 +1594,15 @@ OpenBCICyton.prototype.syncClocks = function () {
 };
 
 /**
- * @description Send the command to tell the board to start the syncing protocol. Must be connected,
- *      streaming and using at least version 2.0.0 firmware. Uses the `synced` event to ensure multiple syncs
- *      don't overlap.
- *      **Note**: This functionality requires OpenBCI Firmware Version 2.0
- * @since 1.1.0
- * @returns {Promise} - Resolves if `synced` event is emitted, rejects if not connected or using firmware v2.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.syncClocksFull = function () {
+* @description Send the command to tell the board to start the syncing protocol. Must be connected,
+*      streaming and using at least version 2.0.0 firmware. Uses the `synced` event to ensure multiple syncs
+*      don't overlap.
+*      **Note**: This functionality requires OpenBCI Firmware Version 2.0
+* @since 1.1.0
+* @returns {Promise} - Resolves if `synced` event is emitted, rejects if not connected or using firmware v2.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.syncClocksFull = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Must be connected to the device');
     if (!this.isStreaming()) return reject('Must be streaming to sync clocks');
@@ -1748,53 +1627,19 @@ OpenBCICyton.prototype.syncClocksFull = function () {
 };
 
 /**
- * @description Output passed bytes on the console as a hexdump, if enabled
- * @param prefix - label to show to the left of bytes
- * @param data - bytes to output, a buffer or string
- * @private
- */
-OpenBCICyton.prototype._debugBytes = function (prefix, data) {
-  if (!this.options.debug) return;
-
-  if (typeof data === 'string') data = new Buffer(data);
-
-  console.log('Debug bytes:');
-
-  for (var j = 0; j < data.length;) {
-    var hexPart = '';
-    var ascPart = '';
-    for (var end = Math.min(data.length, j + 16); j < end; ++j) {
-      var byt = data[j];
-
-      var hex = ('0' + byt.toString(16)).slice(-2);
-      hexPart += (((j & 0xf) === 0x8) ? '  ' : ' '); // puts an extra space 8 bytes in
-      hexPart += hex;
-
-      var asc = (byt >= 0x20 && byt < 0x7f) ? String.fromCharCode(byt) : '.';
-      ascPart += asc;
-    }
-
-    // pad to fixed width for alignment
-    hexPart = (hexPart + '                                                   ').substring(0, 3 * 17);
-
-    console.log(prefix + ' ' + hexPart + '|' + ascPart + '|');
-  }
-};
-
-/**
- * @description Consider the '_processBytes' method to be the work horse of this
- *              entire framework. This method gets called any time there is new
- *              data coming in on the serial port. If you are familiar with the
- *              'serialport' package, then every time data is emitted, this function
- *              gets sent the input data. The data comes in very fragmented, sometimes
- *              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
- *              we will need to store what we don't read for next time.
- * @param data - a buffer of unknown size
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processBytes = function (data) {
-  this._debugBytes(this.curParsingMode + '<<', data);
+* @description Consider the '_processBytes' method to be the work horse of this
+*              entire framework. This method gets called any time there is new
+*              data coming in on the serial port. If you are familiar with the
+*              'serialport' package, then every time data is emitted, this function
+*              gets sent the input data. The data comes in very fragmented, sometimes
+*              we get half of a packet, and sometimes we get 3 and 3/4 packets, so
+*              we will need to store what we don't read for next time.
+* @param data - a buffer of unknown size
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processBytes = function (data) {
+  if (this.options.debug) openBCIUtils.debugBytes(this.curParsingMode + '<<', data);
 
   // Concat old buffer
   var oldDataBuffer = null;
@@ -1807,7 +1652,7 @@ OpenBCICyton.prototype._processBytes = function (data) {
     case k.OBCIParsingEOT:
       if (openBCISample.doesBufferHaveEOT(data)) {
         this.curParsingMode = k.OBCIParsingNormal;
-        this.emit(k.OBCIEmitterEot, data);
+        this.emit('eot', data);
         this.buffer = openBCISample.stripToEOTBuffer(data);
       } else {
         this.buffer = data;
@@ -1817,29 +1662,9 @@ OpenBCICyton.prototype._processBytes = function (data) {
       // Does the buffer have an EOT in it?
       if (openBCISample.doesBufferHaveEOT(data)) {
         this._processParseBufferForReset(data);
-        if (this.options.hardSet) {
-          if (this.getBoardType() !== this.options.boardType) {
-            this.emit(k.OBCIEmitterHardSet);
-            this.hardSetBoardType(this.options.boardType)
-              .then(() => {
-                this.emit(k.OBCIEmitterReady);
-              })
-              .catch((err) => {
-                this.emit(k.OBCIEmitterError, err);
-              });
-          } else {
-            this.curParsingMode = k.OBCIParsingNormal;
-            this.emit(k.OBCIEmitterReady);
-            this.buffer = openBCISample.stripToEOTBuffer(data);
-          }
-        } else {
-          if (this.getBoardType() !== this.options.boardType && this.options.verbose) {
-            console.log(`Module detected ${this.getBoardType()} board type but you specified ${this.options.boardType}, use 'hardSet' to force the module to correct itself`);
-          }
-          this.curParsingMode = k.OBCIParsingNormal;
-          this.emit(k.OBCIEmitterReady);
-          this.buffer = openBCISample.stripToEOTBuffer(data);
-        }
+        this.curParsingMode = k.OBCIParsingNormal;
+        this.emit('ready');
+        this.buffer = openBCISample.stripToEOTBuffer(data);
       } else {
         this.buffer = data;
       }
@@ -1867,13 +1692,13 @@ OpenBCICyton.prototype._processBytes = function (data) {
 };
 
 /**
- * @description Used to extract samples out of a buffer of unknown length
- * @param dataBuffer {Buffer} - A buffer to parse for samples
- * @returns {Buffer} - Any data that was not pulled out of the buffer
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processDataBuffer = function (dataBuffer) {
+* @description Used to extract samples out of a buffer of unknown length
+* @param dataBuffer {Buffer} - A buffer to parse for samples
+* @returns {Buffer} - Any data that was not pulled out of the buffer
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processDataBuffer = function (dataBuffer) {
   if (!dataBuffer) return null;
   var bytesToParse = dataBuffer.length;
   // Exit if we have a buffer with less data than a packet
@@ -1937,11 +1762,15 @@ OpenBCICyton.prototype._processDataBuffer = function (dataBuffer) {
  * @private
  * @author AJ Keller (@pushtheworldllc)
  */
-OpenBCICyton.prototype._processParseBufferForReset = function (dataBuffer) {
+Cyton.prototype._processParseBufferForReset = function (dataBuffer) {
   if (openBCISample.countADSPresent(dataBuffer) === 2) {
-    this.overrideInfoForBoardType(k.OBCIBoardDaisy);
+    this.info.boardType = k.OBCIBoardDaisy;
+    this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
+    this.info.sampleRate = k.OBCISampleRate125;
   } else {
-    this.overrideInfoForBoardType(k.OBCIBoardDefault);
+    this.info.boardType = k.OBCIBoardDefault;
+    this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
+    this.info.sampleRate = k.OBCISampleRate250;
   }
 
   if (openBCISample.findV2Firmware(dataBuffer)) {
@@ -1954,12 +1783,12 @@ OpenBCICyton.prototype._processParseBufferForReset = function (dataBuffer) {
 };
 
 /**
- * @description Used to route qualified packets to their proper parsers
- * @param rawDataPacketBuffer
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processQualifiedPacket = function (rawDataPacketBuffer) {
+* @description Used to route qualified packets to their proper parsers
+* @param rawDataPacketBuffer
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processQualifiedPacket = function (rawDataPacketBuffer) {
   if (!rawDataPacketBuffer) return;
   if (rawDataPacketBuffer.byteLength !== k.OBCIPacketSize) return;
   var missedPacketArray = openBCISample.droppedPacketCheck(this.previousSampleNumber, rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber]);
@@ -2000,23 +1829,23 @@ OpenBCICyton.prototype._processQualifiedPacket = function (rawDataPacketBuffer) 
 };
 
 /**
- * @description A method used to compute impedances.
- * @param sampleObject - A sample object that follows the normal standards.
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processImpedanceTest = function (sampleObject) {
+* @description A method used to compute impedances.
+* @param sampleObject - A sample object that follows the normal standards.
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processImpedanceTest = function (sampleObject) {
   var impedanceArray;
   if (this.impedanceTest.continuousMode) {
     // console.log('running in continuous mode...')
     // openBCISample.debugPrettyPrint(sampleObject)
-    impedanceArray = openBCISample.impedanceCalculateArray(sampleObject, this.impedanceTest);
+    impedanceArray = openBCISample.goertzelProcessSample(sampleObject, this.goertzelObject);
     if (impedanceArray) {
       this.emit('impedanceArray', impedanceArray);
     }
   } else if (this.impedanceTest.onChannel !== 0) {
     // Only calculate impedance for one channel
-    impedanceArray = openBCISample.impedanceCalculateArray(sampleObject, this.impedanceTest);
+    impedanceArray = openBCISample.goertzelProcessSample(sampleObject, this.goertzelObject);
     if (impedanceArray) {
       this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
     }
@@ -2024,12 +1853,12 @@ OpenBCICyton.prototype._processImpedanceTest = function (sampleObject) {
 };
 
 /**
- * @description A method to parse a stream packet that has channel data and data in the aux channels that contains accel data.
- * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processPacketStandardAccel = function (rawPacket) {
+* @description A method to parse a stream packet that has channel data and data in the aux channels that contains accel data.
+* @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processPacketStandardAccel = function (rawPacket) {
   try {
     let sample = openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray, true);
     sample.rawPacket = rawPacket;
@@ -2042,12 +1871,12 @@ OpenBCICyton.prototype._processPacketStandardAccel = function (rawPacket) {
 };
 
 /**
- * @description A method to parse a stream packet that has channel data and data in the aux channels that should not be scaled.
- * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processPacketStandardRawAux = function (rawPacket) {
+* @description A method to parse a stream packet that has channel data and data in the aux channels that should not be scaled.
+* @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processPacketStandardRawAux = function (rawPacket) {
   try {
     let sample = openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray, false);
     sample.rawPacket = rawPacket;
@@ -2060,14 +1889,14 @@ OpenBCICyton.prototype._processPacketStandardRawAux = function (rawPacket) {
 };
 
 /**
- * @description A method to parse a stream packet that does not have channel data or aux/accel data, just a timestamp
- * @param rawPacket {Buffer} - A 33byte data buffer from _processQualifiedPacket
- * @param timeOfPacketArrival {Number} - The time the packet arrived.
- * @private
- * @returns {Object} - A time sync object.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPacketArrival) {
+* @description A method to parse a stream packet that does not have channel data or aux/accel data, just a timestamp
+* @param rawPacket {Buffer} - A 33byte data buffer from _processQualifiedPacket
+* @param timeOfPacketArrival {Number} - The time the packet arrived.
+* @private
+* @returns {Object} - A time sync object.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPacketArrival) {
   /**
    * Helper function for creating a bad sync object
    * @param err {object} - Can be any object
@@ -2087,7 +1916,7 @@ OpenBCICyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPa
     if (this.options.verbose) console.log(k.OBCIErrorTimeSyncIsNull);
     // Set the output to bad object
     syncObj = getBadObject(k.OBCIErrorTimeSyncIsNull);
-    // Missed comma
+  // Missed comma
   } else if (this.curParsingMode === k.OBCIParsingTimeSyncSent) {
     if (this.options.verbose) console.log(k.OBCIErrorTimeSyncNoComma);
     // Set the output to bad object
@@ -2194,13 +2023,13 @@ OpenBCICyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPa
 };
 
 /**
- * @description A method to parse a stream packet that contains channel data, a time stamp and event couple packets
- *      an accelerometer value.
- * @param rawPacket - A 33byte data buffer from _processQualifiedPacket
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processPacketTimeSyncedAccel = function (rawPacket) {
+* @description A method to parse a stream packet that contains channel data, a time stamp and event couple packets
+*      an accelerometer value.
+* @param rawPacket - A 33byte data buffer from _processQualifiedPacket
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processPacketTimeSyncedAccel = function (rawPacket) {
   // if (this.sync.active === false) console.log('Need to sync with board...')
   try {
     let sample = openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster, this.accelArray);
@@ -2214,13 +2043,13 @@ OpenBCICyton.prototype._processPacketTimeSyncedAccel = function (rawPacket) {
 };
 
 /**
- * @description A method to parse a stream packet that contains channel data, a time stamp and two extra bytes that
- *      shall be emitted as a raw buffer and not scaled.
- * @param rawPacket {Buffer} - A 33byte data buffer from _processQualifiedPacket
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._processPacketTimeSyncedRawAux = function (rawPacket) {
+* @description A method to parse a stream packet that contains channel data, a time stamp and two extra bytes that
+*      shall be emitted as a raw buffer and not scaled.
+* @param rawPacket {Buffer} - A 33byte data buffer from _processQualifiedPacket
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._processPacketTimeSyncedRawAux = function (rawPacket) {
   // if (this.sync.active === false) console.log('Need to sync with board...')
   try {
     let sample = openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster);
@@ -2234,13 +2063,13 @@ OpenBCICyton.prototype._processPacketTimeSyncedRawAux = function (rawPacket) {
 };
 
 /**
- * @description A method to emit samples through the EventEmitter channel `sample` or compute impedances if are
- *      being tested.
- * @param sampleObject {Object} - A sample object that follows the normal standards.
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._finalizeNewSample = function (sampleObject) {
+* @description A method to emit samples through the EventEmitter channel `sample` or compute impedances if are
+*      being tested.
+* @param sampleObject {Object} - A sample object that follows the normal standards.
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._finalizeNewSample = function (sampleObject) {
   sampleObject._count = this.sampleCount++;
   if (this.impedanceTest.active) {
     this._processImpedanceTest(sampleObject);
@@ -2257,16 +2086,16 @@ OpenBCICyton.prototype._finalizeNewSample = function (sampleObject) {
 };
 
 /**
- * @description This function is called every sample if the boardType is Daisy. The function stores odd sampleNumber
- *      sample objects to a private global variable called `._lowerChannelsSampleObject`. The method will emit a
- *      sample object only when the upper channels arrive in an even sampleNumber sample object. No sample will be
- *      emitted on an even sampleNumber if _lowerChannelsSampleObject is null and one will be added to the
- *      missedPacket counter. Further missedPacket will increase if two odd sampleNumber packets arrive in a row.
- * @param sampleObject {Object} - The sample object to finalize
- * @private
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype._finalizeNewSampleForDaisy = function (sampleObject) {
+* @description This function is called every sample if the boardType is Daisy. The function stores odd sampleNumber
+*      sample objects to a private global variable called `._lowerChannelsSampleObject`. The method will emit a
+*      sample object only when the upper channels arrive in an even sampleNumber sample object. No sample will be
+*      emitted on an even sampleNumber if _lowerChannelsSampleObject is null and one will be added to the
+*      missedPacket counter. Further missedPacket will increase if two odd sampleNumber packets arrive in a row.
+* @param sampleObject {Object} - The sample object to finalize
+* @private
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype._finalizeNewSampleForDaisy = function (sampleObject) {
   if (openBCISample.isOdd(sampleObject.sampleNumber)) {
     // Check for the skipped packet condition
     if (this._lowerChannelsSampleObject) {
@@ -2291,22 +2120,22 @@ OpenBCICyton.prototype._finalizeNewSampleForDaisy = function (sampleObject) {
 };
 
 /**
- * @description Reset the master buffer and reset the number of bad packets.
- * @author AJ Keller (@pushtheworldllc)
- */
+* @description Reset the master buffer and reset the number of bad packets.
+* @author AJ Keller (@pushtheworldllc)
+*/
 // TODO: nothing is using these constructs, but they look like good constructs.  See contents of masterBufferMaker()
-OpenBCICyton.prototype._reset_ABANDONED = function () {
+Cyton.prototype._reset_ABANDONED = function () {
   this.masterBuffer = masterBufferMaker();
   this.badPackets = 0;
 };
 
 /**
- * @description Stateful method for querying the current offset only when the last
- *                  one is too old. (defaults to daily)
- * @returns {Promise} A promise with the time offset
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.sntpGetOffset = function () {
+* @description Stateful method for querying the current offset only when the last
+*                  one is too old. (defaults to daily)
+* @returns {Promise} A promise with the time offset
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.sntpGetOffset = function () {
   this.options.sntpTimeSync = true;
 
   if (!this.options.sntpTimeSync) return Promise.reject('sntp not enabled');
@@ -2325,22 +2154,22 @@ OpenBCICyton.prototype.sntpGetOffset = function () {
 };
 
 /**
- * @description Allows users to utilize all features of sntp if they want to...
- */
-OpenBCICyton.prototype.sntp = Sntp;
+* @description Allows users to utilize all features of sntp if they want to...
+*/
+Cyton.prototype.sntp = Sntp;
 
 /**
- * @description This gets the time plus offset
- * @private
- */
-OpenBCICyton.prototype._sntpNow = Sntp.now;
+* @description This gets the time plus offset
+* @private
+*/
+Cyton.prototype._sntpNow = Sntp.now;
 
 /**
- * @description This starts the SNTP server and gets it to remain in sync with the SNTP server
- * @returns {Promise} - A promise if the module was able to sync with ntp server.
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.sntpStart = function (options) {
+* @description This starts the SNTP server and gets it to remain in sync with the SNTP server
+* @returns {Promise} - A promise if the module was able to sync with ntp server.
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.sntpStart = function (options) {
   this.options.sntpTimeSync = true;
 
   // Sntp.start doesn't actually report errors (2016-10-29)
@@ -2362,20 +2191,20 @@ OpenBCICyton.prototype.sntpStart = function (options) {
 };
 
 /**
- * @description Stops the sntp from updating.
- */
-OpenBCICyton.prototype.sntpStop = function () {
+* @description Stops the sntp from updating.
+*/
+Cyton.prototype.sntpStop = function () {
   Sntp.stop();
   this.options.sntpTimeSync = false;
   this.sync.sntpActive = false;
 };
 
 /**
- * @description Should use sntp time when sntpTimeSync specified in options, or else use Date.now() for time
- * @returns {Number} - The time
- * @author AJ Keller (@pushtheworldllc)
- */
-OpenBCICyton.prototype.time = function () {
+* @description Should use sntp time when sntpTimeSync specified in options, or else use Date.now() for time
+* @returns {Number} - The time
+* @author AJ Keller (@pushtheworldllc)
+*/
+Cyton.prototype.time = function () {
   if (this.options.sntpTimeSync) {
     return this._sntpNow();
   } else {
@@ -2384,11 +2213,11 @@ OpenBCICyton.prototype.time = function () {
 };
 
 /**
- * @description This prints the total number of packets that were not able to be read
- * @author AJ Keller (@pushtheworldllc)
- */
+* @description This prints the total number of packets that were not able to be read
+* @author AJ Keller (@pushtheworldllc)
+*/
 /* istanbul ignore next */
-OpenBCICyton.prototype.printPacketsBad = function () {
+Cyton.prototype.printPacketsBad = function () {
   if (this.badPackets > 1) {
     console.log('Dropped a total of ' + this.badPackets + ' packets.');
   } else if (this.badPackets === 1) {
@@ -2399,11 +2228,11 @@ OpenBCICyton.prototype.printPacketsBad = function () {
 };
 
 /**
- * @description This prints the total bytes in
- * @author AJ Keller (@pushtheworldllc)
- */
+* @description This prints the total bytes in
+* @author AJ Keller (@pushtheworldllc)
+*/
 /* istanbul ignore next */
-OpenBCICyton.prototype.printBytesIn = function () {
+Cyton.prototype.printBytesIn = function () {
   if (this.bytesIn > 1) {
     console.log('Read in ' + this.bytesIn + ' bytes.');
   } else if (this.bytesIn === 1) {
@@ -2414,11 +2243,11 @@ OpenBCICyton.prototype.printBytesIn = function () {
 };
 
 /**
- * @description This prints the total number of packets that have been read
- * @author AJ Keller (@pushtheworldllc)
- */
+* @description This prints the total number of packets that have been read
+* @author AJ Keller (@pushtheworldllc)
+*/
 /* istanbul ignore next */
-OpenBCICyton.prototype.printPacketsRead = function () {
+Cyton.prototype.printPacketsRead = function () {
   if (this.masterBuffer.packetsRead > 1) {
     console.log('Read ' + this.masterBuffer.packetsRead + ' packets.');
   } else if (this.masterBuffer.packetsIn === 1) {
@@ -2429,22 +2258,22 @@ OpenBCICyton.prototype.printPacketsRead = function () {
 };
 
 /**
- * @description Nice convenience method to print some session details
- * @author AJ Keller (@pushtheworldllc)
- */
+* @description Nice convenience method to print some session details
+* @author AJ Keller (@pushtheworldllc)
+*/
 /* istanbul ignore next */
-OpenBCICyton.prototype.debugSession = function () {
+Cyton.prototype.debugSession = function () {
   this.printBytesIn();
   this.printPacketsRead();
   this.printPacketsBad();
 };
 
 /**
- * @description To pretty print the info recieved on a Misc Register Query (printRegisterSettings)
- * @param channelSettingsObj
- */
+* @description To pretty print the info recieved on a Misc Register Query (printRegisterSettings)
+* @param channelSettingsObj
+*/
 /* istanbul ignore next */
-OpenBCICyton.prototype.debugPrintChannelSettings = function (channelSettingsObj) {
+Cyton.prototype.debugPrintChannelSettings = function (channelSettingsObj) {
   console.log('-- Channel Settings Object --');
   var powerState = 'OFF';
   if (channelSettingsObj.POWER_DOWN.toString().localeCompare('1')) {
@@ -2455,15 +2284,17 @@ OpenBCICyton.prototype.debugPrintChannelSettings = function (channelSettingsObj)
 };
 
 /**
- * @description Quickly determine if a channel is on or off from a channelSettingObject. Most likely from a getChannelSettings call.
- * @param channelSettingsObject
- * @returns {boolean}
- */
-OpenBCICyton.prototype.channelIsOnFromChannelSettingsObject = function (channelSettingsObject) {
+* @description Quickly determine if a channel is on or off from a channelSettingObject. Most likely from a getChannelSettings call.
+* @param channelSettingsObject
+* @returns {boolean}
+*/
+Cyton.prototype.channelIsOnFromChannelSettingsObject = function (channelSettingsObject) {
   return channelSettingsObject.POWER_DOWN.toString().localeCompare('1') === 1;
 };
 
-module.exports = new OpenBCIFactory();
+util.inherits(Cyton, EventEmitter);
+
+module.exports = Cyton;
 
 /**
 * @description To parse a given channel given output from a print registers query
