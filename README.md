@@ -78,13 +78,6 @@ ourBoard.connect(portName) // Port name is a serial port name, see `.listPorts()
     });
 });
 ```
- 
-### <a name="install"></a> Installation:
-
-#### macOs
-```
-npm install openbci
-```
 
 # <a name="cyton"></a> Cyton
 

@@ -315,7 +315,7 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 ### Bug Fixes
 
 * updates to README.me and comments to change ntp to sntp, because the two are similar, but not the same and we do not want to be misleading
-* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCICyton-old.js
+* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCICyton.js
 * Add `.sntpNow()` function to get ntp time.
 
 # 0.3.1

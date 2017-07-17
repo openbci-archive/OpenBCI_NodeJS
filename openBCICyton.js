@@ -121,7 +121,6 @@ var _options = {
 };
 
 
-
 /**
  * @description The initialization method to call first, before any other method.
  * @param options {InitializationObject} (optional) - Board optional configurations.
@@ -236,7 +235,7 @@ function OpenBCICyton (options) {
 }
 
 // This allows us to use the emitter class freely outside of the module
-util.inherits(OpenBCIBoard, stream.Stream);
+util.inherits(OpenBCICyton, stream.Stream);
 
 /**
  * @description The essential precursor method to be called initially to establish a
@@ -1327,7 +1326,7 @@ OpenBCICyton.prototype.impedanceTestAllChannels = function () {
         this.impedanceTestChannel(channelNumber)
           .then(() => {
             resolve(completeChannelImpedanceTest(channelNumber + 1));
-            /* istanbul ignore next */
+          /* istanbul ignore next */
           }).catch(err => reject(err));
       }
     });
@@ -2291,16 +2290,6 @@ OpenBCICyton.prototype._finalizeNewSampleForDaisy = function (sampleObject) {
 };
 
 /**
- * @description Reset the master buffer and reset the number of bad packets.
- * @author AJ Keller (@pushtheworldllc)
- */
-// TODO: nothing is using these constructs, but they look like good constructs.  See contents of masterBufferMaker()
-OpenBCICyton.prototype._reset_ABANDONED = function () {
-  this.masterBuffer = masterBufferMaker();
-  this.badPackets = 0;
-};
-
-/**
  * @description Stateful method for querying the current offset only when the last
  *                  one is too old. (defaults to daily)
  * @returns {Promise} A promise with the time offset
@@ -2463,7 +2452,9 @@ OpenBCICyton.prototype.channelIsOnFromChannelSettingsObject = function (channelS
   return channelSettingsObject.POWER_DOWN.toString().localeCompare('1') === 1;
 };
 
-module.exports = new OpenBCIFactory();
+util.inherits(Cyton, EventEmitter);
+
+module.exports = OpenBCICyton;
 
 /**
 * @description To parse a given channel given output from a print registers query
