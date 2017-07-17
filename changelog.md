@@ -15,7 +15,7 @@
     const ourBoard = new Cyton();
     ```
 * Major change to how board is initialized with removal of `factory` paradigm.
-* Drop support for Node 4 and 5 due to lack of EMACS 6
+* New dependency called `openbci-utilities`.
 
 ### Bug Fixes
 * Documentation error with `testSignal` function.
