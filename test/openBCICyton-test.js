@@ -570,7 +570,7 @@ describe('openbci-sdk', function () {
               done('should have failed to connect');
             })
             .catch((err) => {
-              if (err === 'already connected!') {
+              if (err.message === 'already connected!') {
                 return ourBoard.disconnect();
               } else {
                 return Promise.reject(err);
@@ -976,7 +976,7 @@ describe('openbci-sdk', function () {
                 var writeSpy2 = sinon.spy(ourBoard.serial, 'write');
                 ourBoard.once('ready', () => {
                   writeSpy2.should.equal(ourBoard.serial.write);
-                  writeSpy1.should.have.not.been.called;
+                  writeSpy1.should.have.not.been.called();
                   writeSpy2.should.have.not.been.calledWith(byteToWrite);
                   writeSpy1.restore();
                   writeSpy2.restore();
@@ -1196,7 +1196,7 @@ describe('openbci-sdk', function () {
           ourBoard.hardSetBoardType('daisy')
             .then(done)
             .catch((err) => {
-              expect(err).to.equal('unable to attach daisy');
+              expect(err.message).to.equal('unable to attach daisy');
               expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
               done();
             });
@@ -1496,7 +1496,7 @@ describe('openbci-sdk', function () {
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledThrice;
+      _processQualifiedPacketSpy.should.have.been.calledThrice();
       // The buffer should not have anything in it any more
       expect(buffer).to.be.null();
     });
@@ -1517,7 +1517,7 @@ describe('openbci-sdk', function () {
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledTwice;
+      _processQualifiedPacketSpy.should.have.been.calledTwice();
       // The buffer should not have anything in it any more
       buffer.length.should.equal(extraBuffer.length);
     });
@@ -1539,9 +1539,9 @@ describe('openbci-sdk', function () {
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledTwice;
+      _processQualifiedPacketSpy.should.have.been.calledTwice();
       // The buffer should not have anything in it any more
-      bufferEqual(extraBuffer, buffer).should.be.true;
+      bufferEqual(extraBuffer, buffer).should.be.true();
       buffer.length.should.equal(extraBuffer.length);
     });
 
@@ -1562,9 +1562,9 @@ describe('openbci-sdk', function () {
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledTwice;
+      _processQualifiedPacketSpy.should.have.been.calledTwice();
       // The buffer should not have anything in it any more
-      bufferEqual(Buffer.concat([extraBuffer, extraBuffer], 2), buffer).should.be.true;
+      bufferEqual(Buffer.concat([extraBuffer, extraBuffer], 2), buffer).should.be.true();
       buffer.length.should.equal(extraBuffer.length * 2);
     });
   });
@@ -2333,7 +2333,7 @@ $$$`);
         var buf2 = new Buffer('amazing af$$$');
 
         var eotEvent = data => {
-          bufferEqual(data, Buffer.concat([buf1, buf2], buf1.length + buf2.length)).should.be.true;
+          bufferEqual(data, Buffer.concat([buf1, buf2], buf1.length + buf2.length)).should.be.true();
           ourBoard.curParsingMode.should.be.equal(k.OBCIParsingNormal);
           done();
         };

@@ -2,10 +2,9 @@
 const bluebirdChecks = require('./bluebirdChecks');
 const chai = require('chai');
 const should = chai.should(); // eslint-disable-line no-unused-vars
-const Cyton = require('../openBCICyton');
+const OpenBCICyton = require('../openBCICyton');
 const openBCIUtilities = require('openbci-utilities').Utilities;
 const k = require('openbci-utilities').Constants;
-const Buffer = require('safe-buffer').Buffer;
 
 const chaiAsPromised = require('chai-as-promised');
 const sinonChai = require('sinon-chai');
@@ -13,11 +12,11 @@ chai.use(chaiAsPromised);
 chai.use(sinonChai);
 
 describe('#impedanceTesting', function () {
-  var ourBoard;
+  let ourBoard;
   this.timeout(20000);
 
   before(function (done) {
-    ourBoard = new Cyton({
+    ourBoard = new OpenBCICyton({
       verbose: true,
       simulatorFragmentation: k.OBCISimulatorFragmentationRandom
     });

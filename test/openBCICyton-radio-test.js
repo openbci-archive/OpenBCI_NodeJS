@@ -1,14 +1,13 @@
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var sinon = require('sinon'); // eslint-disable-line no-unused-vars
-var chai = require('chai');
-var expect = chai.expect;
-var should = chai.should(); // eslint-disable-line no-unused-vars
-var OpenBCICyton = require('../openBCICyton');
-var k = require('openbci-utilities').Constants;
-var chaiAsPromised = require('chai-as-promised');
-var sinonChai = require('sinon-chai');
-const Buffer = require('safe-buffer').Buffer;
+const bluebirdChecks = require('./bluebirdChecks');
+const sinon = require('sinon'); // eslint-disable-line no-unused-vars
+const chai = require('chai');
+const expect = chai.expect;
+const should = chai.should(); // eslint-disable-line no-unused-vars
+const OpenBCICyton = require('../openBCICyton');
+const k = require('openbci-utilities').Constants;
+const chaiAsPromised = require('chai-as-promised');
+const sinonChai = require('sinon-chai');
 const dirtyChai = require('dirty-chai');
 
 chai.use(chaiAsPromised);
