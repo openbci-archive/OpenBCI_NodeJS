@@ -9,15 +9,16 @@
  *   do `npm install`
  *   then `npm start`
  */
-var debug = false; // Pretty print any bytes in and out... it's amazing...
-var verbose = true; // Adds verbosity to functions
+const debug = false; // Pretty print any bytes in and out... it's amazing...
+const verbose = true; // Adds verbosity to functions
 
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var ourBoard = new OpenBCIBoard({
+const Cyton = require('openbci').Cyton;
+let ourBoard = new Cyton({
   debug: debug,
   verbose: verbose
 });
-var k = require('openbci').OpenBCIConstants;
+
+const k = require('openbci-utilities').Constants;
 
 let startedImpedance = false;
 let iBuffer = [];

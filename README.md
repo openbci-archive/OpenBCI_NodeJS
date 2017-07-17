@@ -127,8 +127,8 @@ const ourBoard = new Cyton({
 
 Have a daisy?:
 ```js
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var ourBoard = new OpenBCIBoard({
+var Cyton = require('openbci').Cyton;
+var ourBoard = new Cyton({
     boardType: `daisy`,
     hardSet: true
 });
@@ -138,7 +138,7 @@ Go [checkout out the get streaming with daisy example](examples/getStreamingDais
 Another useful way to start the simulator:
 ```js
 const Cyton = require('openbci').Cyton;
-const k = require('openbci').Constants;
+const k = require('openbci-utilities').Constants;
 const ourBoard = new Cyton();
 ourBoard.connect(k.OBCISimulatorPortName) // This will set `simulate` to true
     .then((boardSerial) => {
@@ -152,7 +152,8 @@ ourBoard.connect(k.OBCISimulatorPortName) // This will set `simulate` to true
 
 or if you are using ES6:
 ```js
-import { Cyton, Constants } from 'openbci';
+import { Cyton } from 'openbci';
+import { Constants } from 'openbci-utilities';
 const ourBoard = new Cyton();
 ourBoard.connect(Constants.OBCISimulatorPortName);
 ```
@@ -237,7 +238,7 @@ Keep your resync interval above 50ms. While it's important to resync every coupl
 Using local computer time:
 ```js
 const Cyton = require('openbci').Cyton;
-const k = require('openbci').Constants;
+const k = require('openbci-utilities').Constants;
 const ourBoard = new Cyton({
   verbose:true
 });
@@ -1178,7 +1179,7 @@ Emitted when there is a new sample available.
 
 To use the constants file simply:
 ```js
-const k = require('openbci').Constants;
+const k = require('openbci-utilities').Constants;
 
 console.log(k.OBCISimulatorPortName); // prints OpenBCISimulator to the console.
 ```

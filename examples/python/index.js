@@ -1,3 +1,4 @@
+'use strict';
 /**
  * This is an example from the readme.md
  * On windows you should run with PowerShell not git bash.
@@ -9,25 +10,25 @@
  *   do `npm install`
  *   then `npm start`
  */
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var portPub = 'tcp://127.0.0.1:3004';
-var zmq = require('zmq-prebuilt');
-var socket = zmq.socket('pair');
-var simulate = false; // Sends synthetic data
-var debug = false; // Pretty print any bytes in and out... it's amazing...
-var verbose = true; // Adds verbosity to functions
+const portPub = 'tcp://127.0.0.1:3004';
+const zmq = require('zmq-prebuilt');
+const socket = zmq.socket('pair');
+const simulate = false; // Sends synthetic data
+const debug = false; // Pretty print any bytes in and out... it's amazing...
+const verbose = true; // Adds verbosity to functions
 
-var ourBoard = new OpenBCIBoard({
+const Cyton = require('openbci').Cyton;
+let ourBoard = new Cyton({
   simulate: simulate, // Uncomment to see how it works with simulator!
   simulatorFirmwareVersion: 'v2',
   debug: debug,
   verbose: verbose
 });
 
-var timeSyncPossible = false;
-var resyncPeriodMin = 1;
-var secondsInMinute = 60;
-var resyncPeriod = ourBoard.sampleRate() * resyncPeriodMin * secondsInMinute;
+let timeSyncPossible = false;
+let resyncPeriodMin = 1;
+let secondsInMinute = 60;
+let resyncPeriod = ourBoard.sampleRate() * resyncPeriodMin * secondsInMinute;
 
 ourBoard.autoFindOpenBCIBoard().then(portName => {
   if (portName) {
@@ -61,7 +62,7 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
   }
 });
 
-var sampleFunc = sample => {
+const sampleFunc = sample => {
   if (sample._count % resyncPeriod === 0) {
     ourBoard.syncClocksFull()
       .then(syncObj => {
@@ -124,7 +125,7 @@ var receiveFromPython = (rawData) => {
 
 socket.on('message', receiveFromPython);
 
-var sendStatus = () => {
+const sendStatus = () => {
   sendToPython({'action': 'active', 'message': 'ready', 'command': 'status'}, true);
 };
 
@@ -135,7 +136,7 @@ sendStatus();
  * @param  {String} body   A stringify JSON object that shall be parsed.
  * @return {None}
  */
-var processInterfaceObject = (body) => {
+const processInterfaceObject = (body) => {
   switch (body.command) {
     case 'status':
       processStatus(body);
@@ -151,7 +152,7 @@ var processInterfaceObject = (body) => {
  * @param  {Object} body
  * @return {None}
  */
-var processStatus = (body) => {
+const processStatus = (body) => {
   switch (body.action) {
     case 'started':
       console.log(`python started @ ${body.message}ms`);

@@ -9,24 +9,24 @@
  *   do `npm install`
  *   then `npm start`
  */
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var portPub = 'tcp://127.0.0.1:3004';
-var zmq = require('zmq-prebuilt');
-var socket = zmq.socket('pair');
-var debug = false; // Pretty print any bytes in and out... it's amazing...
-var verbose = true; // Adds verbosity to functions
+const portPub = 'tcp://127.0.0.1:3004';
+const zmq = require('zmq-prebuilt');
+const socket = zmq.socket('pair');
+const debug = false; // Pretty print any bytes in and out... it's amazing...
+const verbose = true; // Adds verbosity to functions
 
-var ourBoard = new OpenBCIBoard({
+const Cyton = require('openbci').Cyton;
+let ourBoard = new Cyton({
   simulatorFirmwareVersion: 'v2',
   debug: debug,
   verbose: verbose
 });
 
-var timeSyncPossible = false;
-var resyncPeriodMin = 1;
-var secondsInMinute = 60;
-var numChans = 8;
-var resyncPeriod = ourBoard.sampleRate() * resyncPeriodMin * secondsInMinute;
+let timeSyncPossible = false;
+let resyncPeriodMin = 1;
+let secondsInMinute = 60;
+let numChans = 8;
+let resyncPeriod = ourBoard.sampleRate() * resyncPeriodMin * secondsInMinute;
 
 ourBoard.autoFindOpenBCIBoard().then(portName => {
   if (portName) {
@@ -67,7 +67,7 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
   }
 });
 
-var sampleFunc = sample => {
+const sampleFunc = sample => {
   if (sample._count % resyncPeriod === 0) {
     ourBoard.syncClocksFull()
       .then(syncObj => {
@@ -107,9 +107,10 @@ socket.bind(portPub, function (err) {
 /**
  * Used to send a message to the Python process.
  * @param  {Object} interProcessObject The standard inter-process object.
+ * @param {Boolean} verbose Should we do a verbose print out
  * @return {None}
  */
-var sendToPython = (interProcessObject, verbose) => {
+const sendToPython = (interProcessObject, verbose) => {
   if (verbose) {
     console.log(`<- out ${JSON.stringify(interProcessObject)}`);
   }
