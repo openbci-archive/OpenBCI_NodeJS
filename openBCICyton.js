@@ -7,7 +7,7 @@ const OpenBCIUtilities = require('openbci-utilities');
 const obciUtils = OpenBCIUtilities.Utilities;
 const k = OpenBCIUtilities.Constants;
 const obciDebug = OpenBCIUtilities.Debug;
-const openBCISimulator = require('./openBCISimulator');
+const OpenBCISimulator = OpenBCIUtilities.Simulator;
 const Sntp = require('sntp');
 const bufferEqual = require('buffer-equal');
 const math = require('mathjs');
@@ -270,7 +270,7 @@ OpenBCICyton.prototype.connect = function (portName) {
       // If we are simulating, set portName to fake name
       this.portName = k.OBCISimulatorPortName;
       if (this.options.verbose) console.log('using faux board ' + portName);
-      this.serial = new openBCISimulator.OpenBCISimulator(this.portName, {
+      this.serial = new OpenBCISimulator(this.portName, {
         accel: this.options.simulatorHasAccelerometer,
         alpha: this.options.simulatorInjectAlpha,
         boardFailure: this.options.simulatorBoardFailure,
@@ -428,7 +428,6 @@ OpenBCICyton.prototype.streamStart = function () {
   return new Promise((resolve, reject) => {
     if (this.isStreaming()) return reject('Error [.streamStart()]: Already streaming');
     this._streaming = true;
-    this._reset_ABANDONED(); // framework is incomplete but looks useful
     this.write(k.OBCIStreamStart).then(resolve, reject);
   });
 };
@@ -1864,9 +1863,9 @@ OpenBCICyton.prototype._processDataBuffer = function (dataBuffer) {
 
   _.forEach(output.rawDataPackets, (rawDataPacket) => {
     // Emit that buffer
-    this.emit('rawDataPacket', rawPacket);
+    this.emit('rawDataPacket', rawDataPacket);
     // Submit the packet for processing
-    this._processQualifiedPacket(rawPacket);
+    this._processQualifiedPacket(rawDataPacket);
     this._rawDataPacketToSample.rawDataPacket = rawDataPacket;
     const sample = obciUtils.transformRawDataPacketToSample(this._rawDataPacketToSample);
     this._finalizeNewSample(sample);

@@ -3,8 +3,8 @@ const bluebirdChecks = require('./bluebirdChecks');
 const chai = require('chai');
 const should = chai.should(); // eslint-disable-line no-unused-vars
 const Cyton = require('../openBCICyton');
-const openBCISample = require('../openBCIUtilities');
-const k = openBCISample.k;
+const openBCIUtilities = require('openbci-utilities').Utilities;
+const k = require('openbci-utilities').Constants;
 
 const chaiAsPromised = require('chai-as-promised');
 const sinonChai = require('sinon-chai');
@@ -264,7 +264,7 @@ describe('#impedanceTesting', function () {
         impedanceArray = arr;
         done();
       });
-      ourBoard.impedanceArray[0] = openBCISample.impedanceObject(1);
+      ourBoard.impedanceArray[0] = openBCIUtilities.impedanceObject(1);
       ourBoard.impedanceTestChannels(['-', 'N', 'n', 'p', 'P', 'p', 'b', 'B']).catch(err => done(err));
     });
     describe('#channel1', function () {
