@@ -8,9 +8,12 @@ var OpenBCICyton = require('../openBCICyton');
 var k = require('openbci-utilities').Constants;
 var chaiAsPromised = require('chai-as-promised');
 var sinonChai = require('sinon-chai');
+const Buffer = require('safe-buffer').Buffer;
+const dirtyChai = require('dirty-chai');
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
+chai.use(dirtyChai);
 
 describe('openbci-radios', function () {
   this.timeout(2000);
@@ -768,7 +771,7 @@ describe('openbci-radios', function () {
         .then(() => {
           ourBoard.once('ready', () => {
             ourBoard.radioSystemStatusGet().then(isUp => {
-              expect(isUp).to.be.true;
+              expect(isUp).to.be.true();
               done();
             }).catch(err => done(err));
           });
@@ -785,7 +788,7 @@ describe('openbci-radios', function () {
         .then(() => {
           ourBoard.once('ready', () => {
             ourBoard.radioSystemStatusGet().then(isUp => {
-              expect(isUp).to.be.false;
+              expect(isUp).to.be.false();
               done();
             }).catch(err => done(err));
           });
@@ -897,7 +900,7 @@ describe('openbci-radios', function () {
         })
         .then(isUp => {
           // console.log(`isUp test`, Date.now(), `${Date.now() - timey}ms`)
-          expect(isUp).to.be.false;
+          expect(isUp).to.be.false();
           return ourBoard.radioChannelSetHostOverride(systemChanNumber); // Set back to good
         })
         .then(newChanNumActual => {
@@ -906,7 +909,7 @@ describe('openbci-radios', function () {
           return ourBoard.radioSystemStatusGet();
         })
         .then(isUp => {
-          expect(isUp).to.be.true;
+          expect(isUp).to.be.true();
           done();
         })
         .catch(err => done(err));
@@ -940,7 +943,7 @@ describe('openbci-radios', function () {
       // Don't test if not using v2
       if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioSystemStatusGet().then(isUp => {
-        expect(isUp).to.be.true;
+        expect(isUp).to.be.true();
         done();
       }).catch(err => done(err));
     });

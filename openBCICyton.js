@@ -12,6 +12,7 @@ const Sntp = require('sntp');
 const bufferEqual = require('buffer-equal');
 const math = require('mathjs');
 const _ = require('lodash');
+const Buffer = require('safe-buffer').Buffer;
 
 /**
  * @typedef {Object} InitializationObject Board optional configurations.
@@ -137,7 +138,7 @@ function OpenBCICyton (options) {
   if (!(this instanceof OpenBCICyton)) {
     return new OpenBCICyton(options);
   }
-  options = (typeof options !== 'function') && options || {};
+  options = options || {};
   var opts = {};
 
   stream.Stream.call(this);
@@ -261,7 +262,7 @@ util.inherits(OpenBCICyton, stream.Stream);
  */
 OpenBCICyton.prototype.connect = function (portName) {
   return new Promise((resolve, reject) => {
-    if (this.isConnected()) return reject('already connected!');
+    if (this.isConnected()) return reject(Error('already connected!'));
 
     /* istanbul ignore else */
     if (this.options.simulate || portName === k.OBCISimulatorPortName) {
@@ -380,7 +381,7 @@ OpenBCICyton.prototype.disconnect = function () {
     })
     .then(() => {
       if (!this.isConnected()) {
-        return Promise.reject('no board connected');
+        return Promise.reject(Error('no board connected'));
       } else {
         return new Promise((resolve, reject) => {
           // serial emitting 'close' will call _disconnected
@@ -427,7 +428,7 @@ OpenBCICyton.prototype.isStreaming = function () {
  */
 OpenBCICyton.prototype.streamStart = function () {
   return new Promise((resolve, reject) => {
-    if (this.isStreaming()) return reject('Error [.streamStart()]: Already streaming');
+    if (this.isStreaming()) return reject(Error('Error [.streamStart()]: Already streaming'));
     this._streaming = true;
     this.write(k.OBCIStreamStart).then(resolve, reject);
   });
@@ -443,7 +444,7 @@ OpenBCICyton.prototype.streamStart = function () {
  */
 OpenBCICyton.prototype.streamStop = function () {
   return new Promise((resolve, reject) => {
-    if (!this.isStreaming()) return reject('Error [.streamStop()]: No stream to stop');
+    if (!this.isStreaming()) return reject(Error('Error [.streamStop()]: No stream to stop'));
     this._streaming = false;
     this.write(k.OBCIStreamStop).then(resolve, reject);
   });
@@ -457,7 +458,7 @@ OpenBCICyton.prototype.streamStop = function () {
  */
 OpenBCICyton.prototype.simulatorEnable = function () {
   return new Promise((resolve, reject) => {
-    if (this.options.simulate) return reject('Already simulating'); // Are we already in simulate mode?
+    if (this.options.simulate) return reject(Error('Already simulating')); // Are we already in simulate mode?
     if (this.isConnected()) {
       this.disconnect() // disconnect first
         .then(() => {
@@ -480,7 +481,7 @@ OpenBCICyton.prototype.simulatorEnable = function () {
  */
 OpenBCICyton.prototype.simulatorDisable = function () {
   return new Promise((resolve, reject) => {
-    if (!this.options.simulate) return reject('Not simulating'); // Are we already not in simulate mode?
+    if (!this.options.simulate) return reject(Error('Not simulating')); // Are we already not in simulate mode?
     if (this.isConnected()) {
       this.disconnect()
         .then(() => {
@@ -506,7 +507,7 @@ OpenBCICyton.prototype.simulatorDisable = function () {
 OpenBCICyton.prototype.write = function (dataToWrite) {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) {
-      reject('not connected');
+      reject(Error('not connected'));
     } else {
       if (Array.isArray(dataToWrite)) { // Got an input array
         var len = dataToWrite.length;
@@ -559,7 +560,7 @@ OpenBCICyton.prototype._writeAndDrain = function (data) {
   obciDebug.debugBytes('>>>', data);
 
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Serial port not open');
+    if (!this.isConnected()) return reject(Error('Serial port not open'));
     this.serial.write(data, (error) => {
       if (error) {
         console.log('Error [writeAndDrain]: ' + error);
@@ -623,7 +624,7 @@ OpenBCICyton.prototype.autoFindOpenBCIBoard = function () {
           resolve(this.portName);
         } else {
           if (this.options.verbose) console.log('could not find board');
-          reject('Could not auto find board');
+          reject(Error('Could not auto find board'));
         }
       });
     }
@@ -660,18 +661,18 @@ OpenBCICyton.prototype.usingVersionTwoFirmware = function () {
 OpenBCICyton.prototype.radioChannelSet = function (channelNumber) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-    if (this.isStreaming()) return reject("Don't query for the radio while streaming");
-    if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware version 2');
-    if (channelNumber === undefined || channelNumber === null) return reject('Must input a new channel number to switch too!');
-    if (!k.isNumber(channelNumber)) return reject('Must input type Number');
-    if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
-    if (channelNumber < k.OBCIRadioChannelMin) return reject(`New channel number must be greater than ${k.OBCIRadioChannelMin}`);
+    if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
+    if (this.isStreaming()) return reject(Error('Don\'t query for the radio while streaming'));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware version 2'));
+    if (channelNumber === undefined || channelNumber === null) return reject(Error('Must input a new channel number to switch too!'));
+    if (!k.isNumber(channelNumber)) return reject(Error('Must input type Number'));
+    if (channelNumber > k.OBCIRadioChannelMax) return reject(Error(`New channel number must be less than ${k.OBCIRadioChannelMax}`));
+    if (channelNumber < k.OBCIRadioChannelMin) return reject(Error(`New channel number must be greater than ${k.OBCIRadioChannelMin}`));
 
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
-      reject('Please make sure your dongle is using firmware v2');
+      reject(Error('Please make sure your dongle is using firmware v2'));
     }, 1000);
 
     // Subscribe to the EOT event
@@ -684,7 +685,7 @@ OpenBCICyton.prototype.radioChannelSet = function (channelNumber) {
       if (obciUtils.isSuccessInBuffer(data)) {
         resolve(data[data.length - 4]);
       } else {
-        reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
+        reject(Error(`Error [radioChannelSet]: ${data}`)); // The channel number is in the first byte
       }
     });
 
@@ -711,17 +712,17 @@ OpenBCICyton.prototype.radioChannelSet = function (channelNumber) {
 OpenBCICyton.prototype.radioChannelSetHostOverride = function (channelNumber) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-    if (this.isStreaming()) return reject("Don't query for the radio while streaming");
-    if (channelNumber === undefined || channelNumber === null) return reject('Must input a new channel number to switch too!');
-    if (!k.isNumber(channelNumber)) return reject('Must input type Number');
-    if (channelNumber > k.OBCIRadioChannelMax) return reject(`New channel number must be less than ${k.OBCIRadioChannelMax}`);
-    if (channelNumber < k.OBCIRadioChannelMin) return reject(`New channel number must be greater than ${k.OBCIRadioChannelMin}`);
+    if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
+    if (this.isStreaming()) return reject(Error("Don't query for the radio while streaming"));
+    if (channelNumber === undefined || channelNumber === null) return reject(Error('Must input a new channel number to switch too!'));
+    if (!k.isNumber(channelNumber)) return reject(Error('Must input type Number'));
+    if (channelNumber > k.OBCIRadioChannelMax) return reject(Error(`New channel number must be less than ${k.OBCIRadioChannelMax}`));
+    if (channelNumber < k.OBCIRadioChannelMin) return reject(Error(`New channel number must be greater than ${k.OBCIRadioChannelMin}`));
 
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
-      reject('Please make sure your dongle is using firmware v2');
+      reject(Error('Please make sure your dongle is using firmware v2'));
     }, 1000);
 
     // Subscribe to the EOT event
@@ -734,7 +735,7 @@ OpenBCICyton.prototype.radioChannelSetHostOverride = function (channelNumber) {
       if (obciUtils.isSuccessInBuffer(data)) {
         resolve(data[data.length - 4]);
       } else {
-        reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
+        reject(Error(`Error [radioChannelSet]: ${data}`)); // The channel number is in the first byte
       }
     });
 
@@ -762,14 +763,14 @@ OpenBCICyton.prototype.radioChannelGet = function () {
   var badCommsTimeout;
 
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-    if (this.isStreaming()) return reject("Don't query for the radio while streaming");
-    if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
+    if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
+    if (this.isStreaming()) return reject(Error("Don't query for the radio while streaming"));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
 
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
-      reject('Please make sure your dongle is plugged in and using firmware v2');
+      reject(Error('Please make sure your dongle is plugged in and using firmware v2'));
     }, 500);
 
     // Subscribe to the EOT event
@@ -784,7 +785,7 @@ OpenBCICyton.prototype.radioChannelGet = function () {
           data: data
         });
       } else {
-        reject(`Error [radioChannelGet]: ${data.toString()}`);
+        reject(Error(`Error [radioChannelGet]: ${data.toString()}`));
       }
     });
 
@@ -810,13 +811,13 @@ OpenBCICyton.prototype.radioChannelGet = function () {
 OpenBCICyton.prototype.radioPollTimeGet = function () {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-    if (this.isStreaming()) return reject("Don't query for the poll time while streaming");
-    if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
+    if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
+    if (this.isStreaming()) return reject(Error("Don't query for the poll time while streaming"));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
-      reject('Please make sure your dongle is plugged in and using firmware v2');
+      reject(Error('Please make sure your dongle is plugged in and using firmware v2'));
     }, 1000);
 
     // Subscribe to the EOT event
@@ -830,7 +831,7 @@ OpenBCICyton.prototype.radioPollTimeGet = function () {
         var pollTime = data[data.length - 4];
         resolve(pollTime);
       } else {
-        reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
+        reject(Error(`Error [radioPollTimeGet]: ${data}`)); // The channel number is in the first byte
       }
     });
 
@@ -857,18 +858,18 @@ OpenBCICyton.prototype.radioPollTimeGet = function () {
 OpenBCICyton.prototype.radioPollTimeSet = function (pollTime) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-    if (this.isStreaming()) return reject("Don't change the poll time while streaming");
-    if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
-    if (pollTime === undefined || pollTime === null) return reject('Must input a new poll time to switch too!');
-    if (!k.isNumber(pollTime)) return reject('Must input type Number');
-    if (pollTime > k.OBCIRadioPollTimeMax) return reject(`New polltime must be less than ${k.OBCIRadioPollTimeMax}`);
-    if (pollTime < k.OBCIRadioPollTimeMin) return reject(`New polltime must be greater than ${k.OBCIRadioPollTimeMin}`);
+    if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
+    if (this.isStreaming()) return reject(Error("Don't change the poll time while streaming"));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
+    if (pollTime === undefined || pollTime === null) return reject(Error('Must input a new poll time to switch too!'));
+    if (!k.isNumber(pollTime)) return reject(Error('Must input type Number'));
+    if (pollTime > k.OBCIRadioPollTimeMax) return reject(Error(`New polltime must be less than ${k.OBCIRadioPollTimeMax}`));
+    if (pollTime < k.OBCIRadioPollTimeMin) return reject(Error(`New polltime must be greater than ${k.OBCIRadioPollTimeMin}`));
 
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
-      reject('Please make sure your dongle is plugged in and using firmware v2');
+      reject(Error('Please make sure your dongle is plugged in and using firmware v2'));
     }, 1000);
 
     // Subscribe to the EOT event
@@ -881,7 +882,7 @@ OpenBCICyton.prototype.radioPollTimeSet = function (pollTime) {
       if (obciUtils.isSuccessInBuffer(data)) {
         resolve(data[data.length - 4]); // Ditch the eot $$$
       } else {
-        reject(`Error [radioPollTimeSet]: ${data}`); // The channel number is in the first byte
+        reject(Error(`Error [radioPollTimeSet]: ${data}`)); // The channel number is in the first byte
       }
     });
 
@@ -911,14 +912,14 @@ OpenBCICyton.prototype.radioPollTimeSet = function (pollTime) {
 OpenBCICyton.prototype.radioBaudRateSet = function (speed) {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-    if (this.isStreaming()) return reject("Don't change the baud rate while streaming");
-    if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware v2');
-    if (!k.isString(speed)) return reject('Must input type String');
+    if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
+    if (this.isStreaming()) return reject(Error("Don't change the baud rate while streaming"));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
+    if (!k.isString(speed)) return reject(Error('Must input type String'));
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
-      reject('Please make sure your dongle is plugged in and using firmware v2');
+      reject(Error('Please make sure your dongle is plugged in and using firmware v2'));
     }, 1000);
 
     // Subscribe to the EOT event
@@ -937,10 +938,10 @@ OpenBCICyton.prototype.radioBaudRateSet = function (speed) {
       }
       var newBaudRateNum = Number(newBaudRateBuf.toString());
       if (newBaudRateNum !== k.OBCIRadioBaudRateDefault && newBaudRateNum !== k.OBCIRadioBaudRateFast) {
-        return reject('Error parse mismatch, restart your system!');
+        return reject(Error('Error parse mismatch, restart your system!'));
       }
       if (!this.isConnected()) {
-        reject('Lost connection to device during baud set');
+        reject(Error('Lost connection to device during baud set'));
       } else if (obciUtils.isSuccessInBuffer(data)) {
         // Change the sample rate here
         if (this.options.simulate === false) {
@@ -952,7 +953,7 @@ OpenBCICyton.prototype.radioBaudRateSet = function (speed) {
           resolve(newBaudRateNum);
         }
       } else {
-        reject(`Error [radioPollTimeGet]: ${data}`); // The channel number is in the first byte
+        reject(Error(`Error [radioPollTimeGet]: ${data}`)); // The channel number is in the first byte
       }
     });
 
@@ -982,14 +983,14 @@ OpenBCICyton.prototype.radioBaudRateSet = function (speed) {
 OpenBCICyton.prototype.radioSystemStatusGet = function () {
   var badCommsTimeout;
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to Dongle. Pro tip: Call .connect()');
-    if (this.isStreaming()) return reject("Don't change the poll time while streaming");
-    if (!this.usingVersionTwoFirmware()) return reject('Must be using firmware version 2');
+    if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
+    if (this.isStreaming()) return reject(Error("Don't check the radio status while streaming"));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware version 2'));
 
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
-      reject('Please make sure your dongle is plugged in and using firmware v2');
+      reject(Error('Please make sure your dongle is plugged in and using firmware v2'));
     }, 1000);
 
     // Subscribe to the EOT event
@@ -1090,7 +1091,7 @@ OpenBCICyton.prototype.overrideInfoForBoardType = function (boardType) {
  * @return {Promise}
  */
 OpenBCICyton.prototype.hardSetBoardType = function (boardType) {
-  if (this.isStreaming()) return Promise.reject('Must not be streaming!');
+  if (this.isStreaming()) return Promise.reject(Error('Must not be streaming!'));
   return new Promise((resolve, reject) => {
     const eotFunc = (data) => {
       switch (data.slice(0, data.length - k.OBCIParseEOT.length).toString()) {
@@ -1108,7 +1109,7 @@ OpenBCICyton.prototype.hardSetBoardType = function (boardType) {
           break;
         case k.OBCIChannelMaxNumber16NoDaisyAttached:
           this.overrideInfoForBoardType(k.OBCIBoardDefault);
-          reject('unable to attach daisy');
+          reject(Error('unable to attach daisy'));
           break;
         case k.OBCIChannelMaxNumber8NoDaisyToRemove:
         default:
@@ -1134,7 +1135,7 @@ OpenBCICyton.prototype.hardSetBoardType = function (boardType) {
           reject(err);
         });
     } else {
-      reject('invalid board type');
+      reject(Error('invalid board type'));
     }
   });
 };
@@ -1275,8 +1276,8 @@ OpenBCICyton.prototype.testSignal = function (signal) {
  */
 OpenBCICyton.prototype.impedanceTestContinuousStart = function () {
   return new Promise((resolve, reject) => {
-    if (this.impedanceTest.active) return reject('Error: test already active');
-    if (this.impedanceTest.continuousMode) return reject('Error: Already in continuous impedance test mode!');
+    if (this.impedanceTest.active) return reject(Error('Error: test already active'));
+    if (this.impedanceTest.continuousMode) return reject(Error('Error: Already in continuous impedance test mode!'));
 
     this.impedanceTest.active = true;
     this.impedanceTest.continuousMode = true;
@@ -1298,8 +1299,8 @@ OpenBCICyton.prototype.impedanceTestContinuousStart = function () {
  */
 OpenBCICyton.prototype.impedanceTestContinuousStop = function () {
   return new Promise((resolve, reject) => {
-    if (!this.impedanceTest.active) return reject('Error: no test active');
-    if (!this.impedanceTest.continuousMode) return reject('Error: Not in continuous impedance test mode!');
+    if (!this.impedanceTest.active) return reject(Error('Error: no test active'));
+    if (!this.impedanceTest.continuousMode) return reject(Error('Error: Not in continuous impedance test mode!'));
 
     this.impedanceTest.active = false;
     this.impedanceTest.continuousMode = false;
@@ -1328,7 +1329,7 @@ OpenBCICyton.prototype.impedanceTestAllChannels = function () {
     upperLimit = k.OBCINumberOfChannelsDaisy;
   }
 
-  if (!this.isStreaming()) return Promise.reject('Must be streaming!');
+  if (!this.isStreaming()) return Promise.reject(Error('Must be streaming!'));
 
   // Recursive function call
   var completeChannelImpedanceTest = (channelNumber) => {
@@ -1365,10 +1366,10 @@ OpenBCICyton.prototype.impedanceTestAllChannels = function () {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype.impedanceTestChannels = function (arrayOfChannels) {
-  if (!Array.isArray(arrayOfChannels)) return Promise.reject('Input must be array of channels... See Docs!');
-  if (!this.isStreaming()) return Promise.reject('Must be streaming!');
+  if (!Array.isArray(arrayOfChannels)) return Promise.reject(Error('Input must be array of channels... See Docs!'));
+  if (!this.isStreaming()) return Promise.reject(Error('Must be streaming!'));
   // Check proper length of array
-  if (arrayOfChannels.length !== this.numberOfChannels()) return Promise.reject('Array length mismatch, should have ' + this.numberOfChannels() + ' but array has length ' + arrayOfChannels.length);
+  if (arrayOfChannels.length !== this.numberOfChannels()) return Promise.reject(Error('Array length mismatch, should have ' + this.numberOfChannels() + ' but array has length ' + arrayOfChannels.length));
 
   // Recursive function call
   var completeChannelImpedanceTest = (channelNumber) => {
@@ -1493,7 +1494,7 @@ OpenBCICyton.prototype.impedanceTestChannelInputN = function (channelNumber) {
  */
 OpenBCICyton.prototype._impedanceTestSetChannel = function (channelNumber, pInput, nInput) {
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected');
+    if (!this.isConnected()) return reject(Error('Must be connected'));
 
     /* istanbul ignore if */
     if (this.options.verbose) {
@@ -1555,9 +1556,9 @@ OpenBCICyton.prototype._impedanceTestCalculateChannel = function (channelNumber,
     }
   }
   return new Promise((resolve, reject) => {
-    if (channelNumber < 1 || channelNumber > this.numberOfChannels()) return reject('Invalid channel number');
-    if (typeof pInput !== 'boolean') return reject("Invalid Input: 'pInput' must be of type Bool");
-    if (typeof nInput !== 'boolean') return reject("Invalid Input: 'nInput' must be of type Bool");
+    if (channelNumber < 1 || channelNumber > this.numberOfChannels()) return reject(Error('Invalid channel number'));
+    if (typeof pInput !== 'boolean') return reject(Error("Invalid Input: 'pInput' must be of type Bool"));
+    if (typeof nInput !== 'boolean') return reject(Error("Invalid Input: 'nInput' must be of type Bool"));
     this.impedanceTest.onChannel = channelNumber;
     this.impedanceTest.sampleNumber = 0; // Reset the sample number
     this.impedanceTest.isTestingPInput = pInput;
@@ -1608,9 +1609,9 @@ OpenBCICyton.prototype._impedanceTestFinalizeChannel = function (channelNumber, 
     }
   }
   return new Promise((resolve, reject) => {
-    if (channelNumber < 1 || channelNumber > this.numberOfChannels()) return reject('Invalid channel number');
-    if (typeof pInput !== 'boolean') return reject("Invalid Input: 'pInput' must be of type Bool");
-    if (typeof nInput !== 'boolean') return reject("Invalid Input: 'nInput' must be of type Bool");
+    if (channelNumber < 1 || channelNumber > this.numberOfChannels()) return reject(Error('Invalid channel number'));
+    if (typeof pInput !== 'boolean') return reject(Error("Invalid Input: 'pInput' must be of type Bool"));
+    if (typeof nInput !== 'boolean') return reject(Error("Invalid Input: 'nInput' must be of type Bool"));
 
     if (pInput) obciUtils.impedanceSummarize(this.impedanceArray[channelNumber - 1].P);
     if (nInput) obciUtils.impedanceSummarize(this.impedanceArray[channelNumber - 1].N);
@@ -1632,7 +1633,7 @@ OpenBCICyton.prototype._impedanceTestFinalizeChannel = function (channelNumber, 
  */
 OpenBCICyton.prototype.sdStart = function (recordingDuration) {
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to the device');
+    if (!this.isConnected()) return reject(Error('Must be connected to the device'));
     k.sdSettingForString(recordingDuration)
       .then(command => {
         // If we are not streaming, then expect a confirmation message back from the board
@@ -1654,7 +1655,7 @@ OpenBCICyton.prototype.sdStart = function (recordingDuration) {
  */
 OpenBCICyton.prototype.sdStop = function () {
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to the device');
+    if (!this.isConnected()) return reject(Error('Must be connected to the device'));
     // If we are not streaming, then expect a confirmation message back from the board
     if (!this.isStreaming()) {
       this.curParsingMode = k.OBCIParsingEOT;
@@ -1719,9 +1720,9 @@ OpenBCICyton.prototype.numberOfChannels = function () {
  */
 OpenBCICyton.prototype.syncClocks = function () {
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to the device');
-    if (!this.isStreaming()) return reject('Must be streaming to sync clocks');
-    if (!this.usingVersionTwoFirmware()) return reject('Time sync not implemented on v1 firmware, please update to v2');
+    if (!this.isConnected()) return reject(Error('Must be connected to the device'));
+    if (!this.isStreaming()) return reject(Error('Must be streaming to sync clocks'));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Time sync not implemented on v1 firmware, please update to v2'));
     this.sync.curSyncObj = obciUtils.newSyncObject();
     this.sync.curSyncObj.timeSyncSent = this.time();
     this.curParsingMode = k.OBCIParsingTimeSyncSent;
@@ -1740,11 +1741,11 @@ OpenBCICyton.prototype.syncClocks = function () {
  */
 OpenBCICyton.prototype.syncClocksFull = function () {
   return new Promise((resolve, reject) => {
-    if (!this.isConnected()) return reject('Must be connected to the device');
-    if (!this.isStreaming()) return reject('Must be streaming to sync clocks');
-    if (!this.usingVersionTwoFirmware()) return reject('Time sync not implemented on v1 firmware, please update to v2');
+    if (!this.isConnected()) return reject(Error('Must be connected to the device'));
+    if (!this.isStreaming()) return reject(Error('Must be streaming to sync clocks'));
+    if (!this.usingVersionTwoFirmware()) return reject(Error('Time sync not implemented on v1 firmware, please update to v2'));
     var timeout = setTimeout(() => {
-      return reject('syncClocksFull timeout after 500ms with no sync');
+      return reject(Error('syncClocksFull timeout after 500ms with no sync'));
     }, 500); // Should not take more than 1s to sync up
     this.sync.eventEmitter = syncObj => {
       clearTimeout(timeout);
@@ -2151,7 +2152,7 @@ OpenBCICyton.prototype._finalizeNewSampleForDaisy = function (sampleObject) {
 OpenBCICyton.prototype.sntpGetOffset = function () {
   this.options.sntpTimeSync = true;
 
-  if (!this.options.sntpTimeSync) return Promise.reject('sntp not enabled');
+  if (!this.options.sntpTimeSync) return Promise.reject(Error('sntp not enabled'));
 
   return new Promise((resolve, reject) => {
     Sntp.offset({

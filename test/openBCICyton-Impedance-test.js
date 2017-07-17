@@ -5,6 +5,7 @@ const should = chai.should(); // eslint-disable-line no-unused-vars
 const Cyton = require('../openBCICyton');
 const openBCIUtilities = require('openbci-utilities').Utilities;
 const k = require('openbci-utilities').Constants;
+const Buffer = require('safe-buffer').Buffer;
 
 const chaiAsPromised = require('chai-as-promised');
 const sinonChai = require('sinon-chai');

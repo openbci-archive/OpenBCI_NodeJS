@@ -14,6 +14,7 @@ const bufferEqual = require('buffer-equal');
 const fs = require('fs');
 const math = require('mathjs');
 const dirtyChai = require('dirty-chai');
+const Buffer = require('safe-buffer').Buffer;
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);

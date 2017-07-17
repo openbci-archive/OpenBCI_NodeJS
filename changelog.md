@@ -16,6 +16,7 @@
     ```
 * Major change to how board is initialized with removal of `factory` paradigm.
 * New dependency called `openbci-utilities`.
+* Rejections are errors with messages, so check err.message for info on message, don't expect string.
 
 ### Bug Fixes
 * Documentation error with `testSignal` function.
