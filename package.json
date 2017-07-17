@@ -40,7 +40,7 @@
     "mocha": "^3.4.2",
     "sandboxed-module": "^2.0.3",
     "semistandard": "^11.0.0",
-    "sinon": "^2.3.8",
+    "sinon": "^1.17.7",
     "sinon-as-promised": "^4.0.3",
     "sinon-chai": "^2.11.0",
     "snazzy": "^7.0.0"
