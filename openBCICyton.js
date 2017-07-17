@@ -352,7 +352,9 @@ OpenBCICyton.prototype._disconnected = function (err) {
   clearTimeout(this.writer);
   this.writer = null;
 
-  this.serial.removeAllListeners();
+  this.serial.removeAllListeners('close');
+  this.serial.removeAllListeners('error');
+  this.serial.removeAllListeners('data');
   this.serial = null;
 
   this.emit('close');
@@ -1854,7 +1856,7 @@ OpenBCICyton.prototype._processBytes = function (data) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype._processDataBuffer = function (dataBuffer) {
-  if (_.isNull(dataBuffer) || _.isUndefined(dataBuffer)) return;
+  if (_.isNull(dataBuffer) || _.isUndefined(dataBuffer)) return null;
   const output = obciUtils.extractRawDataPackets(dataBuffer);
 
   dataBuffer = output.buffer;

@@ -989,18 +989,22 @@ describe('openbci-sdk', function () {
         writeWhileConnected();
         ourBoard.disconnect().catch(done);
       });
-      it('disconnects immediately, rejecting all buffered writes', function () {
+      it('disconnects immediately, rejecting all buffered writes', function (done) {
         var writeSpy = sinon.spy(ourBoard.serial, 'write');
-        return Promise.all([
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.disconnect()
-        ]).then(() => {
-          writeSpy.should.have.not.been.called;
-          writeSpy.restore();
-        });
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+
+        ourBoard.disconnect()
+          .then(() => {
+            writeSpy.should.have.not.been.called();
+            writeSpy.restore();
+            done();
+          })
+          .catch((err) => {
+            done(err);
+          })
       });
     });
     describe('#listPorts', function () {
@@ -1842,50 +1846,6 @@ describe('openbci-sdk', function () {
     });
   });
 
-  describe('#_processPacket Errors', function () {
-    var ourBoard;
-    before(() => {
-      ourBoard = new Cyton({
-        verbose: false
-      });
-    });
-    beforeEach(() => {
-      ourBoard.badPackets = 0;
-      ourBoard.previousSampleNumber = 0;
-    });
-    afterEach(() => {
-      ourBoard.sync.curSyncObj = null;
-    });
-    after(() => bluebirdChecks.noPendingPromises());
-    it('_processPacketStandardAccel', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketStandardAccel(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-    it('_processPacketStandardRawAux', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketStandardRawAux(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-    it('_processPacketTimeSyncedAccel', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketTimeSyncedAccel(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-    it('_processPacketTimeSyncedRawAux', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketTimeSyncedRawAux(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-  });
   describe('#time', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should use sntp time when sntpTimeSync specified in options', function (done) {
