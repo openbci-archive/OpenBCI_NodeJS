@@ -15,7 +15,6 @@ const fs = require('fs');
 const math = require('mathjs');
 const dirtyChai = require('dirty-chai');
 
-
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
 chai.use(dirtyChai);
@@ -567,7 +566,7 @@ describe('openbci-sdk', function () {
               return ourBoard.disconnect();
             })
             .then(() => {
-              done("should have failed to connect");
+              done('should have failed to connect');
             })
             .catch((err) => {
               if (err === 'already connected!') {
@@ -581,7 +580,7 @@ describe('openbci-sdk', function () {
             })
             .catch((err) => {
               done(err);
-            })
+            });
         });
       });
       it('gets the ready signal from the board and sends a stop streaming command before disconnecting', function (done) {
@@ -934,7 +933,7 @@ describe('openbci-sdk', function () {
             })
             .catch(() => {
               done();
-            })
+            });
         } else {
           done();
         }
@@ -1004,7 +1003,7 @@ describe('openbci-sdk', function () {
           })
           .catch((err) => {
             done(err);
-          })
+          });
       });
     });
     describe('#listPorts', function () {

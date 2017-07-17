@@ -127,7 +127,6 @@ var _options = {
   debug: false
 };
 
-
 /**
  * @description The initialization method to call first, before any other method.
  * @param options {* | InitializationObject} (optional) - Board optional configurations.
@@ -610,16 +609,16 @@ OpenBCICyton.prototype.autoFindOpenBCIBoard = function () {
         }
         // This is one big if statement
         if (ports.some(port => {
-            return serialPatterns.some(patterns => {
-              for (var attribute in patterns) {
-                if (!String(port[attribute]).match(patterns[attribute])) {
-                  return false;
-                }
+          return serialPatterns.some(patterns => {
+            for (var attribute in patterns) {
+              if (!String(port[attribute]).match(patterns[attribute])) {
+                return false;
               }
-              this.portName = port.comName;
-              return true;
-            });
-          })) {
+            }
+            this.portName = port.comName;
+            return true;
+          });
+        })) {
           if (this.options.verbose) console.log('auto found board');
           resolve(this.portName);
         } else {
@@ -1948,10 +1947,6 @@ OpenBCICyton.prototype._processImpedanceTest = function (sampleObject) {
     }
   }
 };
-
-
-
-
 
 /**
  * @description A method to parse a stream packet that does not have channel data or aux/accel data, just a timestamp
