@@ -3,8 +3,10 @@ const EventEmitter = require('events').EventEmitter;
 const util = require('util');
 const stream = require('stream');
 const SerialPort = require('serialport');
-const openBCISample = require('./openBCISample');
-const k = openBCISample.k;
+const OpenBCIUtilities = require('openbci-utilities');
+const obciUtils = OpenBCIUtilities.Utilities;
+const k = OpenBCIUtilities.Constants;
+const obciDebug = OpenBCIUtilities.Debug;
 const openBCISimulator = require('./openBCISimulator');
 const Sntp = require('sntp');
 const bufferEqual = require('buffer-equal');
@@ -179,7 +181,7 @@ function OpenBCICyton (options) {
   this.buffer = null;
   this.masterBuffer = masterBufferMaker();
   // Objects
-  this.impedanceTest = openBCISample.impedanceTestObjDefault();
+  this.impedanceTest = obciUtils.impedanceTestObjDefault();
   this.info = {
     boardType: this.options.boardType,
     sampleRate: k.OBCISampleRate125,
@@ -206,7 +208,7 @@ function OpenBCICyton (options) {
   // Numbers
   this.badPackets = 0;
   this.curParsingMode = k.OBCIParsingReset;
-  this.impedanceArray = openBCISample.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
+  this.impedanceArray = obciUtils.impedanceArray(k.numberOfChannelsForBoardType(this.options.boardType));
   this.previousSampleNumber = -1;
   this.sampleCount = 0;
   this.timeOfPacketArrival = 0;
@@ -540,7 +542,7 @@ OpenBCICyton.prototype.write = function (dataToWrite) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype._writeAndDrain = function (data) {
-  this._debugBytes('>>>', data);
+  obciDebug.debugBytes('>>>', data);
 
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject('Serial port not open');
@@ -567,7 +569,7 @@ OpenBCICyton.prototype._writeAndDrain = function (data) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype.autoFindOpenBCIBoard = function () {
-  var serialPatterns = [
+  const serialPatterns = [
     { // mac
       comName: /usbserial-D/
     },
@@ -665,7 +667,7 @@ OpenBCICyton.prototype.radioChannelSet = function (channelNumber) {
       clearTimeout(badCommsTimeout);
       badCommsTimeout = null;
 
-      if (openBCISample.isSuccessInBuffer(data)) {
+      if (obciUtils.isSuccessInBuffer(data)) {
         resolve(data[data.length - 4]);
       } else {
         reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
@@ -715,7 +717,7 @@ OpenBCICyton.prototype.radioChannelSetHostOverride = function (channelNumber) {
       clearTimeout(badCommsTimeout);
       badCommsTimeout = null;
 
-      if (openBCISample.isSuccessInBuffer(data)) {
+      if (obciUtils.isSuccessInBuffer(data)) {
         resolve(data[data.length - 4]);
       } else {
         reject(`Error [radioChannelSet]: ${data}`); // The channel number is in the first byte
@@ -762,7 +764,7 @@ OpenBCICyton.prototype.radioChannelGet = function () {
       // Remove the timeout!
       clearTimeout(badCommsTimeout);
       badCommsTimeout = null;
-      if (openBCISample.isSuccessInBuffer(data)) {
+      if (obciUtils.isSuccessInBuffer(data)) {
         resolve({
           channelNumber: data[data.length - 4],
           data: data
@@ -810,7 +812,7 @@ OpenBCICyton.prototype.radioPollTimeGet = function () {
       clearTimeout(badCommsTimeout);
       badCommsTimeout = null;
 
-      if (openBCISample.isSuccessInBuffer(data)) {
+      if (obciUtils.isSuccessInBuffer(data)) {
         var pollTime = data[data.length - 4];
         resolve(pollTime);
       } else {
@@ -862,7 +864,7 @@ OpenBCICyton.prototype.radioPollTimeSet = function (pollTime) {
       clearTimeout(badCommsTimeout);
       badCommsTimeout = null;
 
-      if (openBCISample.isSuccessInBuffer(data)) {
+      if (obciUtils.isSuccessInBuffer(data)) {
         resolve(data[data.length - 4]); // Ditch the eot $$$
       } else {
         reject(`Error [radioPollTimeSet]: ${data}`); // The channel number is in the first byte
@@ -925,7 +927,7 @@ OpenBCICyton.prototype.radioBaudRateSet = function (speed) {
       }
       if (!this.isConnected()) {
         reject('Lost connection to device during baud set');
-      } else if (openBCISample.isSuccessInBuffer(data)) {
+      } else if (obciUtils.isSuccessInBuffer(data)) {
         // Change the sample rate here
         if (this.options.simulate === false) {
           this.serial.update({baudRate: newBaudRateNum}, err => {
@@ -984,7 +986,7 @@ OpenBCICyton.prototype.radioSystemStatusGet = function () {
 
       if (this.options.verbose) console.log(data.toString());
 
-      if (openBCISample.isSuccessInBuffer(data)) {
+      if (obciUtils.isSuccessInBuffer(data)) {
         resolve(true);
       } else {
         resolve(false);
@@ -1054,7 +1056,7 @@ OpenBCICyton.prototype.overrideInfoForBoardType = function (boardType) {
       this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
       this.info.sampleRate = k.OBCISampleRate125;
       this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
-      this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDaisy);
+      this.impedanceArray = obciUtils.impedanceArray(k.OBCINumberOfChannelsDaisy);
       break;
     case k.OBCIBoardDefault:
     default:
@@ -1062,7 +1064,7 @@ OpenBCICyton.prototype.overrideInfoForBoardType = function (boardType) {
       this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
       this.info.sampleRate = k.OBCISampleRate250;
       this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
-      this.impedanceArray = openBCISample.impedanceArray(k.OBCINumberOfChannelsDefault);
+      this.impedanceArray = obciUtils.impedanceArray(k.OBCINumberOfChannelsDefault);
       break;
   }
 };
@@ -1394,7 +1396,7 @@ OpenBCICyton.prototype.impedanceTestChannels = function (arrayOfChannels) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype.impedanceTestChannel = function (channelNumber) {
-  this.impedanceArray[channelNumber - 1] = openBCISample.impedanceObject(channelNumber);
+  this.impedanceArray[channelNumber - 1] = obciUtils.impedanceObject(channelNumber);
   return new Promise((resolve, reject) => {
     this._impedanceTestSetChannel(channelNumber, true, false) // Sends command for P input on channel number.
       .then(channelNumber => {
@@ -1424,7 +1426,7 @@ OpenBCICyton.prototype.impedanceTestChannel = function (channelNumber) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype.impedanceTestChannelInputP = function (channelNumber) {
-  this.impedanceArray[channelNumber - 1] = openBCISample.impedanceObject(channelNumber);
+  this.impedanceArray[channelNumber - 1] = obciUtils.impedanceObject(channelNumber);
   return new Promise((resolve, reject) => {
     this._impedanceTestSetChannel(channelNumber, true, false) // Sends command for P input on channel number.
       .then(channelNumber => {
@@ -1448,7 +1450,7 @@ OpenBCICyton.prototype.impedanceTestChannelInputP = function (channelNumber) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype.impedanceTestChannelInputN = function (channelNumber) {
-  this.impedanceArray[channelNumber - 1] = openBCISample.impedanceObject(channelNumber);
+  this.impedanceArray[channelNumber - 1] = obciUtils.impedanceObject(channelNumber);
   return new Promise((resolve, reject) => {
     this._impedanceTestSetChannel(channelNumber, false, true) // Sends command for N input on channel number.
       .then(channelNumber => {
@@ -1596,8 +1598,8 @@ OpenBCICyton.prototype._impedanceTestFinalizeChannel = function (channelNumber, 
     if (typeof pInput !== 'boolean') return reject("Invalid Input: 'pInput' must be of type Bool");
     if (typeof nInput !== 'boolean') return reject("Invalid Input: 'nInput' must be of type Bool");
 
-    if (pInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].P);
-    if (nInput) openBCISample.impedanceSummarize(this.impedanceArray[channelNumber - 1].N);
+    if (pInput) obciUtils.impedanceSummarize(this.impedanceArray[channelNumber - 1].P);
+    if (nInput) obciUtils.impedanceSummarize(this.impedanceArray[channelNumber - 1].N);
 
     setTimeout(() => {
       resolve(channelNumber);
@@ -1706,7 +1708,7 @@ OpenBCICyton.prototype.syncClocks = function () {
     if (!this.isConnected()) return reject('Must be connected to the device');
     if (!this.isStreaming()) return reject('Must be streaming to sync clocks');
     if (!this.usingVersionTwoFirmware()) return reject('Time sync not implemented on v1 firmware, please update to v2');
-    this.sync.curSyncObj = openBCISample.newSyncObject();
+    this.sync.curSyncObj = obciUtils.newSyncObject();
     this.sync.curSyncObj.timeSyncSent = this.time();
     this.curParsingMode = k.OBCIParsingTimeSyncSent;
     this._writeAndDrain(k.OBCISyncTimeSet).then(resolve, reject);
@@ -1735,7 +1737,7 @@ OpenBCICyton.prototype.syncClocksFull = function () {
       return resolve(syncObj);
     };
     this.once('synced', this.sync.eventEmitter);
-    this.sync.curSyncObj = openBCISample.newSyncObject();
+    this.sync.curSyncObj = obciUtils.newSyncObject();
     this.sync.curSyncObj.timeSyncSent = this.time();
     this.curParsingMode = k.OBCIParsingTimeSyncSent;
     this._writeAndDrain(k.OBCISyncTimeSet)
@@ -1744,40 +1746,6 @@ OpenBCICyton.prototype.syncClocksFull = function () {
         return reject(err);
       });
   });
-};
-
-/**
- * @description Output passed bytes on the console as a hexdump, if enabled
- * @param prefix - label to show to the left of bytes
- * @param data - bytes to output, a buffer or string
- * @private
- */
-OpenBCICyton.prototype._debugBytes = function (prefix, data) {
-  if (!this.options.debug) return;
-
-  if (typeof data === 'string') data = new Buffer(data);
-
-  console.log('Debug bytes:');
-
-  for (var j = 0; j < data.length;) {
-    var hexPart = '';
-    var ascPart = '';
-    for (var end = Math.min(data.length, j + 16); j < end; ++j) {
-      var byt = data[j];
-
-      var hex = ('0' + byt.toString(16)).slice(-2);
-      hexPart += (((j & 0xf) === 0x8) ? '  ' : ' '); // puts an extra space 8 bytes in
-      hexPart += hex;
-
-      var asc = (byt >= 0x20 && byt < 0x7f) ? String.fromCharCode(byt) : '.';
-      ascPart += asc;
-    }
-
-    // pad to fixed width for alignment
-    hexPart = (hexPart + '                                                   ').substring(0, 3 * 17);
-
-    console.log(prefix + ' ' + hexPart + '|' + ascPart + '|');
-  }
 };
 
 /**
@@ -1793,7 +1761,7 @@ OpenBCICyton.prototype._debugBytes = function (prefix, data) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype._processBytes = function (data) {
-  this._debugBytes(this.curParsingMode + '<<', data);
+  obciDebug.debugBytes(this.curParsingMode + '<<', data);
 
   // Concat old buffer
   var oldDataBuffer = null;
@@ -1804,17 +1772,17 @@ OpenBCICyton.prototype._processBytes = function (data) {
 
   switch (this.curParsingMode) {
     case k.OBCIParsingEOT:
-      if (openBCISample.doesBufferHaveEOT(data)) {
+      if (obciUtils.doesBufferHaveEOT(data)) {
         this.curParsingMode = k.OBCIParsingNormal;
         this.emit(k.OBCIEmitterEot, data);
-        this.buffer = openBCISample.stripToEOTBuffer(data);
+        this.buffer = obciUtils.stripToEOTBuffer(data);
       } else {
         this.buffer = data;
       }
       break;
     case k.OBCIParsingReset:
       // Does the buffer have an EOT in it?
-      if (openBCISample.doesBufferHaveEOT(data)) {
+      if (obciUtils.doesBufferHaveEOT(data)) {
         this._processParseBufferForReset(data);
         if (this.options.hardSet) {
           if (this.getBoardType() !== this.options.boardType) {
@@ -1829,7 +1797,7 @@ OpenBCICyton.prototype._processBytes = function (data) {
           } else {
             this.curParsingMode = k.OBCIParsingNormal;
             this.emit(k.OBCIEmitterReady);
-            this.buffer = openBCISample.stripToEOTBuffer(data);
+            this.buffer = obciUtils.stripToEOTBuffer(data);
           }
         } else {
           if (this.getBoardType() !== this.options.boardType && this.options.verbose) {
@@ -1837,7 +1805,7 @@ OpenBCICyton.prototype._processBytes = function (data) {
           }
           this.curParsingMode = k.OBCIParsingNormal;
           this.emit(k.OBCIEmitterReady);
-          this.buffer = openBCISample.stripToEOTBuffer(data);
+          this.buffer = obciUtils.stripToEOTBuffer(data);
         }
       } else {
         this.buffer = data;
@@ -1845,7 +1813,7 @@ OpenBCICyton.prototype._processBytes = function (data) {
       break;
     case k.OBCIParsingTimeSyncSent:
       // If there is only one match
-      if (openBCISample.isTimeSyncSetConfirmationInBuffer(data)) {
+      if (obciUtils.isTimeSyncSetConfirmationInBuffer(data)) {
         if (this.options.verbose) console.log(`Found Time Sync Sent`);
         this.sync.curSyncObj.timeSyncSentConfirmation = this.time();
         this.curParsingMode = k.OBCIParsingNormal;
@@ -1885,7 +1853,7 @@ OpenBCICyton.prototype._processDataBuffer = function (dataBuffer) {
     if (dataBuffer[parsePosition] === k.OBCIByteStart) {
       // Now that we know the first is a head byte, let's see if the last one is a
       //  tail byte 0xCx where x is the set of numbers from 0-F (hex)
-      if (openBCISample.isStopByte(dataBuffer[parsePosition + k.OBCIPacketSize - 1])) {
+      if (obciUtils.isStopByte(dataBuffer[parsePosition + k.OBCIPacketSize - 1])) {
         /** We just qualified a raw packet */
         // This could be a time set packet!
         this.timeOfPacketArrival = this.time();
@@ -1937,13 +1905,13 @@ OpenBCICyton.prototype._processDataBuffer = function (dataBuffer) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype._processParseBufferForReset = function (dataBuffer) {
-  if (openBCISample.countADSPresent(dataBuffer) === 2) {
+  if (obciUtils.countADSPresent(dataBuffer) === 2) {
     this.overrideInfoForBoardType(k.OBCIBoardDaisy);
   } else {
     this.overrideInfoForBoardType(k.OBCIBoardDefault);
   }
 
-  if (openBCISample.findV2Firmware(dataBuffer)) {
+  if (obciUtils.findV2Firmware(dataBuffer)) {
     this.info.firmware = k.OBCIFirmwareV2;
     this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
   } else {
@@ -1961,12 +1929,12 @@ OpenBCICyton.prototype._processParseBufferForReset = function (dataBuffer) {
 OpenBCICyton.prototype._processQualifiedPacket = function (rawDataPacketBuffer) {
   if (!rawDataPacketBuffer) return;
   if (rawDataPacketBuffer.byteLength !== k.OBCIPacketSize) return;
-  var missedPacketArray = openBCISample.droppedPacketCheck(this.previousSampleNumber, rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber]);
+  var missedPacketArray = obciUtils.droppedPacketCheck(this.previousSampleNumber, rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber]);
   if (missedPacketArray) {
     this.emit(k.OBCIEmitterDroppedPacket, missedPacketArray);
   }
   this.previousSampleNumber = rawDataPacketBuffer[k.OBCIPacketPositionSampleNumber];
-  var packetType = openBCISample.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
+  var packetType = obciUtils.getRawPacketType(rawDataPacketBuffer[k.OBCIPacketPositionStopByte]);
   switch (packetType) {
     case k.OBCIStreamPacketStandardAccel:
       this._processPacketStandardAccel(rawDataPacketBuffer);
@@ -2008,14 +1976,14 @@ OpenBCICyton.prototype._processImpedanceTest = function (sampleObject) {
   var impedanceArray;
   if (this.impedanceTest.continuousMode) {
     // console.log('running in continuous mode...')
-    // openBCISample.debugPrettyPrint(sampleObject)
-    impedanceArray = openBCISample.impedanceCalculateArray(sampleObject, this.impedanceTest);
+    // obciUtils.debugPrettyPrint(sampleObject)
+    impedanceArray = obciUtils.impedanceCalculateArray(sampleObject, this.impedanceTest);
     if (impedanceArray) {
       this.emit('impedanceArray', impedanceArray);
     }
   } else if (this.impedanceTest.onChannel !== 0) {
     // Only calculate impedance for one channel
-    impedanceArray = openBCISample.impedanceCalculateArray(sampleObject, this.impedanceTest);
+    impedanceArray = obciUtils.impedanceCalculateArray(sampleObject, this.impedanceTest);
     if (impedanceArray) {
       this.impedanceTest.impedanceForChannel = impedanceArray[this.impedanceTest.onChannel - 1];
     }
@@ -2030,7 +1998,7 @@ OpenBCICyton.prototype._processImpedanceTest = function (sampleObject) {
  */
 OpenBCICyton.prototype._processPacketStandardAccel = function (rawPacket) {
   try {
-    let sample = openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray, true);
+    let sample = obciUtils.parseRawPacketStandard(rawPacket, this.channelSettingsArray, true);
     sample.rawPacket = rawPacket;
     this._finalizeNewSample(sample);
   } catch (err) {
@@ -2048,7 +2016,7 @@ OpenBCICyton.prototype._processPacketStandardAccel = function (rawPacket) {
  */
 OpenBCICyton.prototype._processPacketStandardRawAux = function (rawPacket) {
   try {
-    let sample = openBCISample.parseRawPacketStandard(rawPacket, this.channelSettingsArray, false);
+    let sample = obciUtils.parseRawPacketStandard(rawPacket, this.channelSettingsArray, false);
     sample.rawPacket = rawPacket;
     this._finalizeNewSample(sample);
   } catch (err) {
@@ -2073,7 +2041,7 @@ OpenBCICyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPa
    * @returns {{boardTime, correctedTransmissionTime, error, timeSyncSent, timeSyncSentConfirmation, timeSyncSetPacket, timeRoundTrip, timeTransmission, timeOffset, timeOffsetMaster, valid}|*}
    */
   var getBadObject = (err) => {
-    var badObject = openBCISample.newSyncObject();
+    var badObject = obciUtils.newSyncObject();
     badObject.timeOffsetMaster = this.sync.timeOffsetMaster;
     // Create an error
     badObject.error = err;
@@ -2095,7 +2063,7 @@ OpenBCICyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPa
     try {
       this.sync.curSyncObj.timeSyncSetPacket = timeOfPacketArrival;
       if (this.options.verbose) console.log('Got time set packet from the board');
-      let boardTime = openBCISample.getFromTimePacketTime(rawPacket);
+      let boardTime = obciUtils.getFromTimePacketTime(rawPacket);
       this.sync.curSyncObj.boardTime = boardTime;
       // if (this.options.verbose) {
       //     console.log(`Sent sync command at ${this.sync.curSyncObj.timeSyncSent} ms`)
@@ -2202,7 +2170,7 @@ OpenBCICyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPa
 OpenBCICyton.prototype._processPacketTimeSyncedAccel = function (rawPacket) {
   // if (this.sync.active === false) console.log('Need to sync with board...')
   try {
-    let sample = openBCISample.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster, this.accelArray);
+    let sample = obciUtils.parsePacketTimeSyncedAccel(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster, this.accelArray);
     sample.rawPacket = rawPacket;
     this._finalizeNewSample(sample);
   } catch (err) {
@@ -2222,7 +2190,7 @@ OpenBCICyton.prototype._processPacketTimeSyncedAccel = function (rawPacket) {
 OpenBCICyton.prototype._processPacketTimeSyncedRawAux = function (rawPacket) {
   // if (this.sync.active === false) console.log('Need to sync with board...')
   try {
-    let sample = openBCISample.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster);
+    let sample = obciUtils.parsePacketTimeSyncedRawAux(rawPacket, this.channelSettingsArray, this.sync.timeOffsetMaster);
     sample.rawPacket = rawPacket;
     this._finalizeNewSample(sample);
   } catch (err) {
@@ -2266,7 +2234,7 @@ OpenBCICyton.prototype._finalizeNewSample = function (sampleObject) {
  * @author AJ Keller (@pushtheworldllc)
  */
 OpenBCICyton.prototype._finalizeNewSampleForDaisy = function (sampleObject) {
-  if (openBCISample.isOdd(sampleObject.sampleNumber)) {
+  if (obciUtils.isOdd(sampleObject.sampleNumber)) {
     // Check for the skipped packet condition
     if (this._lowerChannelsSampleObject) {
       // The last packet was odd... missed the even packet
@@ -2277,7 +2245,7 @@ OpenBCICyton.prototype._finalizeNewSampleForDaisy = function (sampleObject) {
     // Make sure there is an odd packet waiting to get merged with this packet
     if (this._lowerChannelsSampleObject) {
       // Merge these two samples
-      var mergedSample = openBCISample.makeDaisySampleObject(this._lowerChannelsSampleObject, sampleObject);
+      var mergedSample = obciUtils.makeDaisySampleObject(this._lowerChannelsSampleObject, sampleObject);
       // Set the _lowerChannelsSampleObject object to null
       this._lowerChannelsSampleObject = null;
       // Emite the new merged sample
