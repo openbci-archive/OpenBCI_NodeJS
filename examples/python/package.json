@@ -1,6 +1,6 @@
 {
   "name": "python",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "node to python example",
   "main": "index.js",
   "scripts": {
@@ -16,7 +16,7 @@
   "author": "AJ Keller",
   "license": "MIT",
   "dependencies": {
-    "openbci": "^1.4.2",
+    "openbci": "^2.0.0",
     "zmq-prebuilt": "^2.1.0"
   },
   "devEngines": {

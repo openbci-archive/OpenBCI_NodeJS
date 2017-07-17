@@ -1,24 +1,25 @@
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var sinon = require('sinon'); // eslint-disable-line no-unused-vars
-var chai = require('chai');
-var expect = chai.expect;
-var should = chai.should(); // eslint-disable-line no-unused-vars
-var openBCIBoard = require('../openBCIBoard');
-var openBCISample = openBCIBoard.OpenBCISample;
-var k = openBCISample.k;
-var chaiAsPromised = require('chai-as-promised');
-var sinonChai = require('sinon-chai');
+const bluebirdChecks = require('./bluebirdChecks');
+const sinon = require('sinon'); // eslint-disable-line no-unused-vars
+const chai = require('chai');
+const expect = chai.expect;
+const should = chai.should(); // eslint-disable-line no-unused-vars
+const OpenBCICyton = require('../openBCICyton');
+const k = require('openbci-utilities').Constants;
+const chaiAsPromised = require('chai-as-promised');
+const sinonChai = require('sinon-chai');
+const dirtyChai = require('dirty-chai');
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
+chai.use(dirtyChai);
 
 describe('openbci-radios', function () {
   this.timeout(2000);
   var ourBoard, masterPortName;
 
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard();
+    ourBoard = new OpenBCICyton();
     ourBoard.autoFindOpenBCIBoard()
       .then(portName => {
         ourBoard = null;
@@ -62,7 +63,7 @@ describe('openbci-radios', function () {
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not change the channel number if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -71,7 +72,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -91,7 +92,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should reject if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -103,7 +104,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should reject if a number is not sent as input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -117,7 +118,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if no channel number is presented as arg', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -131,7 +132,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if the requested new channel number is lower than 0', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -145,7 +146,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if the requested new channel number is higher than 25', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -159,7 +160,7 @@ describe('openbci-radios', function () {
     });
 
     it('should not change the channel if the board is not communicating with the host', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -175,7 +176,7 @@ describe('openbci-radios', function () {
 
     it('should change the channel if connected, not steaming, and using firmware version 2+', function (done) {
       var newChannelNumber = 2;
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -204,7 +205,7 @@ describe('openbci-radios', function () {
     });
     afterEach(() => bluebirdChecks.noPendingPromises());
     it('should not change the channel number if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -212,7 +213,7 @@ describe('openbci-radios', function () {
       ourBoard.radioChannelSetHostOverride().should.be.rejected.and.notify(done);
     });
     it('should reject if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -232,7 +233,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should reject if a number is not sent as input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -245,7 +246,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should reject if no channel number is presented as arg', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -258,7 +259,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should reject if the requested new channel number is lower than 0', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -271,7 +272,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should reject if the requested new channel number is higher than 25', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -285,7 +286,7 @@ describe('openbci-radios', function () {
     });
     it('should change the channel if connected, not steaming, and using firmware version 2+', function (done) {
       var newChannelNumber = 2;
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -315,14 +316,14 @@ describe('openbci-radios', function () {
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not query if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioChannelGet().should.be.rejected.and.notify(done);
     });
     it('should not query if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -341,7 +342,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should not query if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -353,7 +354,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should query if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -369,7 +370,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should get message even if the board is not communicating with dongle', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -396,7 +397,7 @@ describe('openbci-radios', function () {
     });
     afterEach(() => bluebirdChecks.noPendingPromises());
     it('should not change the channel number if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -405,7 +406,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -426,7 +427,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -439,7 +440,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if a number is not sent as input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -453,7 +454,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if no poll time is presented as arg', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -467,7 +468,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if the requested new poll time is lower than 0', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -481,7 +482,7 @@ describe('openbci-radios', function () {
     });
 
     it('should reject if the requested new poll time is higher than 255', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -495,7 +496,7 @@ describe('openbci-radios', function () {
     });
 
     it('should not change the poll time if the board is not communicating with the host', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -511,7 +512,7 @@ describe('openbci-radios', function () {
 
     it('should change the poll time if connected, not steaming, and using firmware version 2+', function (done) {
       var newPollTime = 69;
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -542,14 +543,14 @@ describe('openbci-radios', function () {
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not query if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioPollTimeGet().should.be.rejected.and.notify(done);
     });
     it('should not query if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -568,7 +569,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should not query if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -580,7 +581,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should query if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -596,7 +597,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should get failure message if the board is not communicating with dongle', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -624,28 +625,28 @@ describe('openbci-radios', function () {
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not try to set baud rate if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioBaudRateSet('default').should.be.rejected.and.notify(done);
     });
     it('should reject if no input', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioBaudRateSet().should.be.rejected.and.notify(done);
     });
     it('should be rejected if input type incorrect', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioBaudRateSet(1).should.be.rejected.and.notify(done);
     });
     it('should not try to change the baud rate if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -664,7 +665,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should not try to change the baud rate if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -676,7 +677,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should set the baud rate to default if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -692,7 +693,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should set the baud rate to fast if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -722,14 +723,14 @@ describe('openbci-radios', function () {
     afterEach(() => bluebirdChecks.noPendingPromises());
 
     it('should not get system status if not connected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
       ourBoard.radioSystemStatusGet().should.be.rejected.and.notify(done);
     });
     it('should not get system status if streaming', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -748,7 +749,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should not get system status if not firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true
       });
@@ -760,7 +761,7 @@ describe('openbci-radios', function () {
         }).catch(err => done(err));
     });
     it('should get up system status if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2'
@@ -769,14 +770,14 @@ describe('openbci-radios', function () {
         .then(() => {
           ourBoard.once('ready', () => {
             ourBoard.radioSystemStatusGet().then(isUp => {
-              expect(isUp).to.be.true;
+              expect(isUp).to.be.true();
               done();
             }).catch(err => done(err));
           });
         }).catch(err => done(err));
     });
     it('should get down system status if firmware version 2', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulate: true,
         simulatorFirmwareVersion: 'v2',
@@ -786,7 +787,7 @@ describe('openbci-radios', function () {
         .then(() => {
           ourBoard.once('ready', () => {
             ourBoard.radioSystemStatusGet().then(isUp => {
-              expect(isUp).to.be.false;
+              expect(isUp).to.be.false();
               done();
             }).catch(err => done(err));
           });
@@ -797,7 +798,7 @@ describe('openbci-radios', function () {
   describe('#radioTests', function () {
     this.timeout(0);
     before(function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new OpenBCICyton({
         verbose: true,
         simulatorFirmwareVersion: 'v2',
         simulatorFragmentation: k.OBCISimulatorFragmentationRandom
@@ -898,7 +899,7 @@ describe('openbci-radios', function () {
         })
         .then(isUp => {
           // console.log(`isUp test`, Date.now(), `${Date.now() - timey}ms`)
-          expect(isUp).to.be.false;
+          expect(isUp).to.be.false();
           return ourBoard.radioChannelSetHostOverride(systemChanNumber); // Set back to good
         })
         .then(newChanNumActual => {
@@ -907,7 +908,7 @@ describe('openbci-radios', function () {
           return ourBoard.radioSystemStatusGet();
         })
         .then(isUp => {
-          expect(isUp).to.be.true;
+          expect(isUp).to.be.true();
           done();
         })
         .catch(err => done(err));
@@ -941,7 +942,7 @@ describe('openbci-radios', function () {
       // Don't test if not using v2
       if (!ourBoard.usingVersionTwoFirmware()) return done();
       ourBoard.radioSystemStatusGet().then(isUp => {
-        expect(isUp).to.be.true;
+        expect(isUp).to.be.true();
         done();
       }).catch(err => done(err));
     });

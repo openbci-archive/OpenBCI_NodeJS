@@ -1,22 +1,22 @@
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var chai = require('chai');
-var should = chai.should(); // eslint-disable-line no-unused-vars
-var openBCIBoard = require('../openBCIBoard');
-var openBCISample = openBCIBoard.OpenBCISample;
-var k = openBCISample.k;
+const bluebirdChecks = require('./bluebirdChecks');
+const chai = require('chai');
+const should = chai.should(); // eslint-disable-line no-unused-vars
+const OpenBCICyton = require('../openBCICyton');
+const openBCIUtilities = require('openbci-utilities').Utilities;
+const k = require('openbci-utilities').Constants;
 
-var chaiAsPromised = require('chai-as-promised');
-var sinonChai = require('sinon-chai');
+const chaiAsPromised = require('chai-as-promised');
+const sinonChai = require('sinon-chai');
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
 
 describe('#impedanceTesting', function () {
-  var ourBoard;
+  let ourBoard;
   this.timeout(20000);
 
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new OpenBCICyton({
       verbose: true,
       simulatorFragmentation: k.OBCISimulatorFragmentationRandom
     });
@@ -264,7 +264,7 @@ describe('#impedanceTesting', function () {
         impedanceArray = arr;
         done();
       });
-      ourBoard.impedanceArray[0] = openBCISample.impedanceObject(1);
+      ourBoard.impedanceArray[0] = openBCIUtilities.impedanceObject(1);
       ourBoard.impedanceTestChannels(['-', 'N', 'n', 'p', 'P', 'p', 'b', 'B']).catch(err => done(err));
     });
     describe('#channel1', function () {

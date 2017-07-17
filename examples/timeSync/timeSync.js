@@ -6,14 +6,16 @@
 *   do `npm install`
 *   then `npm start`
 */
+const verbose = true; // Adds verbosity to functions
 
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
+const Cyton = require('openbci').Cyton;
+let ourBoard = new Cyton({
+  simulatorFirmwareVersion: 'v2',
+  verbose: verbose
+});
 
-var ourBoard = new OpenBCIBoard({});
-var verbose = true; // Adds verbosity to functions
-
-var sampleRate = 250; // Default to 250, ALWAYS verify with a call to `.sampleRate()` after 'ready' event!
-var timeSyncPossible = false;
+let sampleRate = 250; // Default to 250, ALWAYS verify with a call to `.sampleRate()` after 'ready' event!
+let timeSyncPossible = false;
 
 ourBoard.autoFindOpenBCIBoard().then(portName => {
   if (portName) {
@@ -34,7 +36,7 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
   }
 });
 
-var readyFunc = () => {
+const readyFunc = () => {
   // Get the sample rate after 'ready'
   sampleRate = ourBoard.sampleRate();
   // Find out if you can even time sync, you must be using v2 and this is only accurate after a `.softReset()` call which is called internally on `.connect()`. We parse the `.softReset()` response for the presence of firmware version 2 properties.
@@ -50,14 +52,14 @@ var readyFunc = () => {
   }
 };
 
-var killFunc = () => {
+const killFunc = () => {
   ourBoard.disconnect()
     .then(() => {
       process.kill();
     });
 };
 
-var sampleFunc = sample => {
+const sampleFunc = sample => {
   // Resynchronize every every second
   if (sample._count % (sampleRate * 1) === 0) {
     ourBoard.syncClocksFull()

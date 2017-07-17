@@ -1,27 +1,31 @@
 'use strict';
-var bluebirdChecks = require('./bluebirdChecks');
-var sinon = require('sinon');
-var chai = require('chai');
-var expect = chai.expect;
-var should = chai.should(); // eslint-disable-line no-unused-vars
-var openBCIBoard = require('../openBCIBoard');
-var openBCISample = openBCIBoard.OpenBCISample;
-var k = openBCISample.k;
-var chaiAsPromised = require('chai-as-promised');
-var sinonChai = require('sinon-chai');
-var bufferEqual = require('buffer-equal');
-var fs = require('fs');
-var math = require('mathjs');
+const bluebirdChecks = require('./bluebirdChecks');
+const sinon = require('sinon');
+const chai = require('chai');
+const expect = chai.expect;
+const should = chai.should(); // eslint-disable-line no-unused-vars
+const Cyton = require('../openBCICyton');
+const OpenBCIUtilities = require('openbci-utilities');
+const openBCIUtilities = OpenBCIUtilities.Utilities;
+const k = OpenBCIUtilities.Constants;
+const chaiAsPromised = require('chai-as-promised');
+const sinonChai = require('sinon-chai');
+const bufferEqual = require('buffer-equal');
+const fs = require('fs');
+const math = require('mathjs');
+const dirtyChai = require('dirty-chai');
+const Buffer = require('safe-buffer').Buffer;
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
+chai.use(dirtyChai);
 
 describe('openbci-sdk', function () {
   this.timeout(2000);
   var ourBoard, masterPortName, realBoard, spy;
 
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard();
+    ourBoard = new Cyton();
     ourBoard.autoFindOpenBCIBoard()
       .then(portName => {
         ourBoard = null;
@@ -59,51 +63,58 @@ describe('openbci-sdk', function () {
       return bluebirdChecks.noPendingPromises();
     });
     it('constructs with require', function () {
-      var OpenBCIBoard = require('../openBCIBoard').OpenBCIBoard;
-      ourBoard = new OpenBCIBoard({
+      var OpenBCICyton = require('../index').Cyton;
+      ourBoard = new OpenBCICyton({
         verbose: true
       });
       expect(ourBoard.numberOfChannels()).to.equal(8);
     });
     it('constructs with the correct default options', () => {
-      var board = new openBCIBoard.OpenBCIBoard();
+      var board = new Cyton();
       expect(board.options.boardType).to.equal(k.OBCIBoardDefault);
       expect(board.options.baudRate).to.equal(115200);
-      expect(board.options.hardSet).to.be.false;
-      expect(board.options.simulate).to.be.false;
-      expect(board.options.simulatorBoardFailure).to.be.false;
-      expect(board.options.simulatorDaisyModuleAttached).to.be.false;
-      expect(board.options.simulatorDaisyModuleCanBeAttached).to.be.true;
+      expect(board.options.hardSet).to.be.false();
+      expect(board.options.sendCounts).to.be.false();
+      expect(board.options.simulate).to.be.false();
+      expect(board.options.simulatorBoardFailure).to.be.false();
+      expect(board.options.simulatorDaisyModuleAttached).to.be.false();
+      expect(board.options.simulatorDaisyModuleCanBeAttached).to.be.true();
       expect(board.options.simulatorFirmwareVersion).to.equal(k.OBCIFirmwareV1);
-      expect(board.options.simulatorHasAccelerometer).to.be.true;
+      expect(board.options.simulatorHasAccelerometer).to.be.true();
       expect(board.options.simulatorInternalClockDrift).to.equal(0);
-      expect(board.options.simulatorInjectAlpha).to.be.true;
+      expect(board.options.simulatorInjectAlpha).to.be.true();
       expect(board.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz60);
       expect(board.options.simulatorSampleRate).to.equal(k.OBCISampleRate250);
-      expect(board.options.simulatorSerialPortFailure).to.be.false;
-      expect(board.options.sntpTimeSync).to.be.false;
+      expect(board.options.simulatorSerialPortFailure).to.be.false();
+      expect(board.options.sntpTimeSync).to.be.false();
       expect(board.options.sntpTimeSyncHost).to.equal('pool.ntp.org');
-      expect(board.options.verbose).to.be.false;
+      expect(board.options.verbose).to.be.false();
       expect(board.sampleRate()).to.equal(250);
       expect(board.numberOfChannels()).to.equal(8);
-      expect(board.isConnected()).to.be.false;
-      expect(board.isStreaming()).to.be.false;
+      expect(board.isConnected()).to.be.false();
+      expect(board.isStreaming()).to.be.false();
+      it('should still get proper values if no info object', function () {
+        board.info = null;
+        expect(board.sampleRate()).to.equal(250);
+        expect(board.numberOfChannels()).to.equal(8);
+      });
     });
     it('should be able to set ganglion mode', () => {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         boardType: 'ganglion'
       });
       (board.options.boardType).should.equal('ganglion');
     });
     it('should be able to set set daisy mode', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         boardType: 'daisy'
       });
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         boardtype: 'daisy'
       });
       (ourBoard1.options.boardType).should.equal('daisy');
       (ourBoard2.options.boardType).should.equal('daisy');
+      ourBoard1.info = null;
       it('should get value for daisy', () => {
         ourBoard1.sampleRate().should.equal(125);
       });
@@ -112,122 +123,122 @@ describe('openbci-sdk', function () {
       });
     });
     it('should be able to change baud rate', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         baudRate: 9600
       });
       (ourBoard1.options.baudRate).should.equal(9600);
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         baudrate: 9600
       });
       (ourBoard2.options.baudRate).should.equal(9600);
     });
     it('should be able to enter simulate mode from the constructor', () => {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         simulate: true
       });
-      expect(board.options.simulate).to.be.true;
+      expect(board.options.simulate).to.be.true();
     });
     it('should be able to set the simulator to board failure mode', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorBoardFailure: true
       });
-      expect(ourBoard1.options.simulatorBoardFailure).to.be.true;
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      expect(ourBoard1.options.simulatorBoardFailure).to.be.true();
+      var ourBoard2 = new Cyton({
         simulatorboardfailure: true
       });
-      expect(ourBoard2.options.simulatorBoardFailure).to.be.true;
+      expect(ourBoard2.options.simulatorBoardFailure).to.be.true();
     });
     it('should be able to attach the daisy board in the simulator', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorDaisyModuleAttached: true
       });
-      expect(ourBoard1.options.simulatorDaisyModuleAttached).to.be.true;
+      expect(ourBoard1.options.simulatorDaisyModuleAttached).to.be.true();
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatordaisymoduleattached: true
       });
-      expect(ourBoard2.options.simulatorDaisyModuleAttached).to.be.true;
+      expect(ourBoard2.options.simulatorDaisyModuleAttached).to.be.true();
     });
     it('should be able to start the simulator with firmware version 2', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorFirmwareVersion: 'v2'
       });
       (ourBoard1.options.simulatorFirmwareVersion).should.equal(k.OBCIFirmwareV2);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorfirmwareversion: 'v2'
       });
       (ourBoard2.options.simulatorFirmwareVersion).should.equal(k.OBCIFirmwareV2);
     });
     it('should be able to put the simulator in raw aux mode', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorHasAccelerometer: false
       });
-      expect(ourBoard1.options.simulatorHasAccelerometer).to.be.false;
+      expect(ourBoard1.options.simulatorHasAccelerometer).to.be.false();
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorhasaccelerometer: false
       });
-      expect(ourBoard2.options.simulatorHasAccelerometer).to.be.false;
+      expect(ourBoard2.options.simulatorHasAccelerometer).to.be.false();
     });
     it('should be able to make the internal clock of the simulator run slow', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInternalClockDrift: -1
       });
       expect(ourBoard1.options.simulatorInternalClockDrift).to.be.lessThan(0);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinternalclockdrift: -1
       });
       expect(ourBoard2.options.simulatorInternalClockDrift).to.be.lessThan(0);
     });
     it('should be able to make the internal clock of the simulator run fast', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInternalClockDrift: 1
       });
       expect(ourBoard1.options.simulatorInternalClockDrift).to.be.greaterThan(0);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinternalclockdrift: 1
       });
       expect(ourBoard2.options.simulatorInternalClockDrift).to.be.greaterThan(0);
     });
     it('should be able to not inject alpha waves into the simulator', function () {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInjectAlpha: false
       });
-      expect(ourBoard1.options.simulatorInjectAlpha).to.be.false;
+      expect(ourBoard1.options.simulatorInjectAlpha).to.be.false();
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinjectalpha: false
       });
-      expect(ourBoard2.options.simulatorInjectAlpha).to.be.false;
+      expect(ourBoard2.options.simulatorInjectAlpha).to.be.false();
     });
     it('can turn 50Hz line noise on', function () {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorInjectLineNoise: '50Hz'
       });
       expect(ourBoard1.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz50);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorinjectlinenoise: '50Hz'
       });
       expect(ourBoard2.options.simulatorInjectLineNoise).to.equal(k.OBCISimulatorLineNoiseHz50);
     });
     it('can turn no line noise on', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulatorInjectLineNoise: 'none'
       });
       (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseNone);
     });
     it('defaults to 60Hz line noise when bad input', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulatorInjectLineNoise: '20Hz'
       });
       (ourBoard.options.simulatorInjectLineNoise).should.equal(k.OBCISimulatorLineNoiseHz60);
     });
     it('can enter simulate mode with different sample rate', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulate: true,
         simulatorSampleRate: 69
       });
@@ -236,21 +247,21 @@ describe('openbci-sdk', function () {
       (ourBoard.sampleRate()).should.equal(69);
     });
     it('should be able to attach the daisy board in the simulator', () => {
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         simulatorSerialPortFailure: true
       });
-      expect(ourBoard1.options.simulatorSerialPortFailure).to.be.true;
+      expect(ourBoard1.options.simulatorSerialPortFailure).to.be.true();
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         simulatorserialportfailure: true
       });
-      expect(ourBoard2.options.simulatorSerialPortFailure).to.be.true;
+      expect(ourBoard2.options.simulatorSerialPortFailure).to.be.true();
     });
     it('should be able to enter sync mode', function () {
-      var ourBoard = new openBCIBoard.OpenBCIBoard({
+      var ourBoard = new Cyton({
         sntpTimeSync: true
       });
-      expect(ourBoard.options.sntpTimeSync).to.be.true;
+      expect(ourBoard.options.sntpTimeSync).to.be.true();
 
       return new Promise((resolve, reject) => {
         ourBoard.once('sntpTimeLock', resolve);
@@ -264,30 +275,30 @@ describe('openbci-sdk', function () {
     });
     it('should be able to change the ntp pool host', function () {
       var expectedPoolName = 'time.apple.com';
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         sntpTimeSyncHost: expectedPoolName
       });
       expect(ourBoard1.options.sntpTimeSyncHost).to.equal(expectedPoolName);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         sntptimesynchost: expectedPoolName
       });
       expect(ourBoard2.options.sntpTimeSyncHost).to.equal(expectedPoolName);
     });
     it('should be able to change the ntp pool port', function () {
       var expectedPortNumber = 73;
-      var ourBoard1 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard1 = new Cyton({
         sntpTimeSyncPort: expectedPortNumber
       });
       expect(ourBoard1.options.sntpTimeSyncPort).to.equal(expectedPortNumber);
       // Verify multi case support
-      var ourBoard2 = new openBCIBoard.OpenBCIBoard({
+      var ourBoard2 = new Cyton({
         sntptimesyncport: expectedPortNumber
       });
       expect(ourBoard2.options.sntpTimeSyncPort).to.equal(expectedPortNumber);
     });
     it('should report when sntp fails', function (done) {
-      var ourBoard = new openBCIBoard.OpenBCIBoard({
+      var ourBoard = new Cyton({
         sntpTimeSync: true,
         sntpTimeSyncHost: 'no\'where'
       });
@@ -300,18 +311,18 @@ describe('openbci-sdk', function () {
       });
     });
     it('can enter verbose mode', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       (ourBoard.options.verbose).should.equal(true);
     });
     it('should start in current stream state in the init mode', () => {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
 
       ourBoard.curParsingMode.should.equal(k.OBCIParsingReset);
     });
     it('configures impedance testing variables correctly', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
       (ourBoard.impedanceTest.active).should.equal(false);
       (ourBoard.impedanceTest.isTestingNInput).should.equal(false);
       (ourBoard.impedanceTest.isTestingPInput).should.equal(false);
@@ -319,9 +330,9 @@ describe('openbci-sdk', function () {
       (ourBoard.impedanceTest.sampleNumber).should.equal(0);
     });
     it('configures sync object correctly', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
-      expect(ourBoard.sync.curSyncObj).to.be.null;
-      expect(ourBoard.sync.eventEmitter).to.be.null;
+      ourBoard = new Cyton();
+      expect(ourBoard.sync.curSyncObj).to.be.null();
+      expect(ourBoard.sync.eventEmitter).to.be.null();
       expect(ourBoard.sync.objArray.length).to.equal(0);
       (ourBoard.sync.sntpActive).should.equal(false);
       (ourBoard.sync.timeOffsetMaster).should.equal(0);
@@ -329,24 +340,24 @@ describe('openbci-sdk', function () {
       expect(ourBoard.sync.timeOffsetArray.length).to.equal(0);
     });
     it('configures impedance array with the correct amount of channels for default', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
       (ourBoard.impedanceArray.length).should.equal(8);
     });
     it('configures impedance array with the correct amount of channels for daisy', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         boardType: 'daisy'
       });
       (ourBoard.impedanceArray.length).should.equal(16);
     });
     it('configures impedance array with the correct amount of channels for ganglion', function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         boardType: 'ganglion'
       });
       (ourBoard.impedanceArray.length).should.equal(4);
     });
     it('should throw if passed an invalid option', function (done) {
       try {
-        ourBoard = new openBCIBoard.OpenBCIBoard({
+        ourBoard = new Cyton({
           foo: 'bar'
         });
         done('did not throw');
@@ -356,20 +367,20 @@ describe('openbci-sdk', function () {
   describe('#simulator', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('can enable simulator after constructor', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       ourBoard.simulatorEnable().should.be.fulfilled.and.notify(done);
     });
     it('should start sim and call disconnected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       var disconnectStub = sinon.stub(ourBoard, 'disconnect').returns(Promise.resolve());
       var isConnectedStub = sinon.stub(ourBoard, 'isConnected').returns(true);
       ourBoard.options.simulate.should.equal(false);
       ourBoard.simulatorEnable().then(() => {
-        disconnectStub.should.have.been.calledOnce;
+        disconnectStub.should.have.been.calledOnce();
         disconnectStub.restore();
         isConnectedStub.restore();
         ourBoard.options.simulate.should.equal(true);
@@ -377,27 +388,27 @@ describe('openbci-sdk', function () {
       }, done);
     });
     it('should not enable the simulator if already simulating', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.simulatorEnable().should.be.rejected.and.notify(done);
     });
     it('can disable simulator', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
       ourBoard.simulatorDisable().should.be.fulfilled.and.notify(done);
     });
     it('should not disable simulator if not in simulate mode', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       ourBoard.simulatorDisable().should.be.rejected.and.notify(done);
     });
     it('should disable sim and call disconnected', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true
       });
@@ -407,7 +418,7 @@ describe('openbci-sdk', function () {
         var disconnectSpy = sinon.spy(ourBoard, 'disconnect');
         ourBoard.options.simulate.should.equal(true);
         ourBoard.simulatorDisable().then(() => {
-          disconnectSpy.should.have.been.calledOnce;
+          disconnectSpy.should.have.been.calledOnce();
           disconnectSpy.restore();
           ourBoard.options.simulate.should.equal(false);
           done();
@@ -415,7 +426,7 @@ describe('openbci-sdk', function () {
       });
     });
     it('should be able to propagate constructor options to simulator', function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true,
         simulate: true,
         simulatorBoardFailure: true,
@@ -438,11 +449,11 @@ describe('openbci-sdk', function () {
           ourBoard.once('ready', () => {
             var simOptions = ourBoard.serial.options;
             expect(simOptions).to.be.an('object');
-            expect(simOptions.accel).to.be.false;
-            expect(simOptions.alpha).to.be.false;
-            expect(simOptions.boardFailure).to.be.true;
-            expect(simOptions.daisy).to.be.true;
-            expect(simOptions.daisyCanBeAttached).to.be.false;
+            expect(simOptions.accel).to.be.false();
+            expect(simOptions.alpha).to.be.false();
+            expect(simOptions.boardFailure).to.be.true();
+            expect(simOptions.daisy).to.be.true();
+            expect(simOptions.daisyCanBeAttached).to.be.false();
             expect(simOptions.drift).to.be.below(0);
             expect(simOptions.firmwareVersion).to.be.equal(k.OBCIFirmwareV2);
             expect(simOptions.fragmentation).to.be.equal(k.OBCISimulatorFragmentationOneByOne);
@@ -450,8 +461,8 @@ describe('openbci-sdk', function () {
             expect(simOptions.bufferSize).to.be.equal(2718);
             expect(simOptions.lineNoise).to.be.equal(k.OBCISimulatorLineNoiseNone);
             expect(simOptions.sampleRate).to.be.equal(16);
-            expect(simOptions.serialPortFailure).to.be.true;
-            expect(simOptions.verbose).to.be.true;
+            expect(simOptions.serialPortFailure).to.be.true();
+            expect(simOptions.verbose).to.be.true();
             ourBoard.disconnect().then(done).catch(done);
           });
         }).catch(err => done(err));
@@ -486,7 +497,7 @@ describe('openbci-sdk', function () {
   });
   describe('#debug', function () {
     before(function (done) {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         debug: true
       });
       ourBoard.connect(k.OBCISimulatorPortName).catch(done);
@@ -520,7 +531,7 @@ describe('openbci-sdk', function () {
   describe('#boardTests', function () {
     this.timeout(3000);
     before(function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         simulate: !realBoard,
         verbose: false,
         simulatorFragmentation: k.OBCISimulatorFragmentationRandom
@@ -539,6 +550,9 @@ describe('openbci-sdk', function () {
     after(() => bluebirdChecks.noPendingPromises());
     afterEach(function () {
       if (spy) spy.reset();
+      ourBoard.removeAllListeners('sample');
+      ourBoard.removeAllListeners('ready');
+      ourBoard.removeAllListeners('rawDataPacket');
     });
     describe('#connect/disconnect/streamStart/streamStop', function () {
       it('rejects if already disconnected', function () {
@@ -548,9 +562,26 @@ describe('openbci-sdk', function () {
         ourBoard.connect(masterPortName).catch(err => done(err));
 
         ourBoard.once('ready', () => {
-          ourBoard.connect(masterPortName).should.be.rejected
-            .then(() => ourBoard.disconnect())
-            .should.notify(done);
+          ourBoard.connect(masterPortName)
+            .then(() => {
+              return ourBoard.disconnect();
+            })
+            .then(() => {
+              done('should have failed to connect');
+            })
+            .catch((err) => {
+              if (err.message === 'already connected!') {
+                return ourBoard.disconnect();
+              } else {
+                return Promise.reject(err);
+              }
+            })
+            .then(() => {
+              done();
+            })
+            .catch((err) => {
+              done(err);
+            });
         });
       });
       it('gets the ready signal from the board and sends a stop streaming command before disconnecting', function (done) {
@@ -867,17 +898,17 @@ describe('openbci-sdk', function () {
         }
       });
       it('is connected after connection', function () {
-        expect(ourBoard.isConnected()).to.be.true;
+        expect(ourBoard.isConnected()).to.be.true();
       });
       it('is no longer connected after clean disconnection', function (done) {
         ourBoard.disconnect().then(() => {
-          expect(ourBoard.isConnected()).to.be.false;
+          expect(ourBoard.isConnected()).to.be.false();
           done();
         }, done);
       });
       it('is no longer connected if stream closes itself', function (done) {
         ourBoard.serial.close(() => {
-          expect(ourBoard.isConnected()).to.be.false;
+          expect(ourBoard.isConnected()).to.be.false();
           done();
         });
       });
@@ -885,7 +916,7 @@ describe('openbci-sdk', function () {
         var errorDamper = () => true;
         ourBoard.on('error', errorDamper);
         ourBoard.serial.emit('error', new Error('test error'));
-        expect(ourBoard.isConnected()).to.be.false;
+        expect(ourBoard.isConnected()).to.be.false();
         ourBoard.removeListener('error', errorDamper);
       });
     });
@@ -897,7 +928,13 @@ describe('openbci-sdk', function () {
       });
       afterEach(function (done) {
         if (ourBoard.isConnected()) {
-          ourBoard.disconnect().then(done, done);
+          ourBoard.disconnect()
+            .then(() => {
+              done();
+            })
+            .catch(() => {
+              done();
+            });
         } else {
           done();
         }
@@ -939,7 +976,7 @@ describe('openbci-sdk', function () {
                 var writeSpy2 = sinon.spy(ourBoard.serial, 'write');
                 ourBoard.once('ready', () => {
                   writeSpy2.should.equal(ourBoard.serial.write);
-                  writeSpy1.should.have.not.been.called;
+                  writeSpy1.should.have.not.been.called();
                   writeSpy2.should.have.not.been.calledWith(byteToWrite);
                   writeSpy1.restore();
                   writeSpy2.restore();
@@ -952,18 +989,22 @@ describe('openbci-sdk', function () {
         writeWhileConnected();
         ourBoard.disconnect().catch(done);
       });
-      it('disconnects immediately, rejecting all buffered writes', function () {
+      it('disconnects immediately, rejecting all buffered writes', function (done) {
         var writeSpy = sinon.spy(ourBoard.serial, 'write');
-        return Promise.all([
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.write(k.OBCISDLogStop).should.have.been.rejected,
-          ourBoard.disconnect()
-        ]).then(() => {
-          writeSpy.should.have.not.been.called;
-          writeSpy.restore();
-        });
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+        ourBoard.write(k.OBCISDLogStop).should.have.been.rejected();
+
+        ourBoard.disconnect()
+          .then(() => {
+            writeSpy.should.have.not.been.called();
+            writeSpy.restore();
+            done();
+          })
+          .catch((err) => {
+            done(err);
+          });
       });
     });
     describe('#listPorts', function () {
@@ -1155,7 +1196,7 @@ describe('openbci-sdk', function () {
           ourBoard.hardSetBoardType('daisy')
             .then(done)
             .catch((err) => {
-              expect(err).to.equal('unable to attach daisy');
+              expect(err.message).to.equal('unable to attach daisy');
               expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
               done();
             });
@@ -1268,7 +1309,76 @@ describe('openbci-sdk', function () {
         ourBoard.channelSet(1, true, 24, 'normal', 'taco', true, true).should.be.rejected.and.notify(done);
       });
     });
-
+    describe('#printRegisterSettings', function () {
+      before(function (done) {
+        ourBoard.printRegisterSettings()
+          .then(() => {
+            done();
+          }).catch(done);
+      });
+      after(function () {
+        ourBoard.curParsingMode = k.OBCIParsingNormal;
+      });
+      it('should send the correct register setting', function () {
+        spy.should.have.been.calledWith(k.OBCIMiscQueryRegisterSettings);
+      });
+      it('should have set the proper parseing mode', function () {
+        ourBoard.curParsingMode = k.OBCIParsingEOT;
+      });
+    });
+    describe('#testSignal', function () {
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('dc').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToDC);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('ground').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToGround);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse1xFast').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse1xFast);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse1xSlow').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse1xSlow);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse2xFast').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse2xFast);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should call the write function with proper command for dc test signal', function (done) {
+        ourBoard.testSignal('pulse2xSlow').then(() => {
+          setTimeout(() => {
+            spy.should.have.been.calledWith(k.OBCITestSignalConnectToPulse2xSlow);
+            done();
+          }, 5 * k.OBCIWriteIntervalDelayMSShort);
+        });
+      });
+      it('should reject with invalid test signal', function (done) {
+        ourBoard.testSignal('taco').should.be.rejected.and.notify(done);
+      });
+    });
     describe('#impedanceTest Not Connected Rejects ', function () {
       it('rejects all channeles when not streaming', function (done) {
         ourBoard.impedanceTestAllChannels().should.be.rejected.and.notify(done);
@@ -1303,7 +1413,7 @@ describe('openbci-sdk', function () {
   describe('#_processDataBuffer', function () {
     var _processQualifiedPacketSpy;
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       _processQualifiedPacketSpy = sinon.spy(ourBoard, '_processQualifiedPacket');
@@ -1319,7 +1429,7 @@ describe('openbci-sdk', function () {
       // Test the function
       buffer = ourBoard._processDataBuffer(buffer);
 
-      expect(buffer).to.be.null;
+      expect(buffer).to.be.null();
     });
     it('should return an unaltered buffer if there is less than a packets worth of data in it', () => {
       var expectedString = 'AJ';
@@ -1335,10 +1445,10 @@ describe('openbci-sdk', function () {
       buffer.toString().should.equal(expectedString);
 
       // Make sure that the spy was not infact called.
-      _processQualifiedPacketSpy.should.not.have.been.called;
+      _processQualifiedPacketSpy.should.not.have.been.called();
     });
     it('should identify a packet', () => {
-      var buffer = openBCISample.samplePacketReal(0);
+      var buffer = openBCIUtilities.samplePacketReal(0);
 
       // Reset the spy if it exists
       if (_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
@@ -1347,10 +1457,10 @@ describe('openbci-sdk', function () {
       buffer = ourBoard._processDataBuffer(buffer);
 
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledOnce;
+      _processQualifiedPacketSpy.should.have.been.calledOnce();
 
       // The buffer should not have anything in it any more
-      expect(buffer).to.be.null;
+      expect(buffer).to.be.null();
     });
     it('should extract a buffer and preserve the remaining data in the buffer', () => {
       var expectedString = 'AJ';
@@ -1358,14 +1468,14 @@ describe('openbci-sdk', function () {
       // declare the big buffer
       var buffer = new Buffer(k.OBCIPacketSize + extraBuffer.length);
       // Fill that new big buffer with buffers
-      openBCISample.samplePacketReal(0).copy(buffer, 0);
+      openBCIUtilities.samplePacketReal(0).copy(buffer, 0);
       extraBuffer.copy(buffer, k.OBCIPacketSize);
       // Reset the spy if it exists
       if (_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.called;
+      _processQualifiedPacketSpy.should.have.been.called();
       // The buffer should have the epxected number of bytes left
       buffer.length.should.equal(expectedString.length);
       // Convert the buffer to a string and ensure that it equals the expected string
@@ -1378,17 +1488,17 @@ describe('openbci-sdk', function () {
       // declare the big buffer
       var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers);
       // Fill that new big buffer with buffers
-      openBCISample.samplePacketReal(0).copy(buffer, 0);
-      openBCISample.samplePacketReal(1).copy(buffer, k.OBCIPacketSize);
-      openBCISample.samplePacketReal(2).copy(buffer, k.OBCIPacketSize * 2);
+      openBCIUtilities.samplePacketReal(0).copy(buffer, 0);
+      openBCIUtilities.samplePacketReal(1).copy(buffer, k.OBCIPacketSize);
+      openBCIUtilities.samplePacketReal(2).copy(buffer, k.OBCIPacketSize * 2);
       // Reset the spy if it exists
       if (_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledThrice;
+      _processQualifiedPacketSpy.should.have.been.calledThrice();
       // The buffer should not have anything in it any more
-      expect(buffer).to.be.null;
+      expect(buffer).to.be.null();
     });
 
     it('should be able to get multiple packets and keep extra data on the end', () => {
@@ -1399,15 +1509,15 @@ describe('openbci-sdk', function () {
       // declare the big buffer
       var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers + extraBuffer.length);
       // Fill that new big buffer with buffers
-      openBCISample.samplePacketReal(0).copy(buffer, 0);
-      openBCISample.samplePacketReal(1).copy(buffer, k.OBCIPacketSize);
+      openBCIUtilities.samplePacketReal(0).copy(buffer, 0);
+      openBCIUtilities.samplePacketReal(1).copy(buffer, k.OBCIPacketSize);
       extraBuffer.copy(buffer, k.OBCIPacketSize * 2);
       // Reset the spy if it exists
       if (_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledTwice;
+      _processQualifiedPacketSpy.should.have.been.calledTwice();
       // The buffer should not have anything in it any more
       buffer.length.should.equal(extraBuffer.length);
     });
@@ -1420,18 +1530,18 @@ describe('openbci-sdk', function () {
       // declare the big buffer
       var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers + extraBuffer.length);
       // Fill that new big buffer with buffers
-      openBCISample.samplePacketReal(0).copy(buffer, 0);
+      openBCIUtilities.samplePacketReal(0).copy(buffer, 0);
       extraBuffer.copy(buffer, k.OBCIPacketSize);
-      openBCISample.samplePacketReal(1).copy(buffer, k.OBCIPacketSize + extraBuffer.byteLength);
+      openBCIUtilities.samplePacketReal(1).copy(buffer, k.OBCIPacketSize + extraBuffer.byteLength);
 
       // Reset the spy if it exists
       if (_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledTwice;
+      _processQualifiedPacketSpy.should.have.been.calledTwice();
       // The buffer should not have anything in it any more
-      bufferEqual(extraBuffer, buffer).should.be.true;
+      bufferEqual(extraBuffer, buffer).should.be.true();
       buffer.length.should.equal(extraBuffer.length);
     });
 
@@ -1443,18 +1553,18 @@ describe('openbci-sdk', function () {
       // declare the big buffer
       var buffer = new Buffer(k.OBCIPacketSize * expectedNumberOfBuffers + extraBuffer.length * 2);
       // Fill that new big buffer with buffers
-      openBCISample.samplePacketReal(0).copy(buffer, 0);
+      openBCIUtilities.samplePacketReal(0).copy(buffer, 0);
       extraBuffer.copy(buffer, k.OBCIPacketSize);
-      openBCISample.samplePacketReal(1).copy(buffer, k.OBCIPacketSize + extraBuffer.byteLength);
+      openBCIUtilities.samplePacketReal(1).copy(buffer, k.OBCIPacketSize + extraBuffer.byteLength);
       extraBuffer.copy(buffer, k.OBCIPacketSize * 2 + extraBuffer.byteLength);
       // Reset the spy if it exists
       if (_processQualifiedPacketSpy) _processQualifiedPacketSpy.reset();
       // Call the function under test
       buffer = ourBoard._processDataBuffer(buffer);
       // Ensure that we extracted only one buffer
-      _processQualifiedPacketSpy.should.have.been.calledTwice;
+      _processQualifiedPacketSpy.should.have.been.calledTwice();
       // The buffer should not have anything in it any more
-      bufferEqual(Buffer.concat([extraBuffer, extraBuffer], 2), buffer).should.be.true;
+      bufferEqual(Buffer.concat([extraBuffer, extraBuffer], 2), buffer).should.be.true();
       buffer.length.should.equal(extraBuffer.length * 2);
     });
   });
@@ -1464,110 +1574,47 @@ describe('openbci-sdk', function () {
   */
   describe('#_processQualifiedPacket', function () {
     var ourBoard;
-    var funcSpyTimeSyncSet, funcSpyTimeSyncedAccel, funcSpyTimeSyncedRawAux, funcSpyStandardRawAux, funcSpyStandardAccel;
+    var funcSpyTimeSyncSet;
 
     before(function () {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
       // Put watchers on all functions
-      funcSpyStandardAccel = sinon.spy(ourBoard, '_processPacketStandardAccel');
-      funcSpyStandardRawAux = sinon.spy(ourBoard, '_processPacketStandardRawAux');
       funcSpyTimeSyncSet = sinon.spy(ourBoard, '_processPacketTimeSyncSet');
-      funcSpyTimeSyncedAccel = sinon.spy(ourBoard, '_processPacketTimeSyncedAccel');
-      funcSpyTimeSyncedRawAux = sinon.spy(ourBoard, '_processPacketTimeSyncedRawAux');
     });
     beforeEach(function () {
-      funcSpyStandardAccel.reset();
-      funcSpyStandardRawAux.reset();
       funcSpyTimeSyncSet.reset();
-      funcSpyTimeSyncedAccel.reset();
-      funcSpyTimeSyncedRawAux.reset();
 
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
     });
     after(function () {
       // ourBoard = null
     });
     after(() => bluebirdChecks.noPendingPromises());
 
-    it('should process a standard packet', function () {
-      var buffer = openBCISample.samplePacket(0);
-
-      // Call the function under test
-      ourBoard._processQualifiedPacket(buffer);
-
-      // Ensure that we extracted only one buffer
-      funcSpyStandardAccel.should.have.been.calledOnce;
-    });
-    it('should process a standard packet with raw aux', function () {
-      var buffer = openBCISample.samplePacketStandardRawAux(0);
-
-      // Call the function under test
-      ourBoard._processQualifiedPacket(buffer);
-
-      // Ensure that we extracted only one buffer
-      funcSpyStandardRawAux.should.have.been.calledOnce;
-    });
-    it('should call nothing for a user defined packet type ', function () {
-      var buffer = openBCISample.samplePacketUserDefined();
-
-      // Call the function under test
-      ourBoard._processQualifiedPacket(buffer);
-
-      // Nothing should be called
-      funcSpyStandardAccel.should.not.have.been.called;
-      funcSpyStandardRawAux.should.not.have.been.called;
-      funcSpyTimeSyncSet.should.not.have.been.called;
-      funcSpyTimeSyncedAccel.should.not.have.been.called;
-      funcSpyTimeSyncedRawAux.should.not.have.been.called;
-    });
     it('should process a time sync set packet with accel', function () {
-      var buffer = openBCISample.samplePacketAccelTimeSyncSet();
+      var buffer = openBCIUtilities.samplePacketAccelTimeSyncSet();
 
       // Call the function under test
       ourBoard._processQualifiedPacket(buffer);
 
       // We should call to sync up
-      funcSpyTimeSyncSet.should.have.been.calledOnce;
+      funcSpyTimeSyncSet.should.have.been.calledOnce();
       funcSpyTimeSyncSet.should.have.been.calledWith(buffer);
-      // we should call to get a packet
-      funcSpyTimeSyncedAccel.should.have.been.calledOnce;
-      funcSpyTimeSyncedAccel.should.have.been.calledWith(buffer);
-    });
-    it('should process a time synced packet with accel', function () {
-      var buffer = openBCISample.samplePacketAccelTimeSynced(0);
-
-      // Call the function under test
-      ourBoard._processQualifiedPacket(buffer);
-
-      // Ensure that we extracted only one buffer
-      funcSpyTimeSyncedAccel.should.have.been.calledOnce;
     });
     it('should process a time sync set packet with raw aux', function () {
-      var buffer = openBCISample.samplePacketRawAuxTimeSyncSet(0);
+      var buffer = openBCIUtilities.samplePacketRawAuxTimeSyncSet(0);
 
       // Call the function under test
       ourBoard._processQualifiedPacket(buffer);
 
       // We should call to sync up
-      funcSpyTimeSyncSet.should.have.been.calledOnce;
+      funcSpyTimeSyncSet.should.have.been.calledOnce();
       funcSpyTimeSyncSet.should.have.been.calledWith(buffer);
-      // we should call to get a packet
-      funcSpyTimeSyncedRawAux.should.have.been.calledOnce;
-      funcSpyTimeSyncedRawAux.should.have.been.calledWith(buffer);
-    });
-    it('should process a time synced packet with raw aux', function () {
-      var buffer = openBCISample.samplePacketRawAuxTimeSynced(0);
-
-      // Call the function under test
-      ourBoard._processQualifiedPacket(buffer);
-
-      // Ensure that we extracted only one buffer
-      funcSpyTimeSyncedRawAux.should.have.been.calledOnce;
     });
     it('should not identify any packet', function () {
-      var buffer = openBCISample.samplePacket(0);
+      var buffer = openBCIUtilities.samplePacket(0);
 
       // Set the stop byte to some number not yet defined
       buffer[k.OBCIPacketPositionStopByte] = 0xCF;
@@ -1576,20 +1623,16 @@ describe('openbci-sdk', function () {
       ourBoard._processDataBuffer(buffer);
 
       // Nothing should be called
-      funcSpyStandardAccel.should.not.have.been.called;
-      funcSpyStandardRawAux.should.not.have.been.called;
-      funcSpyTimeSyncSet.should.not.have.been.called;
-      funcSpyTimeSyncedAccel.should.not.have.been.called;
-      funcSpyTimeSyncedRawAux.should.not.have.been.called;
+      funcSpyTimeSyncSet.should.not.have.been.called();
     });
     it('should emit a dropped packet on dropped packet', function (done) {
       // Set to default state
       ourBoard.previousSampleNumber = -1;
-      var sampleNumber0 = openBCISample.samplePacket(0);
+      var sampleNumber0 = openBCIUtilities.samplePacket(0);
       ourBoard.once('droppedPacket', () => {
         done();
       });
-      var sampleNumber2 = openBCISample.samplePacket(2);
+      var sampleNumber2 = openBCIUtilities.samplePacket(2);
       // Call the function under test
       ourBoard._processDataBuffer(sampleNumber0);
       ourBoard._processDataBuffer(sampleNumber2);
@@ -1598,13 +1641,13 @@ describe('openbci-sdk', function () {
       // Set to default state
       var count = 0;
       ourBoard.previousSampleNumber = 253;
-      var buf1 = openBCISample.samplePacket(254);
+      var buf1 = openBCIUtilities.samplePacket(254);
       var countFunc = arr => {
         count++;
       };
       ourBoard.on('droppedPacket', countFunc);
-      var buf2 = openBCISample.samplePacket(0);
-      var buf3 = openBCISample.samplePacket(1);
+      var buf2 = openBCIUtilities.samplePacket(0);
+      var buf3 = openBCIUtilities.samplePacket(1);
       // Call the function under test
       ourBoard._processDataBuffer(buf1);
       ourBoard._processDataBuffer(buf2);
@@ -1621,12 +1664,12 @@ describe('openbci-sdk', function () {
     var timeSyncSetPacket;
     var ourBoard;
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: false
       });
     });
     beforeEach(() => {
-      timeSyncSetPacket = openBCISample.samplePacketRawAuxTimeSyncSet();
+      timeSyncSetPacket = openBCIUtilities.samplePacketRawAuxTimeSyncSet();
       ourBoard.sync.timeOffsetArray = [];
     });
     afterEach(() => {
@@ -1659,7 +1702,7 @@ describe('openbci-sdk', function () {
       });
       ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
       ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       let syncObject = ourBoard._processPacketTimeSyncSet(timeSyncSetPacket, timeSetPacketArrived);
       expect(ourBoard.curParsingMode).to.equal(k.OBCIParsingNormal);
       expect(syncObject).to.have.property('valid', false);
@@ -1676,7 +1719,7 @@ describe('openbci-sdk', function () {
       } else {
         badPacket = new Buffer(timeSyncSetPacket.slice(0, 30));
       }
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       ourBoard.sync.timeOffsetMaster = expectedTimeSyncOffsetMaster;
       ourBoard.once('synced', (syncObj) => {
         expect(syncObj).to.have.property('valid', false);
@@ -1694,7 +1737,7 @@ describe('openbci-sdk', function () {
       var expectedRoundTripTime = 20; // ms
       ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
       // Make a new object!
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       // Set the sent time
       ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
 
@@ -1711,7 +1754,7 @@ describe('openbci-sdk', function () {
       // Setup
       ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
       // Make a new object!
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       // Set the sent time
       ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
       ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
@@ -1729,7 +1772,7 @@ describe('openbci-sdk', function () {
       // Setup
       ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
       // Make a new object!
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       // Set the sent time
       ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
       ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
@@ -1751,7 +1794,7 @@ describe('openbci-sdk', function () {
       // Setup
       ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
       // Make a new object!
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       // Set the sent time
       ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
       ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
@@ -1778,7 +1821,7 @@ describe('openbci-sdk', function () {
       // Setup
       ourBoard.curParsingMode = k.OBCIParsingNormal; // indicates the sent conf was found
       // Make a new object!
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       // Set the sent time
       ourBoard.sync.curSyncObj.timeSyncSent = timeSetPacketArrived - expectedRoundTripTime;
       ourBoard.sync.curSyncObj.timeSyncSentConfirmation = ourBoard.sync.curSyncObj.timeSyncSent + expectedTimeTillSentConf;
@@ -1803,82 +1846,38 @@ describe('openbci-sdk', function () {
     });
   });
 
-  describe('#_processPacket Errors', function () {
-    var ourBoard;
-    before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
-        verbose: false
-      });
-    });
-    beforeEach(() => {
-      ourBoard.badPackets = 0;
-      ourBoard.previousSampleNumber = 0;
-    });
-    afterEach(() => {
-      ourBoard.sync.curSyncObj = null;
-    });
-    after(() => bluebirdChecks.noPendingPromises());
-    it('_processPacketStandardAccel', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketStandardAccel(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-    it('_processPacketStandardRawAux', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketStandardRawAux(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-    it('_processPacketTimeSyncedAccel', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketTimeSyncedAccel(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-    it('_processPacketTimeSyncedRawAux', function () {
-      ourBoard.once('droppedPacket', (droppedPacketArray) => {
-        expect(droppedPacketArray[0]).to.equal(1);
-      });
-      ourBoard._processPacketTimeSyncedRawAux(new Buffer(5));
-      expect(ourBoard.badPackets).to.equal(1);
-    });
-  });
   describe('#time', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should use sntp time when sntpTimeSync specified in options', function (done) {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         verbose: true,
         sntpTimeSync: true
       });
       board.on('sntpTimeLock', function () {
         var funcSpySntpNow = sinon.spy(board, '_sntpNow');
         board.time();
-        funcSpySntpNow.should.have.been.calledOnce;
+        funcSpySntpNow.should.have.been.calledOnce();
         funcSpySntpNow.restore();
         board.sntpStop();
         done();
       });
     });
     it('should use Date.now() for time when sntpTimeSync is not specified in options', function () {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         verbose: true
       });
       var funcSpySntpNow = sinon.spy(board, '_sntpNow');
 
       board.time();
 
-      funcSpySntpNow.should.not.have.been.called;
+      funcSpySntpNow.should.not.have.been.called();
 
       funcSpySntpNow.reset();
 
       funcSpySntpNow = null;
     });
     it('should emit sntpTimeLock event after sycned with ntp server', function (done) {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         verbose: true,
         sntpTimeSync: true
       });
@@ -1892,12 +1891,12 @@ describe('openbci-sdk', function () {
   describe('#sntpStart', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should be able to start ntp server', () => {
-      var board = new openBCIBoard.OpenBCIBoard();
-      expect(board.sntp.isLive()).to.be.false;
+      var board = new Cyton();
+      expect(board.sntp.isLive()).to.be.false();
       return Promise.all([
         board.sntpStart()
           .then(() => {
-            expect(board.sntp.isLive()).to.be.true;
+            expect(board.sntp.isLive()).to.be.true();
           }),
         new Promise(resolve => {
           board.once('sntpTimeLock', resolve);
@@ -1911,7 +1910,7 @@ describe('openbci-sdk', function () {
     this.timeout(5000);
     var board;
     before(done => {
-      board = new openBCIBoard.OpenBCIBoard({
+      board = new Cyton({
         sntpTimeSync: true
       });
       board.once('sntpTimeLock', () => {
@@ -1924,23 +1923,23 @@ describe('openbci-sdk', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should be able to stop the ntp server and set the globals correctly', function () {
       // Verify the before condition is correct
-      expect(board.options.sntpTimeSync).to.be.true;
-      expect(board.sync.sntpActive).to.be.true;
-      expect(board.sntp.isLive()).to.be.true;
+      expect(board.options.sntpTimeSync).to.be.true();
+      expect(board.sync.sntpActive).to.be.true();
+      expect(board.sntp.isLive()).to.be.true();
 
       // Call the function under test
       board.sntpStop();
 
       // Ensure the globals were set off
-      expect(board.options.sntpTimeSync).to.be.false;
-      expect(board.sync.sntpActive).to.be.false;
-      expect(board.sntp.isLive()).to.be.false;
+      expect(board.options.sntpTimeSync).to.be.false();
+      expect(board.sync.sntpActive).to.be.false();
+      expect(board.sntp.isLive()).to.be.false();
     });
   });
   describe('#sntpGetOffset', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should get the sntp offset', function (done) {
-      var board = new openBCIBoard.OpenBCIBoard({
+      var board = new Cyton({
         sntpTimeSync: true
       });
       board.once('sntpTimeLock', () => {
@@ -1955,7 +1954,7 @@ describe('openbci-sdk', function () {
     var ourBoard;
 
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
     });
@@ -2032,12 +2031,12 @@ $$$`);
 
   describe('#_processBytes', function () {
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
     });
     beforeEach(() => {
-      ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+      ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
     });
     afterEach(() => {
       ourBoard.buffer = null;
@@ -2066,32 +2065,32 @@ $$$`);
         // Send the first buffer
         ourBoard._processBytes(buf1);
         // Verify the parse function was not called
-        _processParseBufferForResetSpy.should.not.have.been.called;
+        _processParseBufferForResetSpy.should.not.have.been.called();
         // Verify the global buffer has the first buf in it
         bufferEqual(ourBoard.buffer, buf1);
         // Send another buffer without EOT
         ourBoard._processBytes(buf2);
         // Verify the parse function was not called
-        _processParseBufferForResetSpy.should.not.have.been.called;
+        _processParseBufferForResetSpy.should.not.have.been.called();
         // Verify the global buffer has the first and second buf in it
         bufferEqual(ourBoard.buffer, Buffer.concat([buf1, buf2]));
         // Send another buffer without EOT
         ourBoard._processBytes(buf3);
         // Verify the parse function was called
-        _processParseBufferForResetSpy.should.have.been.calledOnce;
+        _processParseBufferForResetSpy.should.have.been.calledOnce();
         // Verify the global buffer is empty
-        expect(ourBoard.buffer).to.be.null;
+        expect(ourBoard.buffer).to.be.null();
       });
     });
 
     describe('#OBCIParsingTimeSyncSent', function () {
       // var spy
       before(() => {
-        // spy = sinon.spy(ourBoard.openBCISample,"isTimeSyncSetConfirmationInBuffer")
+        // spy = sinon.spy(ourBoard.openBCIUtilities,"isTimeSyncSetConfirmationInBuffer")
       });
       beforeEach(() => {
         ourBoard.curParsingMode = k.OBCIParsingTimeSyncSent;
-        ourBoard.sync.curSyncObj = openBCISample.newSyncObject();
+        ourBoard.sync.curSyncObj = openBCIUtilities.newSyncObject();
       // spy.reset()
       });
       it('should call to find the time sync set character in the buffer', function () {
@@ -2108,11 +2107,11 @@ $$$`);
           emitted = true;
         });
         // Make a new buffer
-        var buf1 = openBCISample.samplePacketReal(1);
+        var buf1 = openBCIUtilities.samplePacketReal(1);
         // Send the buffer in
         ourBoard._processBytes(buf1);
-        expect(ourBoard.buffer).to.be.null;
-        expect(emitted).to.be.true;
+        expect(ourBoard.buffer).to.be.null();
+        expect(emitted).to.be.true();
       });
       it('should clear the buffer after a time sync set packet', function () {
         let emitted = false;
@@ -2129,14 +2128,14 @@ $$$`);
           emitted = true;
         });
         // Make a new buffer
-        var buf1 = openBCISample.samplePacketAccelTimeSyncSet(1);
+        var buf1 = openBCIUtilities.samplePacketAccelTimeSyncSet(1);
         // Send the buffer in
         ourBoard._processBytes(buf1);
-        expect(ourBoard.buffer).to.be.null;
-        expect(emitted).to.be.true;
+        expect(ourBoard.buffer).to.be.null();
+        expect(emitted).to.be.true();
       });
       it('should call to find the time sync set character in the buffer after packet', function () {
-        var buf1 = openBCISample.samplePacket();
+        var buf1 = openBCIUtilities.samplePacket();
         var buf2 = new Buffer(',');
 
         // Call the processBytes function
@@ -2148,9 +2147,9 @@ $$$`);
       // ourBoard.buffer.length.should.equal(0)
       });
       it('should find time sync and emit two samples', function (done) {
-        var buf1 = openBCISample.samplePacket(250);
+        var buf1 = openBCIUtilities.samplePacket(250);
         var buf2 = new Buffer([0x2C]);
-        var buf3 = openBCISample.samplePacket(251);
+        var buf3 = openBCIUtilities.samplePacket(251);
 
         var inputBuf = Buffer.concat([buf1, buf2, buf3], buf1.byteLength + 1 + buf3.byteLength);
 
@@ -2177,9 +2176,9 @@ $$$`);
         ourBoard._processBytes(inputBuf);
       });
       it('should not find the packet if in packet', () => {
-        var buf1 = openBCISample.samplePacket(250);
+        var buf1 = openBCIUtilities.samplePacket(250);
         buf1[4] = 0x2C; // Inject a false packet
-        var buf2 = openBCISample.samplePacket(251);
+        var buf2 = openBCIUtilities.samplePacket(251);
 
         // Call the processBytes function
         ourBoard._processBytes(Buffer.concat([buf1, buf2], buf1.length + buf2.length));
@@ -2194,7 +2193,7 @@ $$$`);
       });
       it('should emit a sample when inserted', function (done) {
         var expectedSampleNumber = 0;
-        var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
+        var buf1 = openBCIUtilities.samplePacketReal(expectedSampleNumber);
 
         // Declare the event emitter prior to calling function
         ourBoard.once('sample', sample => {
@@ -2203,14 +2202,14 @@ $$$`);
 
         // Now call the function which should call the "sample" event
         ourBoard._processBytes(buf1);
-        expect(ourBoard.buffer).to.be.null;
+        expect(ourBoard.buffer).to.be.null();
         done();
       });
       it('should get three packets even if one was sent in the last data emit', function () {
         var expectedSampleNumber = 0;
-        var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
-        var buf2 = openBCISample.samplePacketReal(expectedSampleNumber + 1);
-        var buf3 = openBCISample.samplePacketReal(expectedSampleNumber + 2);
+        var buf1 = openBCIUtilities.samplePacketReal(expectedSampleNumber);
+        var buf2 = openBCIUtilities.samplePacketReal(expectedSampleNumber + 1);
+        var buf3 = openBCIUtilities.samplePacketReal(expectedSampleNumber + 2);
         // Pretend that half of buf1 got sent in the first serial flush
         //  and that the last half of it will arrive a lil later
         var splitPoint = 15;
@@ -2237,13 +2236,13 @@ $$$`);
         ourBoard.on('sample', newSample);
         // Now call the function which should call the "sample" event
         ourBoard._processBytes(dataBuf);
-        expect(ourBoard.buffer).to.be.null;
+        expect(ourBoard.buffer).to.be.null();
       });
       it('should keep extra data in the buffer', function () {
         var expectedSampleNumber = 0;
-        var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
-        var buf2 = openBCISample.samplePacketReal(expectedSampleNumber + 1);
-        var buf3 = openBCISample.samplePacketReal(expectedSampleNumber + 2);
+        var buf1 = openBCIUtilities.samplePacketReal(expectedSampleNumber);
+        var buf2 = openBCIUtilities.samplePacketReal(expectedSampleNumber + 1);
+        var buf3 = openBCIUtilities.samplePacketReal(expectedSampleNumber + 2);
         // Pretend that half of buf1 got sent in the first serial flush
         //  and that the last half of it will arrive a lil later
         var splitPoint = 15;
@@ -2276,7 +2275,7 @@ $$$`);
         ourBoard._processBytes(Buffer.concat([buf1, buf2, bufFirstHalf]));
         // Now verify there is data still in the global buffer by calling _processBytes on the last half
         ourBoard._processBytes(bufLastHalf);
-        expect(ourBoard.buffer).to.be.null;
+        expect(ourBoard.buffer).to.be.null();
       });
       it('should throw out old data if it is incomplete and add to badPackets count', function () {
         // Some how this packet go messed up and lodged in... This is the worst case, that the buffer has
@@ -2285,9 +2284,9 @@ $$$`);
 
         // New buffer incoming
         var expectedSampleNumber = 1;
-        var buf1 = openBCISample.samplePacketReal(expectedSampleNumber);
-        var buf2 = openBCISample.samplePacketReal(expectedSampleNumber + 1);
-        var buf3 = openBCISample.samplePacketReal(expectedSampleNumber + 2);
+        var buf1 = openBCIUtilities.samplePacketReal(expectedSampleNumber);
+        var buf2 = openBCIUtilities.samplePacketReal(expectedSampleNumber + 1);
+        var buf3 = openBCIUtilities.samplePacketReal(expectedSampleNumber + 2);
 
         // New data incoming!
         var dataBuf = Buffer.concat([buf1, buf2, buf3]);
@@ -2308,7 +2307,7 @@ $$$`);
         // Now call the function which should call the "sample" event
         ourBoard._processBytes(dataBuf);
         // Verify that the old data was rejected
-        expect(ourBoard.buffer).to.be.null;
+        expect(ourBoard.buffer).to.be.null();
       });
     });
 
@@ -2320,7 +2319,7 @@ $$$`);
         var buf = new Buffer('Tacos are amazing af$$$');
 
         var eotEvent = data => {
-          expect(bufferEqual(data, buf)).to.be.true;
+          expect(bufferEqual(data, buf)).to.be.true();
           ourBoard.curParsingMode.should.be.equal(k.OBCIParsingNormal);
           done();
         };
@@ -2334,7 +2333,7 @@ $$$`);
         var buf2 = new Buffer('amazing af$$$');
 
         var eotEvent = data => {
-          bufferEqual(data, Buffer.concat([buf1, buf2], buf1.length + buf2.length)).should.be.true;
+          bufferEqual(data, Buffer.concat([buf1, buf2], buf1.length + buf2.length)).should.be.true();
           ourBoard.curParsingMode.should.be.equal(k.OBCIParsingNormal);
           done();
         };
@@ -2350,10 +2349,10 @@ $$$`);
   describe('#_finalizeNewSampleForDaisy', function () {
     var ourBoard, randomSampleGenerator, sampleEvent, failTimeout;
     before(() => {
-      ourBoard = new openBCIBoard.OpenBCIBoard({
+      ourBoard = new Cyton({
         verbose: true
       });
-      randomSampleGenerator = openBCISample.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'none');
+      randomSampleGenerator = openBCIUtilities.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'none');
     });
     beforeEach(() => {
       // Clear the global var
@@ -2460,19 +2459,19 @@ $$$`);
   describe('#usingVersionTwoFirmware', function () {
     after(() => bluebirdChecks.noPendingPromises());
     it('should return true if firmware is version 2', () => {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
       ourBoard.info.firmware = 'v2';
 
-      expect(ourBoard.usingVersionTwoFirmware()).to.be.true;
+      expect(ourBoard.usingVersionTwoFirmware()).to.be.true();
     });
     it('should return false if not firmware version 2', () => {
-      ourBoard = new openBCIBoard.OpenBCIBoard();
+      ourBoard = new Cyton();
 
-      expect(ourBoard.usingVersionTwoFirmware()).to.be.false;
+      expect(ourBoard.usingVersionTwoFirmware()).to.be.false();
     });
   });
 
-  describe('#hardwareValidation', function () {
+  xdescribe('#hardwareValidation', function () {
     this.timeout(20000); // long timeout for pleanty of stream time :)
     var runHardwareValidation = true;
     var wstream;
@@ -2482,7 +2481,7 @@ $$$`);
         runHardwareValidation = false;
       }
       if (runHardwareValidation) {
-        board = new openBCIBoard.OpenBCIBoard({
+        board = new Cyton({
           verbose: true,
           simulatorFragmentation: k.OBCISimulatorFragmentationRandom
         });
@@ -2544,7 +2543,7 @@ $$$`);
         }, 15000);
 
         board.on('sample', sample => {
-          openBCISample.samplePrintLine(sample)
+          openBCIUtilities.samplePrintLine(sample)
             .then(line => {
               wstream.write(line);
             });
@@ -2565,7 +2564,7 @@ describe('#daisy', function () {
   var ourBoard;
   this.timeout(4000);
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new Cyton({
       verbose: true,
       simulatorFirmwareVersion: 'v2',
       simulatorDaisyModuleAttached: true,
@@ -2646,7 +2645,7 @@ describe('#syncWhileStreaming', function () {
   var ourBoard;
   this.timeout(4000);
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new Cyton({
       verbose: true,
       simulatorFirmwareVersion: 'v2',
       simulatorFragmentation: k.OBCISimulatorFragmentationRandom
@@ -2759,7 +2758,7 @@ describe('#syncErrors', function () {
   var ourBoard;
   this.timeout(4000);
   before(function (done) {
-    ourBoard = new openBCIBoard.OpenBCIBoard({
+    ourBoard = new Cyton({
       verbose: true,
       simulatorFirmwareVersion: 'v2'
     });

@@ -10,12 +10,11 @@
  *   then `npm start`
  */
 
-var stream = true;
-var debug = true; // Pretty print any bytes in and out... it's amazing...
-var verbose = true; // Adds verbosity to functions
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
-
-var ourBoard = new OpenBCIBoard({
+const stream = true;
+const debug = true; // Pretty print any bytes in and out... it's amazing...
+const verbose = true; // Adds verbosity to functions
+const Cyton = require('openbci').Cyton;
+let ourBoard = new Cyton({
   debug: debug,
   verbose: verbose
 });
