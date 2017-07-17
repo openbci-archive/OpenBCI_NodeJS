@@ -4,7 +4,7 @@ const EventEmitter = require('events').EventEmitter;
 const math = require('mathjs');
 const util = require('util');
 const SerialPort = require('serialport');
-const openBCISample = require('./openBCISample');
+const openBCISample = require('./openBCIUtilities');
 const k = openBCISample.k;
 const openBCISimulator = require('./openBCISimulator');
 const Sntp = require('sntp');
@@ -1838,7 +1838,7 @@ Cyton.prototype._processImpedanceTest = function (sampleObject) {
   var impedanceArray;
   if (this.impedanceTest.continuousMode) {
     // console.log('running in continuous mode...')
-    // openBCISample.debugPrettyPrint(sampleObject)
+    // openBCIUtilities.debugPrettyPrint(sampleObject)
     impedanceArray = openBCISample.goertzelProcessSample(sampleObject, this.goertzelObject);
     if (impedanceArray) {
       this.emit('impedanceArray', impedanceArray);

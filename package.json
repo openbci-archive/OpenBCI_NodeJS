@@ -35,6 +35,7 @@
     "chai": "^3.4.1",
     "chai-as-promised": "^6.0.0",
     "codecov": "^2.1.0",
+    "dirty-chai": "^2.0.1",
     "istanbul": "^0.4.4",
     "mocha": "^3.0.2",
     "sandboxed-module": "^2.0.3",

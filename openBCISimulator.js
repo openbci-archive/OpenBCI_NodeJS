@@ -3,7 +3,7 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var stream = require('stream');
 
-var openBCISample = require('./openBCISample');
+var openBCISample = require('./openBCIUtilities');
 var k = openBCISample.k;
 var now = require('performance-now');
 

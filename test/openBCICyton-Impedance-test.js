@@ -3,7 +3,7 @@ const bluebirdChecks = require('./bluebirdChecks');
 const chai = require('chai');
 const should = chai.should(); // eslint-disable-line no-unused-vars
 const Cyton = require('../openBCICyton');
-const openBCISample = require('../openBCISample');
+const openBCISample = require('../openBCIUtilities');
 const k = openBCISample.k;
 
 const chaiAsPromised = require('chai-as-promised');

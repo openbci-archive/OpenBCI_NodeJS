@@ -91,7 +91,7 @@
 
 ### Bug Fixes
 * Fixes bug where extra data after EOT (`$$$`) was dumped by preserving the poriton after the EOT for further decomposition.
-* Fixes bug where any calls to channel set would actually break the openBCISample code as the channelSettingsArray contained an undefined.
+* Fixes bug where any calls to channel set would actually break the openBCIUtilities code as the channelSettingsArray contained an undefined.
 * Writes promises resolve when they are actually sent over the serial port. 
 
 # 1.4.0
@@ -237,7 +237,7 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 
 * NPM package is not called `openbci-sdk` anymore, now called `openbci`
 * Accelerometer data now goes into `.accelData` array instead of `.auxData` array.
-* In openBCISample.js
+* In openBCIUtilities.js
   * `parseRawPacket()` is now called `parseRawPacketStandard()`
 * `ready` event only triggered after soft reset. `eot` event emitted in all other conditions resulting in the board sending EOT ("$$$")
 * Must use camel case on the OpenBCISimulator object.

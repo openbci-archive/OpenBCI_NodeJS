@@ -130,11 +130,14 @@ var _options = {
 
 /**
  * @description The initialization method to call first, before any other method.
- * @param options {InitializationObject} (optional) - Board optional configurations.
+ * @param options {* | InitializationObject} (optional) - Board optional configurations.
  * @constructor
  * @author AJ Keller (@pushtheworldllc)
  */
 function OpenBCICyton (options) {
+  if (!(this instanceof OpenBCICyton)) {
+    return new OpenBCICyton(options);
+  }
   options = (typeof options !== 'function') && options || {};
   var opts = {};
 
@@ -191,7 +194,6 @@ function OpenBCICyton (options) {
   this._streaming = false;
   // Buffers
   this.buffer = null;
-  this.masterBuffer = masterBufferMaker();
   // Objects
   this.impedanceTest = obciUtils.impedanceTestObjDefault();
   this.info = {
@@ -2258,28 +2260,12 @@ OpenBCICyton.prototype.printBytesIn = function () {
 };
 
 /**
- * @description This prints the total number of packets that have been read
- * @author AJ Keller (@pushtheworldllc)
- */
-/* istanbul ignore next */
-OpenBCICyton.prototype.printPacketsRead = function () {
-  if (this.masterBuffer.packetsRead > 1) {
-    console.log('Read ' + this.masterBuffer.packetsRead + ' packets.');
-  } else if (this.masterBuffer.packetsIn === 1) {
-    console.log('Read 1 packet.');
-  } else {
-    console.log('No packets read.');
-  }
-};
-
-/**
  * @description Nice convenience method to print some session details
  * @author AJ Keller (@pushtheworldllc)
  */
 /* istanbul ignore next */
 OpenBCICyton.prototype.debugSession = function () {
   this.printBytesIn();
-  this.printPacketsRead();
   this.printPacketsBad();
 };
 
@@ -2310,16 +2296,3 @@ OpenBCICyton.prototype.channelIsOnFromChannelSettingsObject = function (channelS
 util.inherits(OpenBCICyton, EventEmitter);
 
 module.exports = OpenBCICyton;
-
-function masterBufferMaker () {
-  var masterBuf = new Buffer(k.OBCIMasterBufferSize);
-  masterBuf.fill(0);
-  return { // Buffer used to store bytes in and read packets from
-    buffer: masterBuf,
-    positionRead: 0,
-    positionWrite: 0,
-    packetsIn: 0,
-    packetsRead: 0,
-    looseBytes: 0
-  };
-}

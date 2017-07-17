@@ -6,7 +6,7 @@ const chaiAsPromised = require(`chai-as-promised`);
 const expect = chai.expect;
 const should = chai.should(); // eslint-disable-line no-unused-vars
 const openBCISimulator = require('../openBCISimulator');
-const openBCISample = require('../openBCISample');
+const openBCISample = require('../openBCIUtilities');
 const k = require('../openBCIConstants');
 
 chai.use(chaiAsPromised);
