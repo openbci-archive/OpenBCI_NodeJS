@@ -487,7 +487,6 @@ describe('openbci-sdk', function () {
             done(err);
           }
         });
-
     });
     it('should be able to set info for daisy board', function (done) {
       ourBoard.simulatorDisable()
@@ -530,7 +529,6 @@ describe('openbci-sdk', function () {
             done(err);
           }
         });
-
     });
   });
   describe('#debug', function () {
