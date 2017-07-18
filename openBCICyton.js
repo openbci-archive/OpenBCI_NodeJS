@@ -553,7 +553,7 @@ Cyton.prototype.write = function (dataToWrite) {
  * @author AJ Keller (@pushtheworldllc)
  */
 Cyton.prototype._writeAndDrain = function (data) {
-  obciDebug.debugBytes('>>>', data);
+  if (this.options.debug) obciDebug.debugBytes('>>>', data);
 
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Serial port not open'));
@@ -1772,7 +1772,7 @@ Cyton.prototype.syncClocksFull = function () {
  * @author AJ Keller (@pushtheworldllc)
  */
 Cyton.prototype._processBytes = function (data) {
-  obciDebug.debugBytes(this.curParsingMode + '<<', data);
+  if (this.options.debug) obciDebug.debugBytes(this.curParsingMode + '<<', data);
 
   // Concat old buffer
   var oldDataBuffer = null;

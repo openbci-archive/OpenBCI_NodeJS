@@ -1139,7 +1139,7 @@ ourBoard.write('o');
 
 Emitted when the serial connection to the board is closed.
 
-#### <a name="event-close"></a> .on('droppedPacket', callback)
+#### <a name="event-dropped-packet"></a> .on('droppedPacket', callback)
 
 Emitted when a packet (or packets) are dropped. Returns an array.
 
@@ -1171,7 +1171,7 @@ Emitted when the board is in a ready to start streaming state.
 
 Emitted when there is a new sample available.
 
-#### <a name="event-sample"></a> .on('synced', callback)
+#### <a name="event-synced"></a> .on('synced', callback)
 
 Emitted when there is a new sample available.
 
