@@ -102,7 +102,7 @@ const Buffer = require('safe-buffer').Buffer;
  * @private
  */
 var _options = {
-  boardType: [k.OBCIBoardDefault, k.OBCIBoardDaisy, k.OBCIBoardGanglion],
+  boardType: [k.OBCIBoardCyton, k.OBCIBoardDefault, k.OBCIBoardDaisy, k.OBCIBoardGanglion],
   baudRate: 115200,
   hardSet: false,
   sendCounts: false,
@@ -179,7 +179,7 @@ function Cyton (options) {
    * @type {RawDataToSample}
    * @private
    */
-  this._rawDataPacketToSample = k.rawDataToSampleObjectDefault(8);
+  this._rawDataPacketToSample = k.rawDataToSampleObjectDefault(k.numberOfChannelsForBoardType(this.options.boardType));
   this._rawDataPacketToSample.scale = !this.options.sendCounts;
   this._rawDataPacketToSample.protocol = k.OBCIProtocolSerial;
   this._rawDataPacketToSample.verbose = this.options.verbose;
@@ -194,15 +194,9 @@ function Cyton (options) {
   // Objects
   this.impedanceTest = obciUtils.impedanceTestObjDefault();
   this.info = {
-    boardType: this.options.boardType,
-    sampleRate: k.OBCISampleRate250,
     firmware: k.OBCIFirmwareV1,
-    numberOfChannels: k.OBCINumberOfChannelsCyton,
     missedPackets: 0
   };
-  if (this.options.boardType === k.OBCIBoardDefault) {
-    this.info.sampleRate = k.OBCISampleRate250;
-  }
 
   this._lowerChannelsSampleObject = null;
   this.serial = null;
@@ -259,7 +253,7 @@ util.inherits(Cyton, EventEmitter);
 Cyton.prototype.connect = function (portName) {
   return new Promise((resolve, reject) => {
     if (this.isConnected()) return reject(Error('already connected!'));
-
+    this.overrideInfoForBoardType(this.options.boardType);
     /* istanbul ignore else */
     if (this.options.simulate || portName === k.OBCISimulatorPortName) {
       this.options.simulate = true;
@@ -1044,12 +1038,12 @@ Cyton.prototype.listPorts = function () {
  * @return boardType: string
  */
 Cyton.prototype.getBoardType = function () {
-  return this.info.boardType;
+  return k.boardTypeForNumberOfChannels(this._rawDataPacketToSample.channelSettings.length);
 };
 
 /**
  * Get the core info object.
- * @return {{boardType: string, sampleRate: number, firmware: string, numberOfChannels: number, missedPackets: number}}
+ * @return {{firmware: string, missedPackets: number}}
  */
 Cyton.prototype.getInfo = function () {
   return this.info;
@@ -1063,19 +1057,14 @@ Cyton.prototype.getInfo = function () {
 Cyton.prototype.overrideInfoForBoardType = function (boardType) {
   switch (boardType) {
     case k.OBCIBoardDaisy:
-      this.info.boardType = k.OBCIBoardDaisy;
-      this.info.numberOfChannels = k.OBCINumberOfChannelsDaisy;
-      this.info.sampleRate = k.OBCISampleRate125;
-      this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
+      this._rawDataPacketToSample.channelSettings = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDaisy);
       this.impedanceArray = obciUtils.impedanceArray(k.OBCINumberOfChannelsDaisy);
       break;
+    case k.OBCIBoardCyton:
     case k.OBCIBoardDefault:
     default:
-      this.info.boardType = k.OBCIBoardDefault;
-      this.info.numberOfChannels = k.OBCINumberOfChannelsDefault;
-      this.info.sampleRate = k.OBCISampleRate250;
-      this.channelSettingsArray = k.channelSettingsArrayInit(k.OBCINumberOfChannelsDefault);
-      this.impedanceArray = obciUtils.impedanceArray(k.OBCINumberOfChannelsDefault);
+      this._rawDataPacketToSample.channelSettings = k.channelSettingsArrayInit(k.OBCINumberOfChannelsCyton);
+      this.impedanceArray = obciUtils.impedanceArray(k.OBCINumberOfChannelsCyton);
       break;
   }
 };
@@ -1092,7 +1081,7 @@ Cyton.prototype.hardSetBoardType = function (boardType) {
     const eotFunc = (data) => {
       switch (data.slice(0, data.length - k.OBCIParseEOT.length).toString()) {
         case k.OBCIChannelMaxNumber8SuccessDaisyRemoved:
-          this.overrideInfoForBoardType(k.OBCIBoardDefault);
+          this.overrideInfoForBoardType(k.OBCIBoardCyton);
           resolve('daisy removed');
           break;
         case k.OBCIChannelMaxNumber16DaisyAlreadyAttached:
@@ -1104,18 +1093,19 @@ Cyton.prototype.hardSetBoardType = function (boardType) {
           resolve('daisy attached');
           break;
         case k.OBCIChannelMaxNumber16NoDaisyAttached:
-          this.overrideInfoForBoardType(k.OBCIBoardDefault);
+          this.overrideInfoForBoardType(k.OBCIBoardCyton);
           reject(Error('unable to attach daisy'));
           break;
         case k.OBCIChannelMaxNumber8NoDaisyToRemove:
         default:
-          this.overrideInfoForBoardType(k.OBCIBoardDefault);
+          this.overrideInfoForBoardType(k.OBCIBoardCyton);
           resolve('no daisy to remove');
           break;
       }
     };
-    if (boardType === k.OBCIBoardDefault) {
+    if (boardType === k.OBCIBoardCyton || boardType === k.OBCIBoardDefault) {
       this.curParsingMode = k.OBCIParsingEOT;
+      if (this.options.verbose) console.log('Attempting to hardset board type');
       this.once(k.OBCIEmitterEot, eotFunc);
       this.write(k.OBCIChannelMaxNumber8)
         .catch((err) => {
@@ -1228,7 +1218,7 @@ Cyton.prototype.channelSet = function (channelNumber, powerDown, gain, inputType
     k.getChannelSetter(channelNumber, powerDown, gain, inputType, bias, srb2, srb1)
       .then((val) => {
         arrayOfCommands = val.commandArray;
-        this.channelSettingsArray[channelNumber - 1] = val.newChannelSettingsObject;
+        this._rawDataPacketToSample.channelSettings[channelNumber - 1] = val.newChannelSettingsObject;
         return this.write(arrayOfCommands);
       }).then(resolve, reject);
   });
@@ -1318,7 +1308,7 @@ Cyton.prototype.impedanceTestContinuousStop = function () {
  * @author AJ Keller (@pushtheworldllc)
  */
 Cyton.prototype.impedanceTestAllChannels = function () {
-  var upperLimit = k.OBCINumberOfChannelsDefault;
+  var upperLimit = k.OBCINumberOfChannelsCyton;
 
   /* istanbul ignore if */
   if (this.options.daisy) {
@@ -1671,16 +1661,13 @@ Cyton.prototype.sampleRate = function () {
   if (this.options.simulate) {
     return this.options.simulatorSampleRate;
   } else {
-    if (this.info) {
-      return this.info.sampleRate;
-    } else {
-      switch (this.boardType) {
-        case k.OBCIBoardDaisy:
-          return k.OBCISampleRate125;
-        case k.OBCIBoardDefault:
-        default:
-          return k.OBCISampleRate250;
-      }
+    switch (this.getBoardType()) {
+      case k.OBCIBoardDaisy:
+        return k.OBCISampleRate125;
+      case k.OBCIBoardCyton:
+      case k.OBCIBoardDefault:
+      default:
+        return k.OBCISampleRate250;
     }
   }
 };
@@ -1693,17 +1680,7 @@ Cyton.prototype.sampleRate = function () {
  * @author AJ Keller (@pushtheworldllc)
  */
 Cyton.prototype.numberOfChannels = function () {
-  if (this.info) {
-    return this.info.numberOfChannels;
-  } else {
-    switch (this.boardType) {
-      case k.OBCIBoardDaisy:
-        return k.OBCINumberOfChannelsDaisy;
-      case k.OBCIBoardDefault:
-      default:
-        return k.OBCINumberOfChannelsDefault;
-    }
-  }
+  return this._rawDataPacketToSample.channelSettings.length;
 };
 
 /**
@@ -1883,7 +1860,7 @@ Cyton.prototype._processParseBufferForReset = function (dataBuffer) {
   if (obciUtils.countADSPresent(dataBuffer) === 2) {
     this.overrideInfoForBoardType(k.OBCIBoardDaisy);
   } else {
-    this.overrideInfoForBoardType(k.OBCIBoardDefault);
+    this.overrideInfoForBoardType(k.OBCIBoardCyton);
   }
 
   if (obciUtils.findV2Firmware(dataBuffer)) {
@@ -2096,7 +2073,7 @@ Cyton.prototype._finalizeNewSample = function (sampleObject) {
   } else {
     // With the daisy board attached, lower channels (1-8) come in packets with odd sample numbers and upper
     //  channels (9-16) come in packets with even sample numbers
-    if (this.info.boardType === k.OBCIBoardDaisy) {
+    if (this.getBoardType === k.OBCIBoardDaisy) {
       // Send the sample for downstream sample compaction
       this._finalizeNewSampleForDaisy(sampleObject);
     } else {

@@ -71,7 +71,7 @@ describe('openbci-sdk', function () {
     });
     it('constructs with the correct default options', () => {
       var board = new Cyton();
-      expect(board.options.boardType).to.equal(k.OBCIBoardDefault);
+      expect(board.options.boardType).to.equal(k.OBCIBoardCyton);
       expect(board.options.baudRate).to.equal(115200);
       expect(board.options.hardSet).to.be.false();
       expect(board.options.sendCounts).to.be.false();
@@ -467,32 +467,68 @@ describe('openbci-sdk', function () {
           });
         }).catch(err => done(err));
     });
-    it('should be able to set info for default board', function () {
-      ourBoard.info.boardType = 'burrito';
-      ourBoard.info.sampleRate = 60;
-      ourBoard.info.numberOfChannels = 200;
-      ourBoard.overrideInfoForBoardType('default');
-      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
-      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
-      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
+    it('should be able to set info for cyton board', function (done) {
+      ourBoard.simulatorDisable()
+        .then(() => {
+          ourBoard.overrideInfoForBoardType('cyton');
+          expect(ourBoard.getBoardType()).to.be.equal(k.OBCIBoardCyton);
+          expect(ourBoard.numberOfChannels()).to.be.equal(k.OBCINumberOfChannelsCyton);
+          expect(ourBoard.sampleRate()).to.be.equal(k.OBCISampleRate250);
+          done();
+        })
+        .catch((err) => {
+          if (err.message === 'Not simulating') {
+            ourBoard.overrideInfoForBoardType('cyton');
+            expect(ourBoard.getBoardType()).to.be.equal(k.OBCIBoardCyton);
+            expect(ourBoard.numberOfChannels()).to.be.equal(k.OBCINumberOfChannelsCyton);
+            expect(ourBoard.sampleRate()).to.be.equal(k.OBCISampleRate250);
+            done();
+          } else {
+            done(err);
+          }
+        });
     });
-    it('should be able to set info for daisy board', function () {
-      ourBoard.info.boardType = 'burrito';
-      ourBoard.info.sampleRate = 60;
-      ourBoard.info.numberOfChannels = 200;
-      ourBoard.overrideInfoForBoardType('daisy');
-      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDaisy);
-      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDaisy);
-      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate125);
+    it('should be able to set info for daisy board', function (done) {
+      ourBoard.simulatorDisable()
+        .then(() => {
+          ourBoard.overrideInfoForBoardType('daisy');
+          expect(ourBoard.getBoardType()).to.be.equal(k.OBCIBoardDaisy);
+          expect(ourBoard.numberOfChannels()).to.be.equal(k.OBCINumberOfChannelsDaisy);
+          expect(ourBoard.sampleRate()).to.be.equal(k.OBCISampleRate125);
+          done();
+        })
+        .catch((err) => {
+          if (err.message === 'Not simulating') {
+            ourBoard.overrideInfoForBoardType('daisy');
+            expect(ourBoard.getBoardType()).to.be.equal(k.OBCIBoardDaisy);
+            expect(ourBoard.numberOfChannels()).to.be.equal(k.OBCINumberOfChannelsDaisy);
+            expect(ourBoard.sampleRate()).to.be.equal(k.OBCISampleRate125);
+            done();
+          } else {
+            done(err);
+          }
+        });
     });
-    it('should set info to default on bad input string', function () {
-      ourBoard.info.boardType = 'burrito';
-      ourBoard.info.sampleRate = 60;
-      ourBoard.info.numberOfChannels = 200;
-      ourBoard.overrideInfoForBoardType('taco');
-      expect(ourBoard.getInfo().boardType).to.be.equal(k.OBCIBoardDefault);
-      expect(ourBoard.getInfo().numberOfChannels).to.be.equal(k.OBCINumberOfChannelsDefault);
-      expect(ourBoard.getInfo().sampleRate).to.be.equal(k.OBCISampleRate250);
+    it('should set info to default on bad input string', function (done) {
+      ourBoard.simulatorDisable()
+        .then(() => {
+          ourBoard.overrideInfoForBoardType('taco');
+          expect(ourBoard.getBoardType()).to.be.equal(k.OBCIBoardCyton);
+          expect(ourBoard.numberOfChannels()).to.be.equal(k.OBCINumberOfChannelsCyton);
+          expect(ourBoard.sampleRate()).to.be.equal(k.OBCISampleRate250);
+          done();
+        })
+        .catch((err) => {
+          if (err.message === 'Not simulating') {
+            ourBoard.overrideInfoForBoardType('cyton');
+            expect(ourBoard.getBoardType()).to.be.equal(k.OBCIBoardCyton);
+            expect(ourBoard.numberOfChannels()).to.be.equal(k.OBCINumberOfChannelsCyton);
+            expect(ourBoard.sampleRate()).to.be.equal(k.OBCISampleRate250);
+            done();
+          } else {
+            done(err);
+          }
+        });
     });
   });
   describe('#debug', function () {
@@ -639,7 +675,7 @@ describe('openbci-sdk', function () {
           };
           const hardSetFuncOnTime = () => {
             // Verify the module is still default
-            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
             // Remove the premature ready function because it won't fire
             ourBoard.removeListener('ready', readyFuncPreMature);
             // If the board was able to attach the daisy
@@ -695,7 +731,7 @@ describe('openbci-sdk', function () {
           };
           const hardSetFuncOnTime = () => {
             // Verify the module is still default
-            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
             // Remove the premature ready function because it won't fire
             ourBoard.removeListener('ready', readyFuncPreMature);
             // If the board was able to attach the daisy
@@ -705,7 +741,7 @@ describe('openbci-sdk', function () {
           };
           const errorFuncTestSuccess = () => {
             // Verify the module is still default
-            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
             ourBoard.options.hardSet = false;
             ourBoard.disconnect().then(() => { // call disconnect
               ourBoard.removeListener('ready', readyFuncTestFailure);
@@ -735,7 +771,7 @@ describe('openbci-sdk', function () {
           // Turn hardSet on
           ourBoard.options.hardSet = true;
           // Set the options to daisy boardType
-          ourBoard.options.boardType = k.OBCIBoardDefault;
+          ourBoard.options.boardType = k.OBCIBoardCyton;
           // The simulator has a daisy attached
           ourBoard.options.simulatorDaisyModuleAttached = true;
 
@@ -767,7 +803,7 @@ describe('openbci-sdk', function () {
           };
           const readyFuncSuccess = () => {
             // Verify the module switched to default type
-            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
             // Remove because it won't fire
             ourBoard.removeListener('error', errorFuncTestFailure);
             ourBoard.options.hardSet = false;
@@ -839,7 +875,7 @@ describe('openbci-sdk', function () {
           // Turn hardSet on
           ourBoard.options.hardSet = true;
           // Set the options to default boardType
-          ourBoard.options.boardType = k.OBCIBoardDefault;
+          ourBoard.options.boardType = k.OBCIBoardCyton;
           // The simulator does not have a daisy
           ourBoard.options.simulatorDaisyModuleAttached = false;
           // The simulator is able to attach daisy
@@ -866,7 +902,7 @@ describe('openbci-sdk', function () {
             ourBoard.removeListener('error', errorFuncTestFailure);
             ourBoard.removeListener('hardSet', hardSetFuncFailure);
             // Verify the module is still default
-            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+            expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
             ourBoard.options.hardSet = false;
             ourBoard.disconnect().then(() => { // call disconnect
               done();
@@ -1142,7 +1178,7 @@ describe('openbci-sdk', function () {
           ourBoard.hardSetBoardType('default')
             .then((res) => {
               expect(res).to.equal('no daisy to remove');
-              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
               done();
             }).catch(done);
         } else {
@@ -1155,7 +1191,7 @@ describe('openbci-sdk', function () {
           ourBoard.hardSetBoardType('default')
             .then((res) => {
               expect(res).to.equal('daisy removed');
-              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
               done();
             }).catch(done);
         } else {
@@ -1197,7 +1233,7 @@ describe('openbci-sdk', function () {
             .then(done)
             .catch((err) => {
               expect(err.message).to.equal('unable to attach daisy');
-              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDefault);
+              expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
               done();
             });
         } else {
@@ -1980,9 +2016,9 @@ LIS3DH Device ID: 0x38422$$$`);
       ourBoard._processParseBufferForReset(buf);
 
       ourBoard.info.firmware.should.equal(k.OBCIFirmwareV1);
-      ourBoard.info.boardType.should.equal(k.OBCIBoardDefault);
-      ourBoard.info.sampleRate.should.equal(k.OBCISampleRate250);
-      ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDefault);
+      expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
+      expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate250);
+      expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsCyton);
     });
     it('should recognize firmware version 1 with daisy', () => {
       var buf = new Buffer(`OpenBCI V3 Simulator
@@ -1994,9 +2030,9 @@ $$$`);
       ourBoard._processParseBufferForReset(buf);
 
       ourBoard.info.firmware.should.equal(k.OBCIFirmwareV1);
-      ourBoard.info.boardType.should.equal(k.OBCIBoardDaisy);
-      ourBoard.info.sampleRate.should.equal(k.OBCISampleRate125);
-      ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDaisy);
+      expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+      expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate125);
+      expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsDaisy);
     });
     it('should recognize firmware version 2 with no daisy', () => {
       var buf = new Buffer(`OpenBCI V3 Simulator
@@ -2008,9 +2044,9 @@ $$$`);
       ourBoard._processParseBufferForReset(buf);
 
       ourBoard.info.firmware.should.equal(k.OBCIFirmwareV2);
-      ourBoard.info.boardType.should.equal(k.OBCIBoardDefault);
-      ourBoard.info.sampleRate.should.equal(k.OBCISampleRate250);
-      ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDefault);
+      expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
+      expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate250);
+      expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsCyton);
     });
     it('should recognize firmware version 2 with daisy', () => {
       var buf = new Buffer(`OpenBCI V3 Simulator
@@ -2023,9 +2059,9 @@ $$$`);
       ourBoard._processParseBufferForReset(buf);
 
       ourBoard.info.firmware.should.equal(k.OBCIFirmwareV2);
-      ourBoard.info.boardType.should.equal(k.OBCIBoardDaisy);
-      ourBoard.info.sampleRate.should.equal(k.OBCISampleRate125);
-      ourBoard.info.numberOfChannels.should.equal(k.OBCINumberOfChannelsDaisy);
+      expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+      expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate125);
+      expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsDaisy);
     });
   });
 
@@ -2352,7 +2388,7 @@ $$$`);
       ourBoard = new Cyton({
         verbose: true
       });
-      randomSampleGenerator = openBCIUtilities.randomSample(k.OBCINumberOfChannelsDefault, k.OBCISampleRate250, false, 'none');
+      randomSampleGenerator = openBCIUtilities.randomSample(k.OBCINumberOfChannelsCyton, k.OBCISampleRate250, false, 'none');
     });
     beforeEach(() => {
       // Clear the global var
