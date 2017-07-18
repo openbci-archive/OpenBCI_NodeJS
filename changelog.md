@@ -1,3 +1,13 @@
+# 2.1.0
+
+### Breaking changes
+
+* Significantly reduce the properties in `this.info` object to only have firmware version and number of missed packets. Code dependent on this.info should switch to using `numberOfChannels()`, and `getBoardType()` and `sampleRate()` for accurate board info!
+
+### Enhancements
+
+* Fixes for daisy with new board, specifically hardSet.
+
 # 2.0.1
 
 ### Bug Fixes

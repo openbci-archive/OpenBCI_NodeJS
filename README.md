@@ -1143,6 +1143,10 @@ Emitted when the serial connection to the board is closed.
 
 Emitted when a packet (or packets) are dropped. Returns an array.
 
+#### <a name="event-eot"></a> .on('eot', callback)
+
+Emitted when there is an EOT a.k.a. '$$$' with a buffer filled with the data.
+
 #### <a name="event-error"></a> .on('error', callback)
 
 Emitted when there is an on the serial port.
