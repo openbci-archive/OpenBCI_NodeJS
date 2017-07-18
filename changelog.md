@@ -1,3 +1,9 @@
+# 2.0.1
+
+### Bug Fixes
+
+* Debug bytes was set to always print in processBytes
+
 # 2.0.0
 
 ### New Features
