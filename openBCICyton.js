@@ -2073,7 +2073,7 @@ Cyton.prototype._finalizeNewSample = function (sampleObject) {
   } else {
     // With the daisy board attached, lower channels (1-8) come in packets with odd sample numbers and upper
     //  channels (9-16) come in packets with even sample numbers
-    if (this.getBoardType === k.OBCIBoardDaisy) {
+    if (this.getBoardType() === k.OBCIBoardDaisy) {
       // Send the sample for downstream sample compaction
       this._finalizeNewSampleForDaisy(sampleObject);
     } else {
