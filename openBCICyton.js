@@ -2060,7 +2060,7 @@ Cyton.prototype._processPacketTimeSyncSet = function (rawPacket, timeOfPacketArr
  * @description A method to emit samples through the EventEmitter channel `sample` or compute impedances if are
  *      being tested.
  * @param sampleObject {Object} - A sample object that follows the normal standards.
- * @private
+ * @privatec
  * @author AJ Keller (@pushtheworldllc)
  */
 Cyton.prototype._finalizeNewSample = function (sampleObject) {
