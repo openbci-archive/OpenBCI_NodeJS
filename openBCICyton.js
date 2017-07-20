@@ -368,13 +368,15 @@ Cyton.prototype.disconnect = function () {
       if (this.isStreaming()) {
         if (this.options.verbose) console.log('stop streaming');
         return this.streamStop();
+      } else {
+        return Promise.resolve();
       }
     })
     .then(() => {
       if (!this.isConnected()) {
         return Promise.reject(Error('no board connected'));
       } else {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           // serial emitting 'close' will call _disconnected
           this.serial.close(() => {
             resolve();

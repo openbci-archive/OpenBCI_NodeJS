@@ -2,7 +2,8 @@
 
 ### Enhancements
 
-* Update openbci-utilities to v0.1.1 to patch for sendCounts.
+* Update openbci-utilities to v0.1.2 to patch for sendCounts.
+* Disconnect did not disconnect from serial port if the device was not streaming.
 
 # 2.1.1
 
