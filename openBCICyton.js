@@ -110,7 +110,7 @@ var _options = {
   simulatorBoardFailure: false,
   simulatorDaisyModuleAttached: false,
   simulatorDaisyModuleCanBeAttached: true,
-  simulatorFirmwareVersion: [k.OBCIFirmwareV1, k.OBCIFirmwareV2],
+  simulatorFirmwareVersion: [k.OBCIFirmwareV1, k.OBCIFirmwareV2, k.OBCIFirmwareV3],
   simulatorFragmentation: [k.OBCISimulatorFragmentationNone, k.OBCISimulatorFragmentationRandom, k.OBCISimulatorFragmentationFullBuffers, k.OBCISimulatorFragmentationOneByOne],
   simulatorLatencyTime: 16,
   simulatorBufferSize: 4096,
@@ -254,6 +254,7 @@ Cyton.prototype.connect = function (portName) {
   return new Promise((resolve, reject) => {
     if (this.isConnected()) return reject(Error('already connected!'));
     this.overrideInfoForBoardType(this.options.boardType);
+    this.buffer = null;
     /* istanbul ignore else */
     if (this.options.simulate || portName === k.OBCISimulatorPortName) {
       this.options.simulate = true;
@@ -638,6 +639,34 @@ Cyton.prototype.usingVersionTwoFirmware = function () {
 };
 
 /**
+ * @description Convenience method to determine if you can use firmware v2.x.x
+ *  or greater capabilities.
+ * @returns {boolean} - True if using firmware version 2 or greater. Should
+ *  be called after a `.softReset()` because we can parse the output of that
+ *  to determine if we are using firmware version 2.
+ * @author AJ Keller (@pushtheworldllc)
+ */
+Cyton.prototype.usingAtLeastVersionTwoFirmware = function () {
+  return this.usingVersionTwoFirmware() || this.usingVersionThreeFirmware();
+};
+
+/**
+ * @description Convenience method to determine if you can use firmware v2.x.x
+ *  capabilities.
+ * @returns {boolean} - True if using firmware version 2 or greater. Should
+ *  be called after a `.softReset()` because we can parse the output of that
+ *  to determine if we are using firmware version 2.
+ * @author AJ Keller (@pushtheworldllc)
+ */
+Cyton.prototype.usingVersionThreeFirmware = function () {
+  if (this.options.simulate) {
+    return this.options.simulatorFirmwareVersion === k.OBCIFirmwareV3;
+  } else {
+    return this.info.firmware === k.OBCIFirmwareV3;
+  }
+};
+
+/**
  * @description Used to set the system radio channel number. The function will reject if not
  *      connected to the serial port of the dongle. Further the function should reject if currently streaming.
  *      Lastly and more important, if the board is not running the new firmware then this functionality does not
@@ -653,7 +682,7 @@ Cyton.prototype.radioChannelSet = function (channelNumber) {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
     if (this.isStreaming()) return reject(Error('Don\'t query for the radio while streaming'));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware version 2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
     if (channelNumber === undefined || channelNumber === null) return reject(Error('Must input a new channel number to switch too!'));
     if (!k.isNumber(channelNumber)) return reject(Error('Must input type Number'));
     if (channelNumber > k.OBCIRadioChannelMax) return reject(Error(`New channel number must be less than ${k.OBCIRadioChannelMax}`));
@@ -755,7 +784,7 @@ Cyton.prototype.radioChannelGet = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
     if (this.isStreaming()) return reject(Error("Don't query for the radio while streaming"));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
 
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
@@ -803,7 +832,7 @@ Cyton.prototype.radioPollTimeGet = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
     if (this.isStreaming()) return reject(Error("Don't query for the poll time while streaming"));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
     badCommsTimeout = setTimeout(() => {
@@ -850,7 +879,7 @@ Cyton.prototype.radioPollTimeSet = function (pollTime) {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
     if (this.isStreaming()) return reject(Error("Don't change the poll time while streaming"));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
     if (pollTime === undefined || pollTime === null) return reject(Error('Must input a new poll time to switch too!'));
     if (!k.isNumber(pollTime)) return reject(Error('Must input type Number'));
     if (pollTime > k.OBCIRadioPollTimeMax) return reject(Error(`New polltime must be less than ${k.OBCIRadioPollTimeMax}`));
@@ -904,7 +933,7 @@ Cyton.prototype.radioBaudRateSet = function (speed) {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
     if (this.isStreaming()) return reject(Error("Don't change the baud rate while streaming"));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware v2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
     if (!k.isString(speed)) return reject(Error('Must input type String'));
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
@@ -975,7 +1004,7 @@ Cyton.prototype.radioSystemStatusGet = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to Dongle. Pro tip: Call .connect()'));
     if (this.isStreaming()) return reject(Error("Don't check the radio status while streaming"));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Must be using firmware version 2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
 
     // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
     //  important if the module was connected, not streaming and using the old firmware
@@ -1695,7 +1724,7 @@ Cyton.prototype.syncClocks = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to the device'));
     if (!this.isStreaming()) return reject(Error('Must be streaming to sync clocks'));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Time sync not implemented on v1 firmware, please update to v2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
     this.sync.curSyncObj = obciUtils.newSyncObject();
     this.sync.curSyncObj.timeSyncSent = this.time();
     this.curParsingMode = k.OBCIParsingTimeSyncSent;
@@ -1716,7 +1745,7 @@ Cyton.prototype.syncClocksFull = function () {
   return new Promise((resolve, reject) => {
     if (!this.isConnected()) return reject(Error('Must be connected to the device'));
     if (!this.isStreaming()) return reject(Error('Must be streaming to sync clocks'));
-    if (!this.usingVersionTwoFirmware()) return reject(Error('Time sync not implemented on v1 firmware, please update to v2'));
+    if (!this.usingAtLeastVersionTwoFirmware()) return reject(Error('Must be using greater than firmware version 2'));
     var timeout = setTimeout(() => {
       return reject(Error('syncClocksFull timeout after 500ms with no sync'));
     }, 500); // Should not take more than 1s to sync up
@@ -1773,7 +1802,7 @@ Cyton.prototype._processBytes = function (data) {
       if (obciUtils.doesBufferHaveEOT(data)) {
         this._processParseBufferForReset(data);
         if (this.options.hardSet) {
-          if (this.getBoardType() !== this.options.boardType) {
+          if (!_.eq(this.getBoardType(), this.options.boardType)) {
             this.emit(k.OBCIEmitterHardSet);
             this.hardSetBoardType(this.options.boardType)
               .then(() => {
@@ -1788,7 +1817,7 @@ Cyton.prototype._processBytes = function (data) {
             this.buffer = obciUtils.stripToEOTBuffer(data);
           }
         } else {
-          if (this.getBoardType() !== this.options.boardType && this.options.verbose) {
+          if (_.eq(this.getBoardType(), this.options.boardType) && this.options.verbose) {
             console.log(`Module detected ${this.getBoardType()} board type but you specified ${this.options.boardType}, use 'hardSet' to force the module to correct itself`);
           }
           this.curParsingMode = k.OBCIParsingNormal;
@@ -1863,8 +1892,13 @@ Cyton.prototype._processParseBufferForReset = function (dataBuffer) {
     this.overrideInfoForBoardType(k.OBCIBoardCyton);
   }
 
-  if (obciUtils.findV2Firmware(dataBuffer)) {
-    this.info.firmware = k.OBCIFirmwareV2;
+  const firmware = obciUtils.getFirmware(dataBuffer);
+  if (firmware) {
+    if (firmware.major === 2) {
+      this.info.firmware = k.OBCIFirmwareV2;
+    } else {
+      this.info.firmware = k.OBCIFirmwareV3;
+    }
     this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
   } else {
     this.info.firmware = k.OBCIFirmwareV1;
@@ -2073,7 +2107,7 @@ Cyton.prototype._finalizeNewSample = function (sampleObject) {
   } else {
     // With the daisy board attached, lower channels (1-8) come in packets with odd sample numbers and upper
     //  channels (9-16) come in packets with even sample numbers
-    if (this.getBoardType === k.OBCIBoardDaisy) {
+    if (_.eq(this.getBoardType(), k.OBCIBoardDaisy)) {
       // Send the sample for downstream sample compaction
       this._finalizeNewSampleForDaisy(sampleObject);
     } else {
