@@ -2038,7 +2038,7 @@ $$$`);
       var buf = new Buffer(`OpenBCI V3 Simulator
 On Board ADS1299 Device ID: 0x12345
 LIS3DH Device ID: 0x38422
-Firmware: v2
+Firmware: v2.0.0
 $$$`);
 
       ourBoard._processParseBufferForReset(buf);
@@ -2048,17 +2048,46 @@ $$$`);
       expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate250);
       expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsCyton);
     });
+    it('should recognize firmware version 3 with no daisy', () => {
+      var buf = new Buffer(`OpenBCI V3 Simulator
+On Board ADS1299 Device ID: 0x12345
+LIS3DH Device ID: 0x38422
+Firmware: v3.0.1
+$$$`);
+
+      ourBoard._processParseBufferForReset(buf);
+
+      ourBoard.info.firmware.should.equal(k.OBCIFirmwareV3);
+      expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardCyton);
+      expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate250);
+      expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsCyton);
+    });
     it('should recognize firmware version 2 with daisy', () => {
       var buf = new Buffer(`OpenBCI V3 Simulator
 On Board ADS1299 Device ID: 0x12345
 On Daisy ADS1299 Device ID: 0xFFFFF
 LIS3DH Device ID: 0x38422
-Firmware: v2
+Firmware: v2.0.0
 $$$`);
 
       ourBoard._processParseBufferForReset(buf);
 
       ourBoard.info.firmware.should.equal(k.OBCIFirmwareV2);
+      expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
+      expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate125);
+      expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsDaisy);
+    });
+    it('should recognize firmware version 3 with daisy', () => {
+      var buf = new Buffer(`OpenBCI V3 Simulator
+On Board ADS1299 Device ID: 0x12345
+On Daisy ADS1299 Device ID: 0xFFFFF
+LIS3DH Device ID: 0x38422
+Firmware: v3.1.69
+$$$`);
+
+      ourBoard._processParseBufferForReset(buf);
+
+      ourBoard.info.firmware.should.equal(k.OBCIFirmwareV3);
       expect(ourBoard.getBoardType()).to.equal(k.OBCIBoardDaisy);
       expect(ourBoard.sampleRate()).to.equal(k.OBCISampleRate125);
       expect(ourBoard.numberOfChannels()).to.equal(k.OBCINumberOfChannelsDaisy);
@@ -2504,6 +2533,42 @@ $$$`);
       ourBoard = new Cyton();
 
       expect(ourBoard.usingVersionTwoFirmware()).to.be.false();
+    });
+  });
+
+  describe('#usingVersionThreeFirmware', function () {
+    after(() => bluebirdChecks.noPendingPromises());
+    it('should return true if firmware is version 3', () => {
+      ourBoard = new Cyton();
+      ourBoard.info.firmware = 'v3';
+
+      expect(ourBoard.usingVersionThreeFirmware()).to.be.true();
+    });
+    it('should return false if not firmware version 3', () => {
+      ourBoard = new Cyton();
+
+      expect(ourBoard.usingVersionThreeFirmware()).to.be.false();
+    });
+  });
+
+  describe('#usingAtLeastVersionTwoFirmware', function () {
+    after(() => bluebirdChecks.noPendingPromises());
+    it('should return true if firmware is version 3', () => {
+      ourBoard = new Cyton();
+      ourBoard.info.firmware = 'v2';
+
+      expect(ourBoard.usingAtLeastVersionTwoFirmware()).to.be.true();
+    });
+    it('should return true if firmware is version 3', () => {
+      ourBoard = new Cyton();
+      ourBoard.info.firmware = 'v3';
+
+      expect(ourBoard.usingAtLeastVersionTwoFirmware()).to.be.true();
+    });
+    it('should return false if not firmware version 3', () => {
+      ourBoard = new Cyton();
+
+      expect(ourBoard.usingAtLeastVersionTwoFirmware()).to.be.false();
     });
   });
 

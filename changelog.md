@@ -1,3 +1,13 @@
+# 2.1.1
+
+### Bug Fixes
+
+* Closes forgot parentheses in `getBoardType()` #152 (thanks @nateGeorge)
+
+### Enhancements
+
+* Add support for v3 cyton firmware.
+
 # 2.1.0
 
 ### Breaking changes
