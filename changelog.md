@@ -1,3 +1,9 @@
+# 2.1.2
+
+### Enhancements
+
+* Update openbci-utilities to v0.1.1 to patch for sendCounts.
+
 # 2.1.1
 
 ### Bug Fixes
