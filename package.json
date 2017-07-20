@@ -1,6 +1,6 @@
 {
   "name": "openbci",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
     "gaussian": "^1.0.0",
     "lodash": "^4.17.4",
     "mathjs": "^3.14.2",
-    "openbci-utilities": "0.1.0",
+    "openbci-utilities": "0.1.2",
     "performance-now": "^2.1.0",
     "safe-buffer": "^5.1.1",
     "serialport": "4.0.7",
