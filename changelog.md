@@ -2,6 +2,13 @@
 
 ### Enhancements
 
+* Can now sync the channel settings from the actual registers on the ADS! Call `.syncRegisterSettings()`
+* Bumped openbci-utilities to v0.1.4
+
+# 2.1.2
+
+### Enhancements
+
 * Update openbci-utilities to v0.1.2 to patch for sendCounts.
 * Disconnect did not disconnect from serial port if the device was not streaming.
 

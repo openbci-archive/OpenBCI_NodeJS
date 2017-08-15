@@ -1184,14 +1184,43 @@ Cyton.prototype.getSettingsForChannel = function (channelNumber) {
 };
 
 /**
- * @description To print out the register settings to the console
- * @returns {Promise.<T>|*}
+ * @description Syncs the internal channel settings object with a cyton, this will take about
+ *  over a second because there are delays between the register reads in the firmware.
+ * @returns {Promise.<T>|*} Resolved once synced, rejects on error or 2 second timeout
  * @author AJ Keller (@pushtheworldllc)
  */
-Cyton.prototype.printRegisterSettings = function () {
-  return this.write(k.OBCIMiscQueryRegisterSettings).then(() => {
-    this.curParsingMode = k.OBCIParsingChannelSettings;
+Cyton.prototype.syncRegisterSettings = function () {
+  // Set a timeout. Since poll times can be max of 255 seconds, we should set that as our timeout. This is
+  //  important if the module was connected, not streaming and using the old firmware
+  let badCommsTimeout;
+  return new Promise((resolve, reject) => {
+    badCommsTimeout = setTimeout(() => {
+      reject(Error('Please make sure your radio system is up'));
+    }, 2500);
+    // Subscribe to the EOT event
+    this.once(k.OBCIEmitterEot, data => {
+      if (this.options.verbose) console.log(data.toString());
+      this._rawDataPacketToSample.data = data;
+      try {
+        obciUtils.syncChannelSettingsWithRawData(this._rawDataPacketToSample);
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+      // Remove the timeout!
+      clearTimeout(badCommsTimeout);
+      badCommsTimeout = null;
+
+    });
+    this.curParsingMode = k.OBCIParsingEOT;
+
+    this.write(k.OBCIMiscQueryRegisterSettings)
+      .catch((err) => {
+        clearTimeout(badCommsTimeout);
+        reject(err);
+      })
   });
+
 };
 
 /**

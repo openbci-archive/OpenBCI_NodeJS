@@ -1069,6 +1069,12 @@ ourBoard.connect(portName)
 
 ```
 
+#### <a name="method-sync-register-settings"></a> .syncRegisterSettings()
+
+Syncs the internal channel settings object with a cyton, this will take about over a second because there are delays between the register reads in the firmware.
+
+**_Returns_** a promise, fulfilled once the channel settings have been synced and reject on error.
+
 #### <a name="method-test-signal"></a> .testSignal(signal)
 
 Apply the internal test signal to all channels.
