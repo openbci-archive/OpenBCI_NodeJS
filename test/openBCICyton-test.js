@@ -3,7 +3,7 @@ const bluebirdChecks = require('./bluebirdChecks');
 const sinon = require('sinon');
 const chai = require('chai');
 const expect = chai.expect;
-const should = chai.should(); // eslint-disable-line no-unused-lets
+const should = chai.should(); // eslint-disable-line no-unused-vars
 const Cyton = require('../openBCICyton');
 const OpenBCIUtilities = require('openbci-utilities');
 const openBCIUtilities = OpenBCIUtilities.Utilities;
@@ -1362,7 +1362,6 @@ describe('openbci-sdk', function () {
             done();
           }).catch(done);
       });
-
     });
     describe('#testSignal', function () {
       it('should call the write function with proper command for dc test signal', function (done) {

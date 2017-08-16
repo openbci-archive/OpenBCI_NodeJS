@@ -1210,7 +1210,6 @@ Cyton.prototype.syncRegisterSettings = function () {
       // Remove the timeout!
       clearTimeout(badCommsTimeout);
       badCommsTimeout = null;
-
     });
     this.curParsingMode = k.OBCIParsingEOT;
 
@@ -1218,9 +1217,8 @@ Cyton.prototype.syncRegisterSettings = function () {
       .catch((err) => {
         clearTimeout(badCommsTimeout);
         reject(err);
-      })
+      });
   });
-
 };
 
 /**
