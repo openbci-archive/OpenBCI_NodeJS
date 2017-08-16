@@ -1358,7 +1358,8 @@ describe('openbci-sdk', function () {
       });
       it('should send the correct register setting', function (done) {
         ourBoard.syncRegisterSettings()
-          .then(() => {
+          .then((channelSettings) => {
+            expect(channelSettings).to.not.equal(null);
             done();
           }).catch(done);
       });

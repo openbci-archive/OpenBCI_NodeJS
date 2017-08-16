@@ -1203,7 +1203,7 @@ Cyton.prototype.syncRegisterSettings = function () {
       this._rawDataPacketToSample.data = data;
       try {
         obciUtils.syncChannelSettingsWithRawData(this._rawDataPacketToSample);
-        resolve();
+        resolve(this._rawDataPacketToSample.channelSettings);
       } catch (e) {
         reject(e);
       }
