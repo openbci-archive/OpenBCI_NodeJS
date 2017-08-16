@@ -1,3 +1,10 @@
+# 2.1.3
+
+### Enhancements
+
+* Can now sync the channel settings from the actual registers on the ADS! Call `.syncRegisterSettings()`
+* Bumped openbci-utilities to v0.1.4
+
 # 2.1.2
 
 ### Enhancements
