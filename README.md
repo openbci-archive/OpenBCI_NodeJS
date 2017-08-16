@@ -1073,7 +1073,7 @@ ourBoard.connect(portName)
 
 Syncs the internal channel settings object with a cyton, this will take about over a second because there are delays between the register reads in the firmware.
 
-**_Returns_** a promise, fulfilled once the channel settings have been synced and reject on error.
+**_Returns_** a promise, fulfilled with channel settings array, where each element is a standard channel setting object, once the channel settings have been synced and reject on error.
 
 #### <a name="method-test-signal"></a> .testSignal(signal)
 

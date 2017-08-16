@@ -1,3 +1,10 @@
+# 2.1.4
+
+### Enhancements
+
+* syncRegisterSettings now resolves channel setting object
+* Bumped openbci-utilities to v0.1.5
+
 # 2.1.3
 
 ### Enhancements
