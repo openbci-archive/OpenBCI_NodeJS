@@ -28,7 +28,19 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
     ourBoard.connect(portName) // Port name is a serial port name, see `.listPorts()`
       .then(() => {
         ourBoard.on('ready', () => {
-          ourBoard.streamStart();
+          ourBoard.syncRegisterSettings()
+            .then((cs) => {
+              return ourBoard.streamStart();
+            })
+            .catch((err) => {
+              console.log('err', err);
+              return ourBoard.streamStart();
+            })
+            .catch((err) => {
+              console.log('fatal err', err);
+              process.exit(0);
+            });
+
           ourBoard.on('sample', (sample) => {
             /** Work with sample */
             for (let i = 0; i < ourBoard.numberOfChannels(); i++) {

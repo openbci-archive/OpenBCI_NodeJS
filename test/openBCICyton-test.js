@@ -553,7 +553,7 @@ describe('openbci-sdk', function () {
       setTimeout(() => {
         console.log.should.have.been.calledWithMatch(k.OBCIStreamStop);
         done();
-      }, 20);
+      }, k.OBCIWriteIntervalDelayMSLong * 2);
     });
     it('outputs a packet when received', done => {
       console.log.reset();

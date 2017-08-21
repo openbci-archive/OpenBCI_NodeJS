@@ -1,3 +1,11 @@
+# 2.2.0
+
+### Bug Fixes
+
+* Calling sdStart and stop would change the writeOutDelay
+* Timeout for v1 was set to 10 ms instead of 50 ms.
+* Timeout for v2+ was set to 0 ms instead of 10 ms.
+
 # 2.1.4
 
 ### Enhancements
