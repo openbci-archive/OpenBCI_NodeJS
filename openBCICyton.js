@@ -545,7 +545,7 @@ Cyton.prototype.write = function (dataToWrite) {
 
 /**
  * @description Should be used to send data to the board
- * @param data {Buffer} - The data to write out
+ * @param data {Buffer | Buffer2} - The data to write out
  * @returns {Promise} if signal was able to be sent
  * @author AJ Keller (@pushtheworldllc)
  */
@@ -1277,7 +1277,12 @@ Cyton.prototype.channelSet = function (channelNumber, powerDown, gain, inputType
       .then((val) => {
         arrayOfCommands = val.commandArray;
         this._rawDataPacketToSample.channelSettings[channelNumber - 1] = val.newChannelSettingsObject;
-        return this.write(arrayOfCommands);
+        if (this.usingAtLeastVersionTwoFirmware()) {
+          const buf = Buffer.from(arrayOfCommands.join(''));
+          return this._writeAndDrain(buf);
+        } else {
+          return this.write(arrayOfCommands);
+        }
       }).then(resolve, reject);
   });
 };
@@ -1684,7 +1689,7 @@ Cyton.prototype.sdStart = function (recordingDuration) {
         if (!this.isStreaming()) {
           this.curParsingMode = k.OBCIParsingEOT;
         }
-        this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
+        // this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
         this.write(command).then(resolve, reject);
       })
       .catch(err => reject(err));
@@ -1704,7 +1709,7 @@ Cyton.prototype.sdStop = function () {
     if (!this.isStreaming()) {
       this.curParsingMode = k.OBCIParsingEOT;
     }
-    this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
+    // this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
     this.write(k.OBCISDLogStop).then(resolve, reject);
   });
 };
@@ -1928,10 +1933,10 @@ Cyton.prototype._processParseBufferForReset = function (dataBuffer) {
     } else {
       this.info.firmware = k.OBCIFirmwareV3;
     }
-    this.writeOutDelay = k.OBCIWriteIntervalDelayMSNone;
+    this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
   } else {
     this.info.firmware = k.OBCIFirmwareV1;
-    this.writeOutDelay = k.OBCIWriteIntervalDelayMSShort;
+    this.writeOutDelay = k.OBCIWriteIntervalDelayMSLong;
   }
 };
 
@@ -2300,30 +2305,6 @@ Cyton.prototype.printBytesIn = function () {
 Cyton.prototype.debugSession = function () {
   this.printBytesIn();
   this.printPacketsBad();
-};
-
-/**
- * @description To pretty print the info recieved on a Misc Register Query (printRegisterSettings)
- * @param channelSettingsObj
- */
-/* istanbul ignore next */
-Cyton.prototype.debugPrintChannelSettings = function (channelSettingsObj) {
-  console.log('-- Channel Settings Object --');
-  var powerState = 'OFF';
-  if (channelSettingsObj.POWER_DOWN.toString().localeCompare('1')) {
-    powerState = 'ON';
-  }
-  console.log('---- POWER STATE: ' + powerState);
-  console.log('-- END --');
-};
-
-/**
- * @description Quickly determine if a channel is on or off from a channelSettingObject. Most likely from a getChannelSettings call.
- * @param channelSettingsObject
- * @returns {boolean}
- */
-Cyton.prototype.channelIsOnFromChannelSettingsObject = function (channelSettingsObject) {
-  return channelSettingsObject.POWER_DOWN.toString().localeCompare('1') === 1;
 };
 
 module.exports = Cyton;
