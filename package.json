@@ -1,10 +1,9 @@
 {
   "name": "openbci",
-  "version": "2.2.1",
-  "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
+  "version": "3.0.0",
+  "description": "The official Node.js SDK for the all OpenBCI Biosensor Boards.",
   "main": "index.js",
   "scripts": {
-    "start": "node index",
     "test": "semistandard | snazzy && mocha test",
     "test-cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec && codecov",
     "test-lint": "semistandard | snazzy"
@@ -16,9 +15,10 @@
   "author": "AJ Keller <aj@pushtheworld.us> (www.openbci.com)",
   "license": "MIT",
   "dependencies": {
-    "openbci-cyton": "^1.0.2",
-    "openbci-utilities": "^0.2.0",
-    "openbci-wifi": "^0.1.2"
+    "openbci-cyton": "^1.0.5",
+    "openbci-ganglion": "^1.0.0",
+    "openbci-utilities": "^0.2.5",
+    "openbci-wifi": "^0.2.2"
   },
   "directories": {
     "test": "test"
