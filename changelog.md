@@ -1,3 +1,15 @@
+# 3.0.0
+
+This adds ganglion, wifi, and cyton support to the `openbci` main library. 
+
+If you only need cyton over serial and so not want the additional support, please see [`openbci-cyton`](https://www.npmjs.com/package/openbci-cyton).
+
+# 2.2.1
+
+### Enhancements
+
+* Bumped openbci-utilities to v0.2.0 for new accel data support
+
 # 2.2.0
 
 ### Bug Fixes
