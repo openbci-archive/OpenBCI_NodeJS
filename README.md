@@ -57,7 +57,7 @@ Using this repo provides a building block for developing with NodeJS. The goal f
 
 ## Who are we?
 
-The founder of the OpenBCI NodeJS SDK is [AJ Keller][link_aj_keller]. If we look back in time, we see this library took shape when the [Cyton][link_shop_cyton] board was the only [OpenBCI][link_openbci] board around. Then the [Ganglion][link_shop_ganglion] came around which required it's own [nodejs libary][link_nodejs_ganglion]! When the [wifi shield][link_shop_wifi] was in development, AJ created the [wifi nodejs driver][link_nodejs_wifi] which was had a lot of overlap with Cyton and Ganglion nodejs drivers. Therefore AJ pulled out the common code between all three NodeJS modules and created the [nodejs utilities][link_node_utilities] which as of today is also available to use in the browser. 
+The founder of the OpenBCI NodeJS SDK is [AJ Keller][link_aj_keller]. If we look back in time, we see this library took shape when the [Cyton][link_shop_cyton] board was the only [OpenBCI][link_openbci] board around. Then the [Ganglion][link_shop_ganglion] came around which required it's own [nodejs libary][link_nodejs_ganglion]! When the [wifi shield][link_shop_wifi_shield] was in development, AJ created the [wifi nodejs driver][link_nodejs_wifi] which was had a lot of overlap with Cyton and Ganglion nodejs drivers. Therefore AJ pulled out the common code between all three NodeJS modules and created the [nodejs utilities][link_nodejs_utilities] which as of today is also available to use in the browser. 
 
 The contributors to these repos are people using NodeJS mainly for their data acquisition purposes. For example, the entire OpenBCI GUI is dependent on the NodeJS ecosystem to provide cross platform support.   
 
