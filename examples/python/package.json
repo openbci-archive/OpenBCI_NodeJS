@@ -6,6 +6,7 @@
   "scripts": {
     "start": "concurrently --kill-others \"python handoff.py\" \"node index.js\"",
     "start-node": "node index.js",
+    "start-py": "python handoff.py",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -16,8 +17,9 @@
   "author": "AJ Keller",
   "license": "MIT",
   "dependencies": {
-    "openbci": "^2.0.0",
-    "zmq-prebuilt": "^2.1.0"
+    "openbci-cyton": "^1.0.7",
+    "openbci-wifi": "^0.3.1",
+    "zeromq": "^4.6.0"
   },
   "devEngines": {
     "node": "<=6.x",
