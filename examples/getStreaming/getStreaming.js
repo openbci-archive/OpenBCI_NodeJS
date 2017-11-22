@@ -9,11 +9,11 @@
  *   do `npm install`
  *   then `npm start`
  */
-var debug = false; // Pretty print any bytes in and out... it's amazing...
-var verbose = true; // Adds verbosity to functions
+const debug = false; // Pretty print any bytes in and out... it's amazing...
+const verbose = true; // Adds verbosity to functions
 
-var OpenBCIBoard = require('openbci').OpenBCIBoard;
-var ourBoard = new OpenBCIBoard({
+const Cyton = require('../../index').Cyton;
+let ourBoard = new Cyton({
   debug: debug,
   verbose: verbose
 });
@@ -28,7 +28,19 @@ ourBoard.autoFindOpenBCIBoard().then(portName => {
     ourBoard.connect(portName) // Port name is a serial port name, see `.listPorts()`
       .then(() => {
         ourBoard.on('ready', () => {
-          ourBoard.streamStart();
+          ourBoard.syncRegisterSettings()
+            .then((cs) => {
+              return ourBoard.streamStart();
+            })
+            .catch((err) => {
+              console.log('err', err);
+              return ourBoard.streamStart();
+            })
+            .catch((err) => {
+              console.log('fatal err', err);
+              process.exit(0);
+            });
+
           ourBoard.on('sample', (sample) => {
             /** Work with sample */
             for (let i = 0; i < ourBoard.numberOfChannels(); i++) {

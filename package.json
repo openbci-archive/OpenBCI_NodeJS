@@ -1,13 +1,12 @@
 {
   "name": "openbci",
-  "version": "1.5.1",
-  "description": "The official Node.js SDK for the OpenBCI Biosensor Board.",
-  "main": "openBCIBoard",
+  "version": "3.0.0",
+  "description": "The official Node.js SDK for the all OpenBCI Biosensor Boards.",
+  "main": "index.js",
   "scripts": {
-    "lint": "semistandard | snazzy",
-    "start": "node index",
     "test": "semistandard | snazzy && mocha test",
-    "test-cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec && codecov"
+    "test-cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec && codecov",
+    "test-lint": "semistandard | snazzy"
   },
   "keywords": [
     "openbci",
@@ -16,30 +15,13 @@
   "author": "AJ Keller <aj@pushtheworld.us> (www.openbci.com)",
   "license": "MIT",
   "dependencies": {
-    "buffer-equal": "^1.0.0",
-    "gaussian": "^1.0.0",
-    "mathjs": "^3.3.0",
-    "performance-now": "^0.2.0",
-    "serialport": "4.0.1",
-    "sntp": "^2.0.0",
-    "streamsearch": "^0.1.2"
+    "openbci-cyton": "^1.0.7",
+    "openbci-ganglion": "^1.0.0",
+    "openbci-utilities": "^0.3.1",
+    "openbci-wifi": "^0.3.1"
   },
   "directories": {
     "test": "test"
-  },
-  "devDependencies": {
-    "bluebird": "3.4.6",
-    "chai": "^3.4.1",
-    "chai-as-promised": "^5.2.0",
-    "codecov": "^1.0.1",
-    "istanbul": "^0.4.4",
-    "mocha": "^3.0.2",
-    "sandboxed-module": "^2.0.3",
-    "semistandard": "^9.0.0",
-    "sinon": "^1.17.2",
-    "sinon-as-promised": "^4.0.2",
-    "sinon-chai": "^2.8.0",
-    "snazzy": "^5.0.0"
   },
   "repository": {
     "type": "git",
@@ -55,6 +37,7 @@
   "semistandard": {
     "globals": [
       "describe",
+      "xdescribe",
       "context",
       "before",
       "beforeEach",

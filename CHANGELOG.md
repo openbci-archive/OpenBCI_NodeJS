@@ -1,3 +1,110 @@
+# 3.0.0
+
+This adds ganglion, wifi, and cyton support to the `openbci` main library. 
+
+If you only need cyton over serial and so not want the additional support, please see [`openbci-cyton`](https://www.npmjs.com/package/openbci-cyton).
+
+# 2.2.1
+
+### Enhancements
+
+* Bumped openbci-utilities to v0.2.0 for new accel data support
+
+# 2.2.0
+
+### Bug Fixes
+
+* Calling sdStart and stop would change the writeOutDelay
+* Timeout for v1 was set to 10 ms instead of 50 ms.
+* Timeout for v2+ was set to 0 ms instead of 10 ms.
+
+# 2.1.4
+
+### Enhancements
+
+* syncRegisterSettings now resolves channel setting object
+* Bumped openbci-utilities to v0.1.5
+
+# 2.1.3
+
+### Enhancements
+
+* Can now sync the channel settings from the actual registers on the ADS! Call `.syncRegisterSettings()`
+* Bumped openbci-utilities to v0.1.4
+
+# 2.1.2
+
+### Enhancements
+
+* Update openbci-utilities to v0.1.2 to patch for sendCounts.
+* Disconnect did not disconnect from serial port if the device was not streaming.
+
+# 2.1.1
+
+### Bug Fixes
+
+* Closes forgot parentheses in `getBoardType()` #152 (thanks @nateGeorge)
+
+### Enhancements
+
+* Add support for v3 cyton firmware.
+
+# 2.1.0
+
+### Breaking changes
+
+* Significantly reduce the properties in `this.info` object to only have firmware version and number of missed packets. Code dependent on this.info should switch to using `numberOfChannels()`, and `getBoardType()` and `sampleRate()` for accurate board info!
+
+### Enhancements
+
+* Fixes for daisy with new board, specifically hardSet.
+
+# 2.0.1
+
+### Bug Fixes
+
+* Debug bytes was set to always print in processBytes
+
+# 2.0.0
+
+### New Features
+* `index.js` file allows for ES6 destructing
+
+### Breaking Changes
+* Change name of `OpenBCIBoard` to `Cyton` to follow new naming convention.
+    Simply change:
+    ```ecmascript 6
+    const OpenBCIBoard = require('openbci').OpenBCIBoard;
+    const ourBoard = new OpenBCIBoard();
+    ```
+    ```ecmascript 6
+    const Cyton = require('openbci').Cyton;
+    const ourBoard = new Cyton();
+    ```
+* Major change to how board is initialized with removal of `factory` paradigm.
+* New dependency called `openbci-utilities`.
+* Rejections are errors with messages, so check err.message for info on message, don't expect string.
+
+### Bug Fixes
+* Documentation error with `testSignal` function.
+ 
+### Enhancements
+* Add more tests for public API functions.
+
+# 1.5.2
+
+### Dependency Package Updates
+* `performance-now`: from `^0.2.0` to `2.1.0`
+* `serialport` - from `4.0.1` to `4.0.7`
+
+### Development Dependency Package Updates
+* `bluebird`: from `3.4.6` to `3.5.0`
+* `chai-as-promised`: from `^5.2.0` to `^6.0.0`
+* `codecov`: from `^1.0.1` to `^2.1.0`
+* `semistandard`: from `^9.0.0` to `^10.0.0`
+* `sinon`: from `^1.17.2` to `^2.1.0`
+* `snazzy`: from `^5.0.0` to `^6.0.0`
+
 # 1.5.1
 
 ### New Features
@@ -52,7 +159,7 @@
 
 ### Bug Fixes
 * Fixes bug where extra data after EOT (`$$$`) was dumped by preserving the poriton after the EOT for further decomposition.
-* Fixes bug where any calls to channel set would actually break the openBCISample code as the channelSettingsArray contained an undefined.
+* Fixes bug where any calls to channel set would actually break the openBCIUtilities code as the channelSettingsArray contained an undefined.
 * Writes promises resolve when they are actually sent over the serial port. 
 
 # 1.4.0
@@ -198,7 +305,7 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 
 * NPM package is not called `openbci-sdk` anymore, now called `openbci`
 * Accelerometer data now goes into `.accelData` array instead of `.auxData` array.
-* In openBCISample.js
+* In openBCIUtilities.js
   * `parseRawPacket()` is now called `parseRawPacketStandard()`
 * `ready` event only triggered after soft reset. `eot` event emitted in all other conditions resulting in the board sending EOT ("$$$")
 * Must use camel case on the OpenBCISimulator object.
@@ -276,7 +383,7 @@ The second major release for the OpenBCI Node.js SDK brings major changes, impro
 ### Bug Fixes
 
 * updates to README.me and comments to change ntp to sntp, because the two are similar, but not the same and we do not want to be misleading
-* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCIBoard.js
+* Extended [Stnp](https://www.npmjs.com/package/sntp) to main openBCICyton.js
 * Add `.sntpNow()` function to get ntp time.
 
 # 0.3.1
