@@ -7,8 +7,8 @@ import zmq
 
 class Interface:
     def __init__(self, verbose=False):
-        context = zmq.Context()
-        self._socket = context.socket(zmq.PAIR)
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.PAIR)
         self._socket.connect("tcp://localhost:3004")
 
         self.verbose = verbose
@@ -43,6 +43,13 @@ class Interface:
         """
         return self._socket.recv()
 
+    def close(self):
+        """
+        Closes the zmq context
+        """
+        self._backend.close()
+        self._context.term()
+
 
 class RingBuffer(np.ndarray):
     """A multidimensional ring buffer."""
@@ -73,44 +80,49 @@ def main(argv):
     interface = Interface(verbose=verbose)
     # Signal buffer
     signal = RingBuffer(np.zeros((nb_chan + 1, 2500)))
+    try:
+        while True:
+            msg = interface.recv()
+            print "woo"
+            try:
+                dicty = json.loads(msg)
+                action = dicty.get('action')
+                command = dicty.get('command')
+                message = dicty.get('message')
 
-    while True:
-        msg = interface.recv()
-        try:
-            dicty = json.loads(msg)
-            action = dicty.get('action')
-            command = dicty.get('command')
-            message = dicty.get('message')
+                if command == 'sample':
+                    if action == 'process':
+                        # Do sample processing here
+                        try:
+                            if type(message) is not dict:
+                                print "sample is not a dict", message
+                                raise ValueError
+                            # Get keys of sample
+                            data = np.zeros(nb_chan + 1)
 
-            if command == 'sample':
-                if action == 'process':
-                    # Do sample processing here
-                    try:
-                        if type(message) is not dict:
-                            print "sample is not a dict", message
-                            raise ValueError
-                        # Get keys of sample
-                        data = np.zeros(9)
+                            data[:-1] = message.get('channelData')
+                            data[-1] = message.get('timeStamp')
 
-                        data[:-1] = message.get('channelData')
-                        data[-1] = message.get('timeStamp')
+                            # Add data to end of ring buffer
+                            signal.append(data)
 
-                        # Add data to end of ring buffer
-                        signal.append(data)
-
-                        print message.get('sampleNumber')
-                    except ValueError as e:
-                        print e
-            elif command == 'status':
-                if action == 'active':
-                    interface.send(json.dumps({
-                        'action': 'alive',
-                        'command': 'status',
-                        'message': time.time() * 1000.0
-                    }))
-
-        except BaseException as e:
-            print e
+                            print message.get('sampleNumber')
+                        except ValueError as e:
+                            print e
+                elif command == 'status':
+                    if action == 'active':
+                        interface.send(json.dumps({
+                            'action': 'alive',
+                            'command': 'status',
+                            'message': time.time() * 1000.0
+                        }))
+            except KeyboardInterrupt:
+                print "W: interrupt received, stopping"
+                print("Python ZMQ Link Clean Up")
+                interface.close()
+                raise ValueError("Peace")
+    except BaseException as e:
+        print e
 
 
 if __name__ == '__main__':
