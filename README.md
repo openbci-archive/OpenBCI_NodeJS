@@ -10,16 +10,13 @@
 [![Stories in Ready](https://badge.waffle.io/OpenBCI/OpenBCI_NodeJS.png?label=ready&title=Ready)](https://waffle.io/OpenBCI/OpenBCI_NodeJS)
 [![Join the chat at https://gitter.im/OpenBCI/OpenBCI_NodeJS](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/OpenBCI/OpenBCI_NodeJS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/OpenBCI/OpenBCI_NodeJS.svg?branch=master)](https://travis-ci.org/OpenBCI/OpenBCI_NodeJS)
-[![codecov](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS/branch/master/graph/badge.svg)](https://codecov.io/gh/OpenBCI/OpenBCI_NodeJS)
-[![Dependency Status](https://david-dm.org/OpenBCI/OpenBCI_NodeJS.svg)](https://david-dm.org/OpenBCI/OpenBCI_NodeJS)
 [![npm](https://img.shields.io/npm/dm/openbci.svg?maxAge=2592000)](http://npmjs.com/package/openbci)
-[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
 
 ## Welcome!
 
 First and foremost, Welcome! :tada: Willkommen! :confetti_ball: Bienvenue! :balloon::balloon::balloon:
 
-Thank you for visiting the OpenBCI NodeJS SDK repository.
+Thank you for visiting the OpenBCI NodeJS SDK repository. This repository does not contain any specific source code and bugs for a specific biosensor should be open in their respective repositories: [Cyton][link_nodejs_cyton] | [Ganglion][link_nodejs_ganglion] | [WiFi Shield][link_nodejs_wifi] | [Utilities][link_javascript_utilities]. Checkout [this blog post](http://openbci.com/community/nodejs-ecosystem-overhaul-cyton-stable-and-ganglion-in-beta/) to understand the rational behind this modular structure of our java script code base.
 
 This document (the README file) is a hub to give you some information about the project. Jump straight to one of the sections below, or just scroll down to find out more.
 
@@ -134,7 +131,7 @@ MIT
 [link_nodejs_cyton]: https://github.com/openbci/openbci_nodejs_cyton
 [link_nodejs_ganglion]: https://github.com/openbci/openbci_nodejs_ganglion
 [link_nodejs_wifi]: https://github.com/openbci/openbci_nodejs_wifi
-[link_nodejs_utilities]: https://github.com/openbci/openbci_nodejs_utilities
+[link_javascript_utilities]: https://github.com/OpenBCI/OpenBCI_JavaScript_Utilities
 [link_ptw]: https://www.pushtheworldllc.com
 [link_openbci]: http://www.openbci.com
 [link_mozwow]: http://mozillascience.github.io/working-open-workshop/index.html
